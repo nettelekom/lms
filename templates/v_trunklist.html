@@ -1,0 +1,67 @@
+{include file="header.html"}
+<!--// $Id: tarifflist.html,v 1.59 2005/06/12 11:27:22 alec Exp $ //-->
+<H1>{$layout.pagetitle}</H1>
+<TABLE WIDTH="100%" CELLPADDING="5">
+	<TR class="dark">
+		<TD WIDTH="93%" CLASS="fleftu">
+			<IMG SRC="img/money.gif" ALT="">&nbsp;<B>{t}Name:{/t}</B>
+		</TD>
+		<TD WIDTH="1%" VALIGN="top" CLASS="fbt" align="right">
+			{t}ID:{/t}
+		</TD>
+		<TD NOWRAP WIDTH="1%" VALIGN="top" CLASS="fbt" align="right">
+			Grupa cennikowa:
+		</TD>	
+		<TD WIDTH="1%" VALIGN="top" CLASS="fbt" align="right">
+			Adres IP serwera:
+		</TD>
+		<TD WIDTH="1%" CLASS="frightu" ALIGN="RIGHT">
+			<NOBR>
+			&nbsp;
+			</NOBR>
+		</TD>
+	</TR>
+	{cycle values="light,lucid" print=false}
+	{section name=trunklist loop=$trunklist}
+	<TR class="{cycle}" onmouseover="addClass(this, 'highlight')" onmouseout="removeClass(this, 'highlight')">
+		<TD WIDTH="93%" CLASS="fleft" onClick="return self.location.href='?m=v_trunkinfo&id={$trunklist[trunklist].id}';" class="fleft">
+			<IMG SRC="img/money.gif" ALT="">&nbsp;<B>{$trunklist[trunklist].username}</B>
+		</TD>
+		<TD WIDTH="1%" VALIGN="top" align="right" onClick="return self.location.href='?m=v_trunkinfo&id={$trunklist[trunklist].id}';">
+			({$trunklist[trunklist].id|string_format:"%04d"})
+		</TD>
+		<TD WIDTH="1%" VALIGN="top" align="right" onClick="return self.location.href='?m=v_trunkinfo&id={$trunklist[trunklist].id}';">
+			<NOBR>
+			{$trunklist[trunklist].trunk_groups_name} 
+			</NOBR>
+		</TD>
+		<TD WIDTH="1%" VALIGN="top" align="right" onClick="return self.location.href='?m=v_trunkinfo&id={$trunklist[trunklist].id}';">
+			{$trunklist[trunklist].defaultip} 
+		</TD>
+		<TD WIDTH="1%" CLASS="fright" ALIGN="right">
+			<NOBR>
+<A HREF="?m=v_trunkdel&id={$trunklist[trunklist].id}" onClick="return confirmLink(this,'{t}Are you sure, you want to delete that tariff?{/t}');"><IMG SRC="img/delete.gif" ALT="[ {t}Delete{/t} ]"></A>
+				<A HREF="?m=v_trunkedit&id={$trunklist[trunklist].id}"><IMG SRC="img/edit.gif" ALT="[ {t}Edit{/t} ]"></A>
+				<A HREF="?m=v_trunkinfo&id={$trunklist[trunklist].id}"><IMG SRC="img/info.gif" ALT="[ {t}Info{/t} ]"></A>
+			</NOBR>
+		</TD>
+	</TR>
+	{sectionelse}
+	<TR>
+		<TD COLSPAN="6" ALIGN="center" CLASS="fall">
+			<p>&nbsp;</p>
+			<p><B>{t}No such subscriptions in database.{/t}</B></p>
+			<p>&nbsp;</p>
+		</TD>
+	</TR>
+	{/section}
+	<TR CLASS="light">
+		<TD CLASS="fleftu" COLSPAN="4" WIDTH="99%" ALIGN="right">
+			&nbsp;
+		</TD>
+		<TD CLASS="frightu" WIDTH="1%">
+			&nbsp;
+		</TD>
+	</TR>
+</TABLE>
+{include file="footer.html"}

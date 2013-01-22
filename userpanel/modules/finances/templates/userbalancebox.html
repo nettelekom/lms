@@ -1,4 +1,19 @@
 <!--// $Id$ //-->
+<script language="JavaScript">
+<!--
+{literal}
+function confirmLink(theLink, message)
+{
+        var is_confirmed = confirm(message);
+
+        if (is_confirmed) {
+                theLink.href += '&is_sure=1';
+        }
+        return is_confirmed;
+}
+{/literal}
+-->
+</script>
 {box title="Your balance"}
 {$disable_invoices = check_conf('userpanel.disable_invoices')}
 <form name="invoices" action="?m=finances&f=invoice" method="POST" target="_blank">
@@ -10,6 +25,7 @@
 		<td width="1%" align="right">{trans("After:")}</td>
 		<td width="95%">{trans("Description:")}</td>
 		{if !$disable_invoices}
+		<td width="1%" align="right"></td>
 		<td width="1%" align="right"></td>
 		{/if}
 	</tr>
@@ -28,11 +44,16 @@
 			&nbsp;
 			{/if}
 		</td>
+                <td width="1%">
+                        {if $balancelist.details[balancelist]}<a href="?m=finances&amp;f=v_attachment&amp;docid={$balancelist.docid[balancelist]}" target="_blank" onclick="confirmLink(this,'Drukować szczegółowy biling ?');">Zał.</a>
+                        {else}&nbsp;
+                        {/if}
+                </td>
 		{/if}
 	</tr>
 	{sectionelse}
 	<tr>
-		<td align="center" width="100%" colspan="6">
+		<td align="center" width="100%" colspan="7">
 			<p>&nbsp;</p>
 			<p><b>{trans("No such transactions on your account.")}</b></p>
 			<p>&nbsp;</p>
@@ -41,7 +62,7 @@
 	{/section}
 	{if !$disable_invoices}
 	<tr class="darkest">
-		<td colspan="6" width="100%">
+		<td colspan="7" width="100%">
 			<table width="100%" cellpadding="0" cellspacing="0">
 			    <tr>
 				<td width="50%">

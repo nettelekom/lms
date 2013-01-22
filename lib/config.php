@@ -214,6 +214,26 @@ $DEFAULTS = array(
 		'default_mailserver_ip' => '127.0.0.1',
 		'default_mx' => 'localhost'
 	),
+	'voip' => array(
+		'enabled' => '1',
+		'taxid' => '1',
+		'pg_pass' => '',
+		'pg_host' => '',
+		'voip_as_host' => '127.0.0.1',
+		'voip_as_login' => 'asterisk',
+		'voip_as_pass' => '',
+		'voip_timeswitch' => '1',
+		'voip_set_remb' => '1',
+		'jpgraph' => '/usr/share/jpgraph',
+		'mondir' => '/var/spool/asterisk/monitor/',
+		'fax_outgoingdir' => '/var/spool/asterisk/fax/outgoing/',
+		'fax_incomingdir' => '/var/spool/asterisk/fax/incoming/',
+		'fax_statusdir' => '/var/spool/asterisk/outgoing_done/',
+		'mailboxdir' => '/var/spool/asterisk/voicemail/default/',
+		'dialplan_file' => '/var/spool/asterisk/virtualpbx/dialplan.conf',
+		'incvoipdir' => '/var/spool/asterisk/incvoip/',
+		'ivrdir' => '/var/spool/asterisk/ivr/'
+	),
 );
 
 foreach ($DEFAULTS as $section => $values)

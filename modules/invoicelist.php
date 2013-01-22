@@ -248,6 +248,7 @@ if($invoice = $SESSION->get('invoiceprint'))
         $SESSION->remove('invoiceprint');
 }
 
+$invoicelist=$voip->get_billing_details2($invoicelist);
 $SMARTY->assign('listdata',$listdata);
 $SMARTY->assign('pagelimit',$pagelimit);
 $SMARTY->assign('start',($page - 1) * $pagelimit);

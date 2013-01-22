@@ -125,7 +125,15 @@ elseif (isset($_POST['customerdata']))
 	        elseif($phone)
 	                $contacts[] = array('name' => $name, 'phone' => $phone, 'type' => $type);
 	}
-
+	if($customerdata['isvoip'] == 1)
+	{
+		if($customerdata['voippoczatekum'] != '' and (!preg_match('/^\d{4}-\d{2}-\d{2}$/',$customerdata['voippoczatekum']) or !checkdate(substr($customerdata['voippoczatekum'],5,2),substr($customerdata['voippoczatekum'],-2),substr($customerdata['voippoczatekum'],0,4))))
+			$error['voippoczatekum'] = trans('Incorrect date!');
+		if($customerdata['voipkoniecum'] != '' and (!preg_match('/^\d{4}-\d{2}-\d{2}$/',$customerdata['voipkoniecum']) or !checkdate(substr($customerdata['voipkoniecum'],5,2),substr($customerdata['voipkoniecum'],-2),substr($customerdata['voipkoniecum'],0,4))))
+			$error['voipkoniecum'] = trans('Incorrect date!');
+		if($customerdata['voippoczatekum'] != '' and $customerdata['voipkoniecum'] != '' and $customerdata['voipkoniecum'] < $customerdata['voippoczatekum'])
+			$error['voippoczatekum'] = trans('Incorrect date!');
+	}
 	if(!$error)
 	{
 		if($customerdata['cutoffstop'])
@@ -143,6 +151,7 @@ elseif (isset($_POST['customerdata']))
 			$customerdata['divisionid'] = 0;
 
 		$LMS->CustomerUpdate($customerdata);
+		if($customerdata['isvoip']) $voip->update_user($customerdata);
 
 		$DB->Execute('DELETE FROM imessengers WHERE customerid = ?', array($customerdata['id']));
 		if(isset($im))
@@ -182,6 +191,7 @@ elseif (isset($_POST['customerdata']))
 else
 {
 	$customerinfo = $LMS->GetCustomer($_GET['id']);
+	if($customerinfo['isvoip'] == 1) $customerinfo = $voip->GetCustomer($customerinfo, $_GET['id']);
 
 	if($customerinfo['cutoffstop'] > mktime(0,0,0))
 		$customerinfo['cutoffstop'] = floor(($customerinfo['cutoffstop'] - mktime(23,59,59))/86400);
@@ -202,6 +212,7 @@ $SESSION->save('backto', $_SERVER['QUERY_STRING']);
 
 $customerid = $customerinfo['id'];
 include(MODULES_DIR.'/customer.inc.php');
+include(MODULES_DIR.'/customer.voip.inc.php');
 
 $SMARTY->assign('customerinfo',$customerinfo);
 $SMARTY->assign('cstateslist',$LMS->GetCountryStates());

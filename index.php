@@ -139,6 +139,11 @@ require_once(LIB_DIR.'/LMS.class.php');
 require_once(LIB_DIR.'/Auth.class.php');
 require_once(LIB_DIR.'/accesstable.php');
 require_once(LIB_DIR.'/Session.class.php');
+if($CONFIG['voip']['enabled'] == 1)
+{
+	require_once(LIB_DIR.'/LMSVOIP.class.php');
+	require_once(LIB_DIR.'/floAPI.php');
+}
 
 // Initialize Session, Auth and LMS classes
 
@@ -147,6 +152,8 @@ $AUTH = new Auth($DB, $SESSION);
 $LMS = new LMS($DB, $AUTH, $CONFIG);
 $LMS->ui_lang = $_ui_language;
 $LMS->lang = $_language;
+if($CONFIG['voip']['enabled'] == 1)
+	$voip=new LMSVOIP($DB, $CONFIG['voip']);
 
 // Set some template and layout variables
 

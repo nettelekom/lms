@@ -2628,5 +2628,10 @@ $_LANG['Enter access start date in YYYY/MM/DD format. If you don\'t want to defi
 $_LANG['Enter access end date in YYYY/MM/DD format. If you don\'t want to define \'To\' date leave this field empty'] = 'Wprowadź datę do której ważność konta powinna obowiązywać lub zostaw to pole puste. Data powinna być w formacie RRRR/MM/DD';
 $_LANG['Last modification time:'] = 'Czas ostatniej modyfikacji:';
 $_LANG['Last modified by:'] = 'Ostatnio zmodyfikował:';
+$_LANG['Enter SIP account and press Enter'] = 'Wprowadź nazwę konta SIP i naciśnij Enter';
+$_LANG['SIP Search Results'] = 'Wyniki wyszukiwania kont SIP';
+$_LANG['No such SIP matching search criteria.'] = 'Brak kont SIP spełniających warunki wyszukiwania.';
+$_LANG['Are you sure, you want to delete SIP \\\'$0\\\' from database?'] = 'Jesteś pewien, że chcesz usunąć konto SIP \\\'$0\\\' z bazy danych?';
+$_LANG['Disk usage'] = 'Użycie przestrzeni dyskowej';
 
 ?>

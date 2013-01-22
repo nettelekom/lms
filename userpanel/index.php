@@ -26,7 +26,7 @@
 
 // REPLACE THIS WITH PATH TO YOUR CONFIG FILE
 
-$CONFIG_FILE = (is_readable('lms.ini')) ? 'lms.ini' : '/etc/lms/lms.ini';
+$CONFIG_FILE = (is_readable('../lms.ini')) ? '../lms.ini' : '/etc/lms/lms.ini';
 
 // PLEASE DO NOT MODIFY ANYTHING BELOW THIS LINE UNLESS YOU KNOW
 // *EXACTLY* WHAT ARE YOU DOING!!!
@@ -65,6 +65,7 @@ define('LIB_DIR', $CONFIG['directories']['lib_dir']);
 define('DOC_DIR', $CONFIG['directories']['doc_dir']);
 define('MODULES_DIR', $CONFIG['directories']['modules_dir']);
 define('SMARTY_COMPILE_DIR', $CONFIG['directories']['smarty_compile_dir']);
+$_LIB_DIR=LIB_DIR;
 
 // include required files
 
@@ -127,6 +128,11 @@ require_once(LIB_DIR.'/unstrip.php');
 require_once(LIB_DIR.'/common.php');
 require_once(LIB_DIR.'/LMS.class.php');
 
+if($CONFIG['voip']['enabled'] == 1)
+{
+	require_once(LIB_DIR.'/LMSVOIP.class.php');
+}
+
 $AUTH = NULL;
 $LMS = new LMS($DB, $AUTH, $CONFIG);
 
@@ -142,6 +148,10 @@ $SESSION = new Session($DB, $_TIMEOUT);
 $USERPANEL = new USERPANEL($DB, $SESSION, $CONFIG);
 $LMS->ui_lang = $_ui_language;
 $LMS->lang = $_language;
+if($CONFIG['voip']['enabled'] == 1)
+{
+	$voip=new LMSVOIP($DB,$CONFIG['voip']);
+}
 
 // Initialize modules
 
@@ -149,8 +159,19 @@ $dh  = opendir(USERPANEL_MODULES_DIR);
 while (false !== ($filename = readdir($dh))) {
     if ((preg_match('/^[a-zA-Z0-9]/',$filename)) && (is_dir(USERPANEL_MODULES_DIR.$filename)) && file_exists(USERPANEL_MODULES_DIR.$filename.'/configuration.php'))
     {
+	if($filename=='voip')
+        {
+        if($CONFIG['voip']['enabled'] == 1 and $voip->CustomerExists($SESSION->id))
+                {
+                @include(USERPANEL_MODULES_DIR.$filename.'/locale/'.$_language.'/strings.php');
+                include(USERPANEL_MODULES_DIR.$filename."/configuration.php");
+                }
+        }
+        else
+        {
 	@include(USERPANEL_MODULES_DIR.$filename.'/locale/'.$_ui_language.'/strings.php');
 	include(USERPANEL_MODULES_DIR.$filename.'/configuration.php');
+	}
     }
 };
 

@@ -1,0 +1,41 @@
+{include file="header.html"}
+<table width="100%" cellspacing="0" class="icu_tab">
+        <tr>
+                <td valign="top" width="100%">
+{box title="Książka adresowa"}
+<table width="100%">
+<tr><th>Nazwa</th><th>Numer</th><th colspan="2">Akcja</th></tr>
+{section name=a loop=$nrl}
+<TR>
+<td>{$nrl[a].name}</td>
+<td>{$nrl[a].number}</td>
+<td><a href="?m=voip&f=addressbookd&gr={$smarty.get.gr}&edit={$nrl[a].id}">Edytuj</a></td>
+<td><a href="?m=voip&f=addressbookd&gr={$smarty.get.gr}&del={$nrl[a].id}" onclick="return confirm('Na pewno?');">Usuń</a></td>
+
+{/section}
+</table>
+{/box}
+</td></tr>
+        <tr>
+                <td valign="top" width="100%">
+{if $groupaction}
+{assign var='title' value="Książka adresowa - Edytuj"}
+{else}
+{assign var='title' value="Książka adresowa - Dodaj"}
+{/if}
+{box title=$title}
+{if $error}<span style="color:#FF0000; font-weight:bold;">{$error}</span>{/if}
+<form action="?m=voip&f=addressbookd&gr={$smarty.get.gr}" method="post">
+Nazwa: <input type="text" name="nr[name]" value="{$nr.name}">
+&nbsp;
+Numer: <input type="text" name="nr[number]" value="{$nr.number}">
+&nbsp;
+<input type="hidden" name="nr[id]" value="{$nr.id}">
+<input type="submit" value="Zapisz">
+</form>
+{/box}
+</td>
+</tr>
+</table>
+{include file="footer.html"}
+

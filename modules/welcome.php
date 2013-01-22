@@ -54,7 +54,10 @@ if (!check_conf('privileges.hide_sysinfo')) {
 }
 
 if (!check_conf('privileges.hide_summaries')) {
-	$SMARTY->assign('customerstats', $LMS->CustomerStats());
+	$customerstats=$LMS->CustomerStats();
+	if(check_conf('voip.enabled'))
+		$voip->CustomerStats($customerstats);
+	$SMARTY->assign('customerstats',$customerstats);
 	$SMARTY->assign('nodestats', $LMS->NodeStats());
 }
 

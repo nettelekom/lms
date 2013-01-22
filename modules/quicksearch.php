@@ -71,6 +71,9 @@ if(!empty($_POST['qscustomer'])) {
 } elseif(!empty($_POST['qsaccount'])) {
 	$mode = 'account'; 
 	$search = urldecode(trim($_POST['qsaccount']));
+} elseif(!empty($_POST['qssip'])) {
+	$mode = 'sip'; 
+	$search = urldecode(trim($_POST['qssip']));
 } elseif(!empty($_GET['what'])) {
 	$search = urldecode(trim($_GET['what']));
 	$mode = $_GET['mode'];
@@ -376,6 +379,50 @@ switch($mode)
 		$SESSION->save('accountsearch', $search);
 		$target = '?m=accountsearch&s=1';
 	break;
+
+	case 'sip':
+		if(isset($_GET['ajax'])) // support for AutoSuggest
+		{
+			$candidates = $voip->QSearch($search);
+			
+			$eglible=array(); $actions=array(); $descriptions=array();
+			if ($candidates)
+			foreach($candidates as $idx => $row) {
+				$actions[$row['id']] = '?m=v_nodeinfo&id='.$row['id'];
+				$eglible[$row['id']] = escape_js($row['name']);
+				$descriptions[$row['id']] = escape_js($row['surname'].' '.$row['forename']);
+			}
+			header('Content-type: text/plain');
+			if ($eglible) {
+				print preg_replace('/$/',"\");\n","this.eligible = new Array(\"".implode('","',$eglible));
+				print preg_replace('/$/',"\");\n","this.descriptions = new Array(\"".implode('","',$descriptions));
+				print preg_replace('/$/',"\");\n","this.actions = new Array(\"".implode('","',$actions));
+			} else {
+				print "false;\n";
+			}
+			exit;
+		}
+
+		if(is_numeric($search) && !strstr($search, '.')) // maybe it's node ID
+		{
+			if($nodeid = $DB->GetOne('SELECT id FROM nodes WHERE id = '.$search))
+			{
+				$target = '?m=nodeinfo&id='.$nodeid;
+				break;
+			}
+		}
+
+		// use nodesearch module to find all matching nodes
+		$s['name'] = $search;
+		
+		$SESSION->save('v_nodesearch', $s);
+		$SESSION->save('nslk', 'OR');
+
+		$SESSION->remove('nslp');
+
+		$target = '?m=v_nodesearch&search';
+	break;
+	
 }
 
 $SESSION->redirect(!empty($target) ? $target : '?'.$SESSION->get('backto'));

@@ -1,0 +1,9 @@
+Jest to aktualna (20130122) wersja LMS-git z nałożoną łatką VoiP
+Nettelekom.  Jest to jednocześnie ostatnia wersja wykorzystująca sockety i
+stunnel do połączenia z centralą. Wszystkie nowe funkcjonalności i poprawki
+będą wprowadzane do wersji opartej na webserwisach. Ta gałąź zostaje
+zamrożona - fixy będą wprowadzane tylko w przypadku stwierdzenia poważnych
+błędów funkcjonalnych.
+Przed instalacją proszę zapoznać się z plikiem lms.ini w katalogu sample i
+z nowymi opcjami konfiguracyjnymi w sekcji [voip]. Domyślne wartości tych
+opcji powinny być prawidłowe w większości przypadków.

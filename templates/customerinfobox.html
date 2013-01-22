@@ -261,7 +261,7 @@
             </TABLE>
         </TD>
     </TR>
-
+{include file="v_customerinfobox.html"}
                                         </TABLE>
 				</TD>
 				<TD WIDTH="50%" style="vertical-align:top;">
@@ -367,6 +367,13 @@
 				<A HREF="?m=customeredit&id={$customerinfo.id}&action=recover">{trans("Restore")} <IMG SRC="img/recover.gif" ALT="[ {trans("Restore")} ]"></A>
 			{else}
 				<NOBR>
+				{if check_conf('voip.enabled', 0) eq 1}
+				{if ! $isvoip and $smarty.get.m|truncate:2:"" neq 'v_'}
+					<A HREF="?m=v_export&id={$customerinfo.id}">Eksport do VOIP</A> <IMG src="img/phone.gif"></A> 
+				{else}
+					<A HREF="?m=v_voipremove&id={$customerinfo.id}" onclick="return confirm('Na pewno ?');">Usuń z VOIP</A> <IMG src="img/phone.gif" alt=""></A>
+				{/if}
+				{/if}
 				<A HREF="?m=rtsearch&id={$customerinfo.id}">{trans("Tickets")}</A> <IMG src="img/ticket.gif" alt="[ {trans("Tickets")} ]"></A>
 				<A href="?m=accountlist&u={$customerinfo.id}">{trans("Accounts")} <IMG src="img/account.gif" alt="[ {trans("Accounts")} ]"></A>
 				<A href="?m=domainlist&c={$customerinfo.id}">{trans("Domains")} <IMG src="img/network.gif" alt="[ {trans("Domains")} ]"></A>

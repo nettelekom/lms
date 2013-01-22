@@ -33,6 +33,8 @@ if(isset($_GET['ownerid']))
 	{
 		$nodedata['ownerid'] = $_GET['ownerid'];
 		$customerinfo = $LMS->GetCustomer($_GET['ownerid']);
+		if($customerinfo['isvoip'] == 1)
+			$customerinfo = $voip->GetCustomer($customerinfo, $_GET['ownerid']); 
 		$SMARTY->assign('customerinfo', $customerinfo);
 	}
 	else
@@ -212,6 +214,7 @@ $layout['pagetitle'] = trans('New Node');
 if($customerid = $nodedata['ownerid'])
 {
 	include(MODULES_DIR.'/customer.inc.php');
+	include(MODULES_DIR.'/customer.voip.inc.php');
 }
 else
 	$SMARTY->assign('allnodegroups', $LMS->GetNodeGroupNames());

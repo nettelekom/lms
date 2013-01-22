@@ -86,4 +86,9 @@ function module_main()
     include 'main.php';
 }
 
+function module_v_attachment()
+{
+    include 'v_attachment.php';
+}
+
 ?>

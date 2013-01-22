@@ -182,6 +182,12 @@ class Session {
 			return NULL;
 		}
 	}
+
+	function redirect($location)
+	{
+		header('Location: '.$location);
+		die;
+	}
 }
 
 ?>

@@ -1,0 +1,69 @@
+<TABLE WIDTH="100%" CELLPADDING="3">
+	<TR CLASS="DARK">
+		<TD class="fleftu" width="99%" onclick="showOrHide('cdrpanel');" style="border-right:solid black 1px;">
+			<IMG src="img/phone.gif" alt="">
+			<B><A name="helpdesk">Połączenia wychodzące z ostatnich 24 godzin</A></B>
+		</TD>
+		</TR>
+	<TR id="cdrpanel" style="display:none;">
+		<TD WIDTH="100%" class="fall">
+<TABLE cellpadding="3" WIDTH="100%">
+	<TR class="dark">
+		<TD class="fleftu" WIDTH="20%" NOWRAP>
+			<IMG src="img/phone.gif" alt="">&nbsp;{t}ID:{/t}<BR>
+			<IMG src="img/calendar.gif" alt="">&nbsp;<B>Data</B>:
+		</TD>
+		<TD class="fbt" WIDTH="16%" NOWRAP>
+			<B>Z numeru:</B>
+		</TD>
+		<TD class="fbt" WIDTH="16%" NOWRAP>
+			<B>Na numer:</B>
+		</TD>
+		<TD class="fbt" WIDTH="16%" NOWRAP>
+			<B>Czas połączenia:</B>
+		</TD>
+		<TD class="fbt" WIDTH="16%" NOWRAP>
+			<B>Koszt:</B>
+		</TD>
+		<TD class="frightu" WIDTH="16%" NOWRAP>
+			<B>Opłata:</B>
+		</TD>
+	</TR>
+	{cycle values="light,lucid" print=false}
+	{section name=cdr loop=$cdr}
+	<TR class="{cycle}{if $queue[ticket].state == 2} blend{/if}" onmouseover="addClass(this, 'highlight')" onmouseout="removeClass(this, 'highlight')">
+		<TD class="fleft">
+{$cdr[cdr].id}<br><b>{$cdr[cdr].calldate}</b>
+		</TD>
+		<TD>
+{$cdr[cdr].src}
+		</TD>
+		<TD>
+{$cdr[cdr].dst}
+		</TD>
+		<TD>
+{$cdr[cdr].seconds}
+		</TD>
+		<TD>
+{$cdr[cdr].tmp_cost|money_format}
+		</TD>
+		<TD class="fright">
+{$cdr[cdr].cost|money_format}
+		</TD>
+	</TR>
+	{sectionelse}
+	<TR>
+		<TD COLSPAN="6" class="flr" ALIGN="center">
+			<p>&nbsp;</p>
+			<p><B>Brak połączeń w wybranym okresie.</B></p>
+			<p>&nbsp;</p>
+		</TD>
+	</TR>
+	{/section}
+	<TR class="light">
+		<TD COLSPAN="6" class="fall" ALIGN="right">
+			<A HREF="?m=v_cdr&customerid={$customerinfo.id}">Więcej... <IMG src="img/save.gif" ALT=""></A>
+		</TD>
+	</TR>
+</TABLE>
+</TD></TR></TABLE>

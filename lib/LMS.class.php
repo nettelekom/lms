@@ -691,6 +691,9 @@ class LMS {
 						$result['contacts'][$idx]['typestr'] = implode('/', $types);
 				}
 
+			if($this->CONFIG['voip']['enabled'] == 1 && $this->DB->GetOne('SELECT COUNT(lmsid) FROM v_exportedusers WHERE lmsid = ?', array($result['id'])) > 0)
+				$result['isvoip'] = 1;
+
 			return $result;
 		}
 		else
@@ -780,6 +783,12 @@ class LMS {
 				break;
 			case 12: $indebted3 = 1;
 				break;
+		}
+
+		if($state == 99)
+		{
+			$searchargs[] = ' c.id in ('.$network.')';
+			unset($network);
 		}
 
 		if ($network)
@@ -1059,6 +1068,15 @@ class LMS {
 			$saldolist['balance'] = 0;
 			$saldolist['total'] = 0;
 			$i = 0;
+
+			foreach($tslist as $key=>$val)
+			{
+				if($this->DB->GetOne('select COUNT(id) from billing_details WHERE documents_id = ?', array($val['docid'])) > 0)
+				$val['details'] = 1;
+				else $val['details'] = 0;
+				$tslist[$key] = $val;
+			}
+			reset($tslist);
 
 			foreach ($tslist as $row) {
 				// old format wrapper

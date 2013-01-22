@@ -1,0 +1,62 @@
+{include file="header.html"}
+<!--// $Id: tarifflist.html,v 1.59 2005/06/12 11:27:22 alec Exp $ //-->
+<H1>{$layout.pagetitle}</H1>
+<TABLE WIDTH="100%" CELLPADDING="5">
+	<TR class="dark">
+		<TD WIDTH="1%" CLASS="fleftu">
+			<B>Od:</B>
+		</TD>
+		<TD WIDTH="1%" VALIGN="top" CLASS="fbt" align="right">
+			<B>Do:</B>
+		</TD>
+		<TD NOWRAP WIDTH="96%" VALIGN="top" CLASS="fbt" align="center">
+			<B>Dni:</B>
+		</TD>	
+		<TD WIDTH="1%" VALIGN="top" CLASS="fbt" align="right">
+			<NOBR><B>Cena netto za minutę:</B></NOBR>
+		</TD>
+		<TD WIDTH="1%" CLASS="frightu" ALIGN="RIGHT">
+			<A HREF="?m=v_trunkhoursadd&c={$listdata.c}&id={$listdata.id}&id_rates={$smarty.get.id_rates}">Dodaj</A>
+		</TD>
+	</TR>
+	{cycle values="light,lucid" print=false}
+	{section name=hours loop=$hours}
+	<TR class="{cycle}" onmouseover="addClass(this, 'highlight');{if $hours[hours].overlib} return overlib('{$hours[hours].overlib}',HAUTO,VAUTO,OFFSETX,15,OFFSETY,15);{/if}" onmouseout="removeClass(this, 'highlight');{if $hours[hours].overlib} nd();{/if}">
+		<TD CLASS="fleft">
+			{$hours[hours].from}
+		</TD>
+		<TD VALIGN="top" align="right">
+			{$hours[hours].to}
+		</TD>
+		<TD VALIGN="top" align="center">
+		{$hours[hours].days}
+		</TD>
+		<TD VALIGN="top" align="right" >
+{$hours[hours].price} 
+		</TD>
+		<TD WIDTH="1%" CLASS="fright" ALIGN="right">
+			<NOBR>
+<A HREF="?m=v_trunkhourdelete&id={$listdata.id}&c={$listdata.c}&count={$smarty.section.hours.index_next}&id_rates={$smarty.get.id_rates}" onClick="return confirmLink(this,'{t}Are you sure?{/t}');"><IMG SRC="img/delete.gif" ALT="[ {t}Delete{/t} ]"></A>
+				<A HREF="?m=v_trunkhouredit&id={$listdata.id}&c={$listdata.c}&count={$smarty.section.hours.index_next}&id_rates={$smarty.get.id_rates}"><IMG SRC="img/edit.gif" ALT="[ {t}Edit{/t} ]"></A>
+			</NOBR>
+		</TD>
+	</TR>
+	{sectionelse}
+	<TR>
+		<TD COLSPAN="5" ALIGN="center" CLASS="fall">
+			<p>&nbsp;</p>
+			<p><B>{t}No such subscriptions in database.{/t}</B></p>
+			<p>&nbsp;</p>
+		</TD>
+	</TR>
+	{/section}
+	<TR CLASS="light">
+		<TD CLASS="fleftu" COLSPAN="4" WIDTH="99%" ALIGN="right">
+			&nbsp;
+		</TD>
+		<TD CLASS="frightu" WIDTH="1%">
+			&nbsp;
+		</TD>
+	</TR>
+</TABLE>
+{include file="footer.html"}

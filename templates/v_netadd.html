@@ -1,0 +1,38 @@
+{include file="header.html"}
+<!--// $Id: netadd.html,v 1.33 2005/12/21 19:40:14 alec Exp $ //-->
+<H1>{$layout.pagetitle}</H1>
+<P><FORM METHOD="POST" ACTION="?m=v_netadd" NAME="netadd">
+<INPUT type="submit" class="hiddenbtn">
+<TABLE WIDTH="100%" CELLPADDING="3">
+	<TR CLASS="DARK" COLSPAN="2">
+		<TD WIDTH="1%" CLASS="fleftu" NOWRAP>
+			<IMG SRC="img/network.gif" ALT="">
+			<B>{t}Network name:{/t}</B>
+		</TD>
+		<TD CLASS="frightu">
+			<INPUT TYPE="TEXT" SIZE="23" NAME="netadd[name]" VALUE="{$netadd.name}" {tip trigger="name" bold=1}>
+		</TD>
+	</TR>
+	<TR CLASS="LIGHT">
+		<TD WIDTH="1%" CLASS="fleft" NOWRAP><IMG SRC="img/ip.gif" ALT=""> <B>Początek</B></TD>
+		<TD CLASS="fright"><INPUT TYPE="TEXT" SIZE="23" NAME="netadd[start]" VALUE="{$netadd.start}" {tip trigger="start"}><B>
+		</TR>
+	<TR CLASS="LIGHT">
+		<TD WIDTH="1%" CLASS="fleft" NOWRAP><IMG SRC="img/mac.gif" ALT=""> <B>Ilość numerów</B></TD>
+		<TD CLASS="fright"><INPUT TYPE="TEXT" SIZE="23" NAME="netadd[count]" VALUE="{$netadd.count}" {tip trigger="count"}></TD>
+	</TR>
+	<TR CLASS="LIGHT">
+			<TR CLASS="LIGHT">
+		<TD width="100%" CLASS="fbottomu" COLSPAN="2" align="right">
+			<A HREF="javascript:document.netadd.submit();" accesskey="s">{t}Submit{/t} <IMG SRC="img/save.gif" ALT=""></A>
+			<A HREF="?m=v_netlist">{t}Cancel{/t} <IMG SRC="img/cancel.gif" ALT=""></A>
+		</TD>
+	</TR>
+</TABLE>
+</FORM></P>
+<SCRIPT language="javaScript">
+<!--
+document.forms['netadd'].elements['netadd[name]'].focus();
+//-->
+</SCRIPT>
+{include file="footer.html"}

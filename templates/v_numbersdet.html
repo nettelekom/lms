@@ -1,0 +1,48 @@
+{include file="header.html"}
+<!--// $Id: tarifflist.html,v 1.59 2005/06/12 11:27:22 alec Exp $ //-->
+<H1>{$layout.pagetitle}</H1>
+<TABLE WIDTH="100%" CELLPADDING="5">
+	<TR class="dark">
+		<TD WIDTH="93%" CLASS="fleftu">
+			<IMG SRC="img/money.gif" ALT="">&nbsp;<B>Wzorzec</B>
+		</TD>
+		<TD WIDTH="1%" VALIGN="top" CLASS="fbt" align="right">
+			{t}ID:{/t}
+		</TD>
+		<TD WIDTH="1%" CLASS="frightu" ALIGN="RIGHT">
+			<a href="?m=v_numbersdetadd&id_rates={$rate.id}">Nowy</a>
+		</TD>
+	</TR>
+	{cycle values="light,lucid" print=false}
+	{section name=n loop=$n}
+	<TR class="{cycle}" onmouseover="addClass(this, 'highlight')" onmouseout="removeClass(this, 'highlight')">
+		<TD WIDTH="93%" CLASS="fleft" class="fleft">
+			<IMG SRC="img/money.gif" ALT="">&nbsp;<B>{$n[n].pattern}</B>
+		</TD>
+		<TD WIDTH="1%" VALIGN="top" align="right">
+			({$n[n].id})
+		</TD>
+		<TD WIDTH="1%" CLASS="fright" ALIGN="right"><nobr>
+<a href="?m=v_numbersdetadd&id={$n[n].id}&id_rates={$rate.id}"><img src="img/edit.gif" border="0" alt="Edytuj"></a>
+<a href="?m=v_numbersdetdel&id={$n[n].id}&id_rates={$rate.id}" onClick="return confirmLink(this,'Jesteś pewien ?')"><img src="img/delete.gif" border="0" alt="Usuń"></a>
+</nobr></TD>
+	</TR>
+	{sectionelse}
+	<TR>
+		<TD COLSPAN="3" ALIGN="center" CLASS="fall">
+			<p>&nbsp;</p>
+			<p><B>Brak wzorców.</B></p>
+			<p>&nbsp;</p>
+		</TD>
+	</TR>
+	{/section}
+	<TR CLASS="light">
+		<TD CLASS="fleftu" COLSPAN="2" WIDTH="99%" ALIGN="right">
+			&nbsp;
+		</TD>
+		<TD CLASS="frightu" WIDTH="1%">
+			&nbsp;
+		</TD>
+	</TR>
+</TABLE>
+{include file="footer.html"}
