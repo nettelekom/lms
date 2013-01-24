@@ -70,17 +70,4 @@
 </table>
 </body>
 {/if}
-{if $part eq "down"}
-<body>
-<table cellpadding="5" width="100%">
-	<tr>
-		<td class="fall light" align="center">
-			<B>{if $network.page > 1}<A HREF="javascript:void(0);" onclick="parent.location.href='?m=v_chooseip&netid={$netid}&page={math equation="x - 1" x=$network.page}'; return false;">&laquo;&laquo;&laquo;</A>{else}<FONT CLASS="BLEND">&laquo;&laquo;&laquo;</FONT>{/if}
-			{t 0=$network.page 1=$network.pages}Page $0 of $1{/t}
-		{if $network.page < $network.pages}<A HREF="javascript:void(0);" onclick="parent.location.href='?m=v_chooseip&netid={$netid}&page={math equation="x + 1" x=$network.page}'; return false;">&raquo;&raquo;&raquo;</A>{else}<FONT CLASS="BLEND">&raquo;&raquo;&raquo;<FONT>{/if}</B>
-		</td>
-	</tr>
-</table>
-</body>
-{/if}
 </html>	

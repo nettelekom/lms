@@ -25,13 +25,9 @@
  */
 
 $nodedata = $_POST['nodedata'];
-($voip->CustomerExists($_GET['ownerid']) ? $v=true : $v=false);
-$SMARTY->assign('isvoip',$v);
 
 if(isset($nodedata))
 {
-	//var_dump($nodedata);exit;
-
 	foreach($nodedata as $key => $value)
 		$nodedata[$key] = trim($value);
 
@@ -49,7 +45,7 @@ if(isset($nodedata))
 		$error['name'] = trans('Node name is too long (max.16 characters)!');
 	elseif($voip->GetNodeIDByName($nodedata['name']))
 		$error['name'] = trans('Specified name is in use!');
-	elseif(!eregi('^[_a-z0-9-]+$',$nodedata['name']))
+	elseif(!preg_match('/^[_a-z0-9-]+$/',$nodedata['name']))
 		$error['name'] = trans('Specified name contains forbidden characters!');		
 
 	
@@ -61,6 +57,8 @@ if(isset($nodedata))
 	elseif($LMS->GetCustomerStatus($nodedata['ownerid']) != 3)
 		$error['customer'] = trans('Selected customer is not connected!');
 	if(!$nodedata['id_tariffs']) $error['id_tariffs'] = 'Musisz wybrać taryfę!';
+	if($nodedata['sippostcode'] && !preg_match('/^\d{2}-\d{3}$/', $nodedata['sippostcode']))
+		$error['sippostcode'] = 'Błędny wpis!';
 
 	if(!preg_match('/^[0-9.,\/]+$/',$nodedata['permit'])) $error['permit']='Błędny wpis!';
 		else
@@ -116,13 +114,11 @@ $nodedata['access'] = 1;
 if($_GET['ownerid'] && $LMS->CustomerExists($_GET['ownerid']) > 0)
 {
 	$nodedata['ownerid'] = $_GET['ownerid'];
-	$customerinfo = $LMS->GetCustomer($_GET['ownerid']);
-	if($v) $customerinfo=$voip->GetCustomer($customerinfo,$_GET['ownerid']);
+	$customerid = $_GET['ownerid'];
+	include(MODULES_DIR . '/customer.inc.php');
+	include(MODULES_DIR.'/customer.voip.inc.php');
 }
 
-//if(isset($_GET['prename']) && $nodedata['name']=='')
-//	$nodedata['name'] = $_GET['prename'];
-		
 if(isset($_GET['preip']) && $nodedata['name']=='')
 	$nodedata['name'] = $_GET['preip'];
 
@@ -130,16 +126,6 @@ $layout['pagetitle'] = trans('Nowe konto SIP');
 
 $customers = $voip->GetCustomerNames();
 
-if($nodedata['ownerid'])
-{
-	$SMARTY->assign('balancelist', $LMS->GetCustomerBalanceList($nodedata['ownerid']));
-	$SMARTY->assign('assignments', $LMS->GetCustomerAssignments($nodedata['ownerid']));
-	$SMARTY->assign('customergroups', $LMS->CustomergroupGetForCustomer($nodedata['ownerid']));
-	$SMARTY->assign('othercustomergroups', $LMS->GetGroupNamesWithoutCustomer($nodedata['ownerid']));
-	$documents = $LMS->GetDocuments($nodedata['ownerid'], 10);
-	$taxeslist = $LMS->GetTaxes();
-	$tariffs = $LMS->GetTariffs();
-}
 $SMARTY->assign('busy_action',array('busy'=>'Sygnał zajętości','voicemail'=>'Poczta głosowa','forward'=>'Przekieruj'));
 $SMARTY->assign('unavail_action',array('unavail'=>'Sygnał niedostępności','voicemail'=>'Poczta głosowa','forward'=>'Przekieruj'));
 $SMARTY->assign('yesno',array('no'=>'Nie','yes'=>'Tak'));
@@ -148,12 +134,8 @@ $SMARTY->assign('nat',array('yes'=>'Tak','no'=>'Nie','never'=>'Nigdy','route'=>'
 $SMARTY->assign('trunks_allowed',$voip->get_trunks_allowed());
 $SMARTY->assign('id_tariffs',$voip->get_id_tariffs());
 $SMARTY->assign('id_subscriptions',$voip->get_id_subscriptions());
-$SMARTY->assign('tariffs',$tariffs);
-$SMARTY->assign('taxeslist',$taxeslist);
-$SMARTY->assign('documents',$documents);
 $SMARTY->assign('customers',$customers);
 $SMARTY->assign('error',$error);
-$SMARTY->assign('customerinfo',$customerinfo);
 $SMARTY->assign('nodedata',$nodedata);
 $SMARTY->display('v_nodeadd.html');
 
