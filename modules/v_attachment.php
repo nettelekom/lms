@@ -15,8 +15,6 @@ $el=array();
 $el['L.p.']=$i++;
 $el['Nazwa us³ugi']=iconv('UTF-8','ISO-8859-2//TRANSLIT',$val['name']);
 $el['Liczba jedn.']='1.00';
-//$el['Cena jedn.']=$val['value'];
-//$el['Stawka VAT']='22,00';
 $el['Warto¶æ netto']=$val['value'];
 $el['VAT']=number_format(round($val['value']*($tax/100),2),2,'.','');
 $el['Warto¶æ brutto']=number_format($val['value']+$el['VAT'],2,'.','');
@@ -55,7 +53,7 @@ function at_details($id)
 {
 global $DB,$voip,$tax;
 $res=$DB->GetRow('select cdate,customerid from documents where id=?',array($id));
-$data=$voip->GetBilling($res['cdate'],$res['customerid']);
+$data=$voip->wsdl->GetBilling($res['cdate'],$res['customerid']);
 $out=array();$lp=1;
 if(is_array($data)) foreach($data as $val)
 {

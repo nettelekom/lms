@@ -153,7 +153,10 @@ $LMS = new LMS($DB, $AUTH, $CONFIG);
 $LMS->ui_lang = $_ui_language;
 $LMS->lang = $_language;
 if($CONFIG['voip']['enabled'] == 1)
+{
 	$voip=new LMSVOIP($DB, $CONFIG['voip']);
+	$layout['v_errors'] =& $voip->errors;
+}
 
 // Set some template and layout variables
 

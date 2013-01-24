@@ -732,11 +732,11 @@ if(isset($CONFIG['voip']['enabled']) && $CONFIG['voip']['enabled'] == 1)
 					'link' => '?m=v_cdr',
 					'tip' => 'Lista połączeń wychodzących',
 					'prio' => '120'),
-				array(
-					'name' => 'Bilans kosztów',
+/*				array(
+TEMPORARY DISABLED			'name' => 'Bilans kosztów',
 					'link' => '?m=v_balance',
 					'tip' => 'Bilans kosztów',
-					'prio' => '130'),
+					'prio' => '130'),*/
 				array(
 					'name' => 'Lista stref numeracyjnych',
 					'link' => '?m=v_netlist',

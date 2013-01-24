@@ -29,32 +29,33 @@ if($customerinfo['isvoip'] == 1)
 	$v = TRUE;
 	$SMARTY->assign('isvoip', TRUE);
 
-        $customerinfo = $voip->GetCustomer($customerinfo, $customerid);
+        $customerinfo = $voip->wsdl->GetCustomer($customerinfo, $customerid);
 	if($setl = $CONFIG['voip']['voip_set_remb'])
 	{
 		if(date('Y-m-d', strtotime('+'.$setl.' month'))>=$customerinfo['voipkoniecum'])
 			$SMARTY->assign('setl',$setl);
 	}
-        $customersip = $voip->GetCustomerNodes($customerid);
-	$customersip['ownerid'] = $_GET['id'];
+        $customersip = $voip->wsdl->GetCustomerNodes($customerid);
+	//var_dump($customersip);exit;
+	$customersip['ownerid'] = $customerid;
 	$SMARTY->assign('customersip', $customersip);
-	$SMARTY->assign('cdr', $voip->GetLastUserCdr($customerid));
+	$SMARTY->assign('cdr', $voip->wsdl->GetLastUserCdr($customerid));
 	if($customerinfo['woj'] && $customerinfo['pow'] && $customerinfo['mia'])
 	{
-		$tmp = $voip->list_woj();
+		$tmp = $voip->wsdl->list_woj();
 		$geoloc = $tmp[$customerinfo['woj']];
-		$tmp = $voip->list_pow($customerinfo['woj']);
+		$tmp = $voip->wsdl->list_pow($customerinfo['woj']);
 		$geoloc .= ' - &gt; ' . $tmp[$customerinfo['pow']];
-		$tmp = $voip->list_mia($customerinfo['pow']);
+		$tmp = $voip->wsdl->list_mia($customerinfo['pow']);
 		$geoloc .= ' - &gt; ' . $tmp[$customerinfo['mia']];
 		$tmp = null;
 	}
 	else $geoloc = '<B>BRAK !! KONIECZNIE UZUPEŁNIJ !!</B>';
 	$SMARTY->assign('geoloc', $geoloc);
-	$SMARTY->assign('id_tariffs', $voip->get_id_tariffs());
-	$SMARTY->assign('id_subscriptions', $voip->get_id_subscriptions());
-	$SMARTY->assign('woj',$voip->list_woj());
-	$SMARTY->assign('pow',$voip->list_pow($customerinfo['woj']));
-	$SMARTY->assign('mia',$voip->list_mia($customerinfo['pow']));
+	$SMARTY->assign('id_tariffs', $voip->wsdl->get_id_tariffs());
+	$SMARTY->assign('id_subscriptions', $voip->wsdl->get_id_subscriptions());
+	$SMARTY->assign('woj',$voip->wsdl->list_woj());
+	$SMARTY->assign('pow',$voip->wsdl->list_pow($customerinfo['woj']));
+	$SMARTY->assign('mia',$voip->wsdl->list_mia($customerinfo['pow']));
 }
 ?>

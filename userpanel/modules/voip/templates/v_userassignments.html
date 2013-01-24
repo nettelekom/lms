@@ -1,20 +1,20 @@
 {box title="Konta SIP"}
 <table style="width: 100%;" cellpadding="3">
 	<tr class="darkest">
-		<td width="1%" class="nobr"><b>Numer</b></td>
-		<td width="1%" class="nobr" align="right">{t}Value:{/t}</td>
-		<td width="1%" class="nobr">Abonament</td>
-		<td width="1%" class="nobr">{t}Accounting day:{/t}</td>
-		<td width="1%" class="nobr" colspan="4">Ustawienia</td>
+		<td width="1%" class="nobr" align="center"><b>Numer</b></td>
+		<td width="1%" class="nobr" align="center">Wartość netto:</td>
+		<td width="1%" class="nobr" align="center">Abonament</td>
+		<td width="1%" class="nobr" align="center">{t}Accounting day:{/t}</td>
+		<td width="1%" class="nobr" colspan="4" align="center">Ustawienia</td>
 	</tr>
 	{foreach from=$assignments item=assignment}
 	<tr class="dark">
-		<td class="nobr"><b>
+		<td class="nobr" align="right"><b>
 		{$assignment.name}
 		</b></td>
 		<td class="nobr" align="right">{$assignment.value|money_format}</td>
 		<td class="nobr" align="right">{$assignment.subscription}</td>
-		<td class="nobr">{$assignment.period} ({$assignment.at})</td>
+		<td class="nobr" align="right">{$assignment.period} ({$assignment.at})</td>
 		<td class="nobr"><a href="?m=voip&f=settings&id={$assignment.id}">Edytuj</a></td>
 		<td><a href="?m=voip&f=allowedrates&id={$assignment.id}">Dozwolone strefy</a></td>
 		<td><a href="?m=voip&f=cost&id={$assignment.id}">Sprawdź koszt połączenia</a></td>
@@ -33,7 +33,7 @@
 	<tr class="darkest">
 		<td align="right"><b>{t}Total:{/t}</b></td>
 		<td class="nobr" align="right">{sum array=$assignments column="value" string_format=$LANGDEFS.$_language.money_format}</td>
-		<td class="nobr" align="right">({sum array=$assignments column="discounted_value" string_format=$LANGDEFS.$_language.money_format})</td>
+		<td class="nobr" align="right"></td>
 		<td>&nbsp;</td>
 <td colspan="4">&nbsp;</td>
 	</tr>

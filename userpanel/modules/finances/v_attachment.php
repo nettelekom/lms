@@ -54,7 +54,7 @@ function at_details($id)
 {
 global $DB,$voip,$tax;
 $res=$DB->GetRow('select cdate,customerid from documents where id=?',array($id));
-$data=$voip->GetBilling($res['cdate'],$res['customerid']);
+$data=$voip->wsdl->GetBilling($res['cdate'],$res['customerid']);
 $out=array();$lp=1;
 if(is_array($data)) foreach($data as $val)
 {

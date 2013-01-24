@@ -103,7 +103,7 @@ unset($cdr['sum_tmp_cost']);
 $listdata['zysk']=$cdr['zysk'];
 unset($cdr['zysk']);
 $listdata['totalpos'] = sizeof($cdr);
-$SMARTY->assign('customers', $voip->GetCustomerNames());
+$SMARTY->assign('customers', $voip->wsdl->GetCustomerNames());
 $SMARTY->assign('listdata',$listdata);
 $SMARTY->assign('rategroups',$voip->rategroups);
 $SMARTY->assign('start',$start);

@@ -69,7 +69,7 @@ if (! isset($_GET['page']))
 	    
 if($s==99)
 {
-$ids=$voip->GetCustomerList();
+$ids=$voip->wsdl->GetCustomerList();
 if($ids) $customerlist = $LMS->GetCustomerList($o, $s, $ids, $g, NULL, NULL, 'AND', $ng, $d);
 	else $customerlist=array();
 }

@@ -232,7 +232,10 @@ $DEFAULTS = array(
 		'mailboxdir' => '/var/spool/asterisk/voicemail/default/',
 		'dialplan_file' => '/var/spool/asterisk/virtualpbx/dialplan.conf',
 		'incvoipdir' => '/var/spool/asterisk/incvoip/',
-		'ivrdir' => '/var/spool/asterisk/ivr/'
+		'ivrdir' => '/var/spool/asterisk/ivr/',
+		'wsdlurl' => 'https://soap.nettelekom.pl/voip.wsdl',
+		'wsdllogin' => '',
+		'wsdlpassword' => ''
 	),
 );
 

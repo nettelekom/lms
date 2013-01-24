@@ -1,11 +1,11 @@
 <?php
 if($_GET['id_rates'])
 {
-	$rate=$voip->getratebyid($_GET['id_rates']);
-	$layout['pagetitle'] = $voip->GetCennName($_GET['id']).' - '.$rate[0]['desc'].' - edytuj godziny';
+	$rate=$voip->wsdl->getratebyid($_GET['id_rates']);
+	$layout['pagetitle'] = $voip->wsdl->GetCennName($_GET['id']).' - '.$rate[0]['desc'].' - edytuj godziny';
 }
 else
-$layout['pagetitle'] = $voip->GetCennName($_GET['id']).' - '.$voip->cnames[$_GET['c']].' - edytuj godziny';
+$layout['pagetitle'] = $voip->wsdl->GetCennName($_GET['id']).' - '.$voip->rategroups[$_GET['c']].' - edytuj godziny';
 
 $ha=$_POST['hoursadd'];
 if(isset($ha))
@@ -25,12 +25,12 @@ if(!$error)
 {
 	if($_GET['id_rates'])
 	{
-		$voip->AddHours2($ha,$days,$_GET['id_rates']);
+		$voip->wsdl->AddHours2($ha,$days,$_GET['id_rates']);
 		$SESSION->redirect('?m=v_hours&id_rates='.$_GET['id_rates'].'&id='.$_GET['id']);
 	}
 	else
 	{
-		$voip->AddHours($ha,$days,$_GET['c']);
+		$voip->wsdl->AddHours($ha,$days,$_GET['c']);
 		$SESSION->redirect('?m=v_hours&c='.$_GET['c'].'&id='.$_GET['id']);
 	}
 }

@@ -1,6 +1,6 @@
 <?php
 $mail=$LMS->GetCustomerEmail($_GET['id']);
-if($mail and !$voip->login_exists($mail)) 
+if($mail and !$voip->wsdl->login_exists($mail)) 
 {
 	if($voip->CustomerExists($_GET['id']))
 	$SESSION->redirect('?m=customerinfo&id='.$_GET['id']);

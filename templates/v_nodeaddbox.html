@@ -9,7 +9,7 @@
 		<TD WIDTH="1%" CLASS="FBT">
 			<B>Numer</B>
 		<TD WIDTH="98%" CLASS="FRIGHTU">
-			<INPUT TYPE="TEXT" NAME="nodedata[name]" VALUE="{$nodedata.name}" MAXLENGTH="16" {tip text="Wprowadź nr telefonu" trigger="name" bold=1}> <a href="javascript: void(0);" onClick="return v_ipchoosewin(document.forms['nodeadd'].elements['nodedata[name]']);">&raquo;&raquo;&raquo;</A>
+			<INPUT TYPE="TEXT" NAME="nodedataname" VALUE="{$nodedata.name}" MAXLENGTH="16" {tip text="Wprowadź nr telefonu" trigger="name" bold=1}> <a href="javascript: void(0);" onClick="return v_ipchoosewin(document.nodeadd.nodedataname);">&raquo;&raquo;&raquo;</A>
 		</TD>
 	</TR>
 	<TR CLASS="LIGHT">
@@ -22,9 +22,9 @@
 		<TD WIDTH="98%" CLASS="FRIGHT">
 		<INPUT TYPE="TEXT" NAME="nodedata[sipaddr]" VALUE="{$nodedata.sipaddr}"{tip text="Wprowadź adres zainstalowanej bramki SIP" bold=1}>
 			<br>
-		<INPUT TYPE="TEXT" NAME="nodedata[sipcity]" VALUE="{$nodedata.sipcity}"  {tip text="Wprowadź miasto" trigger="name" bold=1}>
+		<INPUT TYPE="TEXT" NAME="nodedata[sipcity]" VALUE="{$nodedata.sipcity}"  {tip text="Wprowadź miasto" bold=1}>
 			<br>
-		 <INPUT TYPE="TEXT" NAME="nodedata[sippostcode]" VALUE="{$nodedata.sippostcode}" {tip text="Wprowadź kod pocztowy" trigger="name" bold=1}>
+		 <INPUT TYPE="TEXT" NAME="nodedata[sippostcode]" VALUE="{$nodedata.sippostcode}" {tip text="Wprowadź kod pocztowy" trigger="sippostcode" bold=1}>
 		</TD>
 	</TR>
 		<TR CLASS="LIGHT">
@@ -68,7 +68,7 @@
 			<B>W przypadku zajętości...</B>
 		</TD>
 		<TD WIDTH="98%" CLASS="FRIGHT">
-{html_options name=nodedata[busy_action] options=$busy_action selected=$nodedata.busy_action}
+{html_options name="nodedata[busy_action]" options=$busy_action selected=$nodedata.busy_action}
 
 		</TD>
 	</TR>
@@ -91,7 +91,7 @@
 			<B>W przypadku niedostępności...</B>
 		</TD>
 		<TD WIDTH="98%" CLASS="FRIGHT">
-{html_options name=nodedata[unavail_action] options=$unavail_action selected=$nodedata.unavail_action}
+{html_options name="nodedata[unavail_action]" options=$unavail_action selected=$nodedata.unavail_action}
 
 		</TD>
 	</TR>
@@ -136,7 +136,7 @@
 			<B>Opcja CanReInvite</B>
 		</TD>
 		<TD WIDTH="98%" CLASS="FRIGHT">
-{html_options name=nodedata[canreinvite] options=$yesno selected=$nodedata.canreinvite}
+{html_options name="nodedata[canreinvite]" options=$yesno selected=$nodedata.canreinvite}
 		</TD>
 	</TR>
 <TR CLASS="LIGHT">
@@ -147,7 +147,7 @@
 			<B>Sygnalizacja DTMF</B>
 		</TD>
 		<TD WIDTH="98%" CLASS="FRIGHT">
-{html_options name=nodedata[dtmfmode] options=$dtmfmode selected=$nodedata.dtmfmode}
+{html_options name="nodedata[dtmfmode]" options=$dtmfmode selected=$nodedata.dtmfmode}
 		</TD>
 	</TR>
 	<TR CLASS="LIGHT">
@@ -158,7 +158,7 @@
 			<B>NAT</B>
 		</TD>
 		<TD WIDTH="98%" CLASS="FRIGHT">
-{html_options name=nodedata[nat] options=$nat selected=$nodedata.nat}
+{html_options name="nodedata[nat]" options=$nat selected=$nodedata.nat}
 		</TD>
 	</TR>
 	<TR CLASS="LIGHT">
@@ -169,7 +169,7 @@
 			<B>Qualify</B>
 		</TD>
 		<TD WIDTH="98%" CLASS="FRIGHT">
-{html_options name=nodedata[qualify] options=$yesno selected=$nodedata.qualify|default:'yes'}
+{html_options name="nodedata[qualify]" options=$yesno selected=$nodedata.qualify|default:'yes'}
 		</TD>
 	</TR>
 	<TR CLASS="LIGHT">
@@ -180,7 +180,7 @@
 			<B>Zezwól na dzwonienie przez</B>
 		</TD>
 		<TD WIDTH="98%" CLASS="FRIGHT">
-{html_options name=nodedata[trunks_allowed] options=$trunks_allowed selected=$nodedata.trunks_allowed}
+{html_options name="nodedata[trunks_allowed]" options=$trunks_allowed selected=$nodedata.trunks_allowed}
 		</TD>
 	</TR>
 	<TR CLASS="LIGHT">
@@ -191,7 +191,7 @@
 			<B>Taryfa konta</B>
 		</TD>
 		<TD WIDTH="98%" CLASS="FRIGHT">
-{html_options name=nodedata[id_tariffs] options=$id_tariffs selected=$nodedata.id_tariffs}
+{html_options name="nodedata[id_tariffs]" options=$id_tariffs selected=$nodedata.id_tariffs}
 		</TD>
 	</TR>
 	<TR CLASS="LIGHT">
@@ -202,7 +202,7 @@
 			<B>Abonament konta</B>
 		</TD>
 		<TD WIDTH="98%" CLASS="FRIGHT">
-{html_options name=nodedata[id_subscriptions] options=$id_subscriptions selected=$nodedata.id_subscriptions}
+{html_options name="nodedata[id_subscriptions]" options=$id_subscriptions selected=$nodedata.id_subscriptions}
 		</TD>
 	</TR>
 	

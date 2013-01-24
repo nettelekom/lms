@@ -102,13 +102,13 @@ if(is_array($_POST['fin'])) $voip->ui_deletefin($_POST['fin'],$SESSION->id);
 if(is_array($_POST['fout'])) $voip->ui_deletefout($_POST['fout'],$SESSION->id);
 if($_GET['sa']) $SMARTY->assign('faxform',$voip->ui_faxsa($_GET['sa'],$SESSION->id));
 $customernodes=array();
-$tmp=$voip->GetCustomerNodes($SESSION->id);
+$tmp=$voip->wsdl->GetCustomerNodes($SESSION->id);
 if(is_array($tmp)) foreach($tmp as $key=>$val) if(is_numeric($key)) $customernodes[$val['id']]=$val['name'];
 $adrbook=array();
-foreach((array)$voip->getaddressbook($SESSION->id) as $val) $adrbook[$val['number']]=$val['name'];
+foreach((array)$voip->wsdl->getaddressbook($SESSION->id) as $val) $adrbook[$val['number']]=$val['name'];
 $SMARTY->assign('addressbook',$adrbook);
 $adrbookgr=array();
-foreach((array)$voip->gr_list($SESSION->id) as $val) $adrbookgr[$val['id']]=$val['name'];
+foreach((array)$voip->wsdl->gr_list($SESSION->id) as $val) $adrbookgr[$val['id']]=$val['name'];
 $SMARTY->assign('addressbookgr',$adrbookgr);
 if(($file=$_FILES['faxfile']) && ($gr=$_POST['dogr']) && ($nr=$_POST['fromnr']))
 {
@@ -116,7 +116,7 @@ if(($file=$_FILES['faxfile']) && ($gr=$_POST['dogr']) && ($nr=$_POST['fromnr']))
 	if(!array_key_exists($nr,$customernodes)) $err[]='Błąd!!';
 	if(strtolower(substr($file['name'],-3))!='pdf') $err[]='Błąd! Obsługiwane są wyłącznie pliki PDF.';
 	if($file['error']) $err[]='Błąd wysyłania pliku. Spróbuj ponownie.';
-	$numbers=$voip->nr_list($gr);
+	$numbers=$voip->wsdl->nr_list($gr);
 	if(empty($numbers)) $err[]='Brak wpisów';
 	else
 	{
@@ -180,10 +180,10 @@ exit();
 function module_settings()
 {
 	global $SMARTY,$voip,$SESSION,$LMS;
-	if(!$voip->uicheckowner($_GET['id'],$SESSION->id)) $SESSION->redirect('?m=voip');
+	if(!$voip->wsdl->uicheckowner($_GET['id'],$SESSION->id)) $SESSION->redirect('?m=voip');
 	if($sip=$_POST['sip'])
 	{
-		if(!$voip->uicheckowner($sip['id'],$SESSION->id)) $SESSION->redirect('?m=voip');
+		if(!$voip->wsdl->uicheckowner($sip['id'],$SESSION->id)) $SESSION->redirect('?m=voip');
 		$err=array();
 		$sip['finlimit']=str_replace(',','.',$sip['finlimit']);
 		if($sip['busy_action']=='forward' && !$sip['busy_forward_number']) $err[]='Brak numeru przekierowania';
@@ -199,19 +199,19 @@ function module_settings()
 		$error[] = 'Błędny adres email!';
 		if(empty($err))
 		{
-			$voip->uiupdatesip($sip);
+			$voip->wsdl->uiupdatesip($sip);
 			$SESSION->redirect('?m=voip');
 		}
 		else
 		{
 			$SMARTY->assign('err',$err);
-			$tmp=$voip->ui_getsip($_GET['id']);
+			$tmp=$voip->wsdl->ui_getsip($_GET['id']);
 			$sip['id_subscriptions']=$tmp['id_subscriptions'];
 		}
 	}
 	else
-		$sip=$voip->ui_getsip($_GET['id']);
-	$subs=$voip->GetTariff($sip['id_subscriptions']);
+		$sip=$voip->wsdl->ui_getsip($_GET['id']);
+	$subs=$voip->wsdl->GetTariff($sip['id_subscriptions']);
 	$addserv=array();
 	$taxes=$LMS->GetTaxes();
 	$tax=0;
@@ -219,8 +219,8 @@ function module_settings()
 	foreach($subs['addserv'] as $val) $addserv[$val['column_name']]=number_format(round($val['price']+$val['price']*($tax/100),2),2,'.','');
 	$SMARTY->assign('addserv',$addserv);
 	$user=array();
-	$voip->GetCustomer($user,$SESSION->id);
-	$tmp=$voip->GetSettings();
+	$voip->wsdl->GetCustomer($user,$SESSION->id);
+	$tmp=$voip->wsdl->GetSettings();
 	$sip['sipserver']=$tmp[1];
 	$sip['mailboxnumber']=$tmp[4];
 	$SMARTY->assign('user',$user);
@@ -233,13 +233,13 @@ function module_settings()
 function module_allowedrates()
 {
 global $SMARTY, $SESSION, $voip;
-if(!$voip->uicheckowner($_GET['id'],$SESSION->id)) $SESSION->redirect('?m=voip');
+if(!$voip->wsdl->uicheckowner($_GET['id'],$SESSION->id)) $SESSION->redirect('?m=voip');
 if($alr=$_POST['sz'])
 {
-	$voip->uiAddAllowedRates($alr,$_GET['id']);
+	$voip->wsdl->uiAddAllowedRates($alr,$_GET['id']);
 	$SESSION->redirect('?m=voip');
 }
-$SMARTY->assign('alr',$voip->uiGetAllowedRates($_GET['id']));
+$SMARTY->assign('alr',$voip->wsdl->uiGetAllowedRates($_GET['id']));
 
 $SMARTY->display('module:alr.html');
 }
@@ -248,8 +248,6 @@ function module_listen()
 {
 global $SESSION,$voip;
 $file = $voip->uilisten($SESSION->id, $_GET['id']);
-$tmp = explode('/', $file, 4);
-$file = $voip->mondir.$tmp[3];
 if (file_exists($file)) 
 {
 	header('Content-Description: File Transfer');
@@ -271,7 +269,9 @@ $SESSION->redirect('?m=voip');
 function module_delcdr()
 {
 global $SESSION,$voip;
-$voip->uidelcdr($SESSION->id,$_GET['id']);
+$file = $voip->uilisten($SESSION->id, $_GET['id']);
+if (file_exists($file)) 
+	@unlink($file);
 $SESSION->redirect('?m=voip');
 }
 
@@ -281,55 +281,55 @@ global $SESSION,$voip,$SMARTY;
 if($gr=$_POST['group'])
 {
         if(!preg_match('/^[0-9a-zA-Z_ ]*$/',$gr['name']) || !$gr['name']) $error='Błędna nazwa grupy';
-        if($voip->check_gr_exist($gr['name'],$SESSION->id,$gr['id'])) $error='Podana nazwa już istnieje';
+        if($voip->wsdl->check_gr_exist($gr['name'],$SESSION->id,$gr['id'])) $error='Podana nazwa już istnieje';
         if($error) $SMARTY->assign('error',$error);
         else
         {
                 if($gr['id'])
                 {
-                        $voip->edit_gr($gr['name'],$gr['block'],$SESSION->id,$gr['id']);
+                        $voip->wsdl->edit_gr($gr['name'],$gr['block'],$SESSION->id,$gr['id']);
                 }
-                else $voip->add_gr($gr['name'],$gr['block'],$SESSION->id);
+                else $voip->wsdl->add_gr($gr['name'],$gr['block'],$SESSION->id);
         $SESSION->redirect('?m=voip&f=addressbook');
         }
 }
 elseif($_GET['edit'])
 {
-        $SMARTY->assign('group',$voip->gr_gettoedit($_GET['edit'],$SESSION->id));
+        $SMARTY->assign('group',$voip->wsdl->gr_gettoedit($_GET['edit'],$SESSION->id));
         $SMARTY->assign('groupaction',true);
 }
 elseif($_GET['del'])
-        $voip->del_gr($_GET['del'],$SESSION->id);
-$SMARTY->assign('groups',$voip->gr_list($SESSION->id));
+        $voip->wsdl->del_gr($_GET['del'],$SESSION->id);
+$SMARTY->assign('groups',$voip->wsdl->gr_list($SESSION->id));
 $SMARTY->display('module:addressbook.html');
 }
 
 function module_addressbookd()
 {
 global $SESSION,$voip,$SMARTY;
-if(!$voip->check_grd($_GET['gr'],$SESSION->id)) $SESSION->redirect('?m=voip&f=addressbook');
+if(!$voip->wsdl->check_grd($_GET['gr'],$SESSION->id)) $SESSION->redirect('?m=voip&f=addressbook');
 if($nr=$_POST['nr'])
 {
         if(!preg_match('/^[0-9a-zA-Z_ ]+$/',$nr['name']) || !$nr['name']) $error='Błędna nazwa kontaktu';
         if(!preg_match('/^\d+$/',$nr['number'])) $error='Błędny numer kontaktu';
-        if($voip->check_nr_exist($nr['number'],$SESSION->id,$nr['id'],$_GET['gr'])) $error='Podany numer już istnieje';
-        if($voip->check_nrname_exist($nr['name'],$SESSION->id,$nr['id'],$_GET['gr'])) $error='Podana nazwa już istnieje';
+        if($voip->wsdl->check_nr_exist($nr['number'],$SESSION->id,$nr['id'],$_GET['gr'])) $error='Podany numer już istnieje';
+        if($voip->wsdl->check_nrname_exist($nr['name'],$SESSION->id,$nr['id'],$_GET['gr'])) $error='Podana nazwa już istnieje';
         if($error) $SMARTY->assign('error',$error);
         else
         {
-                if($nr['id']) $voip->edit_nr($nr['name'],$nr['number'],$nr['id']);
-                else $voip->add_nr($nr['name'],$nr['number'],$_GET['gr']);
+                if($nr['id']) $voip->wsdl->edit_nr($nr['name'],$nr['number'],$nr['id']);
+                else $voip->wsdl->add_nr($nr['name'],$nr['number'],$_GET['gr']);
         }
 
 }
 elseif($_GET['edit'])
 {
-        $SMARTY->assign('nr',$voip->nr_gettoedit($_GET['edit']));
+        $SMARTY->assign('nr',$voip->wsdl->nr_gettoedit($_GET['edit']));
         $SMARTY->assign('groupaction',true);
 }
 elseif($_GET['del'])
-        $voip->del_nr($_GET['del']);
-$SMARTY->assign('nrl',$voip->nr_list($_GET['gr']));
+        $voip->wsdl->del_nr($_GET['del']);
+$SMARTY->assign('nrl',$voip->wsdl->nr_list($_GET['gr']));
 $SMARTY->display('module:addressbookd.html');
 }
 
@@ -339,13 +339,13 @@ global $voip,$SMARTY,$LMS;
 setlocale(LC_NUMERIC, 'C');
 if(($to=$_POST['tonr']) && ($tar=$_GET['id']))
 {
-$cost=$voip->checkcost($to,$tar);
+$cost=$voip->wsdl->checkcost($to,$tar);
 if($cost===false) $SMARTY->assign('err','Brak w cenniku !');
 else
 {
 $taxes=$LMS->GetTaxes();
 $tax=0;
-if(is_array($taxes)) foreach($taxes as $val) if($val['label']=='VOIP') $tax=$val['value'];
+if(is_array($taxes)) foreach($taxes as $val) if($val['id'] == $voip->config['taxid']) $tax=$val['value'];
 
 	$SMARTY->assign('err',$cost[1].'<br>Koszt: '.number_format(round($cost[0]*($tax/100)+$cost[0],2),2,'.','').' PLN za minutę połączenia');
 }
@@ -363,10 +363,10 @@ $cbrut = 'Cena za minutę połączenia (brutto)';
 $voip->toiso($cbrut);
 $taxes=$LMS->GetTaxes();
 $tax=23;
-if(is_array($taxes)) foreach($taxes as $val) if($val['label']=='VOIP') $tax=$val['value'];
+if(is_array($taxes)) foreach($taxes as $val) if($val['id'] == $voip->config['taxid']) $tax=$val['value'];
 setlocale (LC_TIME, "C");
 $sip=$voip->GetNode($_GET['id']);
-$exp=$voip->CennExport($sip['id_tariffs']);
+$exp=$voip->wsdl->CennExport($sip['id_tariffs']);
 $data=array();
 $i=1;$suma=0;$poz=0;
 if(is_array($exp)) foreach($exp as $val)
@@ -380,13 +380,13 @@ else
         $x=decbin($val['days']);
         $x=sprintf('%09s', $x);
         $x=$voip->str_split($x);
-        $el['Kiedy']=$val['from'].'-'.$val['to']."\n".$voip->days($x);
+        $el['Kiedy']=$val['from'].'-'.$val['to']."\n".$voip->wsdl->days($x);
 }
 $koszt=$val['price']*60;
 $el[$cnet]=sprintf("%.3f",round($koszt,3));
 $koszt=$koszt*($tax/100)+$koszt;
 $el[$cbrut]=sprintf("%.3f",round($koszt,3));
-$data[]=$el;
+$data[]=$voip->toiso($el);
 }
 if($_GET['csv'])
 {

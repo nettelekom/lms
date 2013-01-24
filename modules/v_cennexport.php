@@ -1,23 +1,24 @@
 <?php
-//error_reporting(0);
 setlocale(LC_ALL,'C');
-$exp=$voip->CennExport($_GET['id']);
+$exp=$voip->wsdl->CennExport($_GET['id']);
 $data=array();
 $i=1;$suma=0;$poz=0;
 foreach($exp as $val)
 {
 $el=array();
 $el['L.p.']=$i++;
-$el['Kierunek']=$val['desc'];
+$el['Kierunek'] = $voip->toiso($val['desc']);
 if($val['days']==510 && $val['from']=='00:00' && $val['to']=='23:59') $el['Kiedy']='zawsze';
 else
 {
         $x=decbin($val['days']);
         $x=sprintf('%09s', $x);
         $x=$voip->str_split($x);
-        $el['Kiedy']=$val['from'].'-'.$val['to']." ".$voip->days($x);
+	$txt = $voip->wsdl->days($x);
+        $el['Kiedy']=$val['from'].'-'.$val['to']." ".$voip->toiso($txt);
 }
-$el[$voip->toiso('Cena za minutę połączenia')]=sprintf("%.3f",round($val['price']*60,3));
+$txt = 'Cena za minutę połączenia';
+$el[$voip->toiso($txt)]=sprintf("%.3f",round($val['price']*60,3));
 $data[]=$el;
 }
 if($_GET['csv'])

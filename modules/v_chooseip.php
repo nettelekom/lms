@@ -27,13 +27,13 @@
 $layout['pagetitle'] = 'Wybierz numer telefonu';
 
 $networks = $voip->GetNetworks();
-//var_dump($networks);
-$p = $_GET['p'];
 
-if(!isset($p))
-	$js = 'var targetfield = window.opener.targetfield;';
-if($p == 'main')
-	$js = 'var targetfield = parent.targetfield;';
+$p = isset($_GET['p']) ? $_GET['p'] : '';
+
+if(!$p || $p == 'main')
+	$js = 'var targetfield = window.parent.targetfield;';
+else
+	$js = '';
 
 if (isset($_POST['netid']))
     $netid = $_POST['netid'];

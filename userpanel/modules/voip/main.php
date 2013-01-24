@@ -5,8 +5,8 @@ if($_POST['new']) $SMARTY->assign('serv_err',$voip->uiAddService($SESSION->id,$_
 if($_POST['uinvoicec']==1) $voip->ui_setinvoice($SESSION->id,true);
 elseif($_POST['notuinvoicec']==1) $voip->ui_setinvoice($SESSION->id,false);
 $userinfo=$LMS->GetCustomer($SESSION->id);
-$assignments=$voip->uiGetCustomerNodes($SESSION->id);
-$userinfo=$voip->GetCustomer($userinfo,$SESSION->id);
+$assignments=$voip->wsdl->uiGetCustomerNodes($SESSION->id);
+$userinfo=$voip->wsdl->GetCustomer($userinfo,$SESSION->id);
 $SMARTY->assign('userinfo', $userinfo);
 $SMARTY->assign('assignments', $assignments);
 
@@ -69,7 +69,6 @@ $listdata['cost_br']=number_format(round($listdata['cost']*($tax/100)+$listdata[
 $SMARTY->assign('listdata',$listdata);
 $SMARTY->assign('rategroups',$voip->rategroups);
 $SMARTY->assign('cdr',$cdr);
-$SMARTY->assign('service',$voip->uiGetServices($SESSION->id));
 $SMARTY->display('module:voip.html');
 
 ?>

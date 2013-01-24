@@ -1,7 +1,6 @@
 <?php
 class LMSVOIP
 {
-var $db;
 var $lmsdb;
 var $config;
 var $mondir;
@@ -11,57 +10,11 @@ var $fax_statusdir;
 var $rategroups;
 var $mailboxdir;
 var $dialplan_file;
-var $dialplan=array();
-var $connected=true;
+var $dialplan = array();
 var $incvoipdir;
 var $ivrdir;
-
-function __call($name,$args)
-{
-if(!$this->connected) return $this->ret($args[0]);
-$hex = sprintf('%04s', strlen($name));
-foreach($args as $key => $val)
-{
-	$val = str_replace("\r\n", '%newl%', $val);
-	$val = str_replace("\n", '%newl2%', $val);
-	$args[$key] = $val;
-}
-$str = $name.addslashes(serialize($args));
-$hex .= $str;
-$hex .= md5($this->config['pg_pass'])."\n";
-$fp = fsockopen($this->config['pg_host'], 32002, $errno, $errstr, 2);
-if($fp)
-{
-	stream_set_timeout($fp,15);
-	fwrite($fp,$hex);
-	while(!feof($fp))
-	{
-		$linia.=fgets($fp,128);
-		$meta = stream_get_meta_data($fp);
-		if($meta['timed_out']) return $this->ret($args[0]);
-	}
-	fclose($fp);
-	if(!$linia) return $this->ret($args[0]);
-}
-else return $this->ret($args[0]);
-$linia = trim($linia);
-
-$output = unserialize(stripslashes($linia));
-if(is_array($output)) foreach($output as $key => $val)
-{
-	$val = str_replace('%newl%', "\r\n", $val);
-	$val = str_replace('%newl2%', "\n", $val);
-	$output[$key] = $val;
-}
-return $output;
-}
-
-function ret($arg)
-{
-$this->connected = false;
-if(is_array($arg) && !empty($arg)) return $arg;
-else return null;
-}
+var $wsdl;
+var $errors = null;
 
 function LMSVOIP(&$lmsdb, &$config)
 {
@@ -75,6 +28,10 @@ $this->mailboxdir = $config['mailboxdir'];
 $this->dialplan_file = $config['dialplan_file'];
 $this->incvoipdir = $config['incvoipdir'];
 $this->ivrdir = $config['ivrdir'];
+$this->wsdl = new SoapClient($config['wsdlurl'], array('login' => $config['wsdllogin'], 'password' => $config['wsdlpassword'], 'cache_wsdl' => WSDL_CACHE_NONE));
+$this->rategroups = $this->wsdl->makerategroups();
+if(!is_dir($this->mondir))
+	$this->errors = 'Katalog <B>'.dirname($this->mondir).'</B> nie jest zamontowany. Niektóre funkcjonalności mogą nie działać prawidłowo.';
 }
 
 function toutf8(&$d)
@@ -99,25 +56,25 @@ function toiso(&$d)
 	return $d;
 }
 
-	function GetNetworkList()
-	{
-		if($networks = $this->lmsdb->GetAll('SELECT id, name, start, count as size FROM v_netlist ORDER BY name'))
-		{
-			$size = 0; $assigned = 0;
+function GetNetworkList()
+{
+if($networks = $this->lmsdb->GetAll('SELECT id, name, start, count as size FROM v_netlist ORDER BY name'))
+{
+	$size = 0; $assigned = 0;
 
-			foreach($networks as $idx => $row)
-			{
-				$row['assigned'] = $this->_GetNetworkList($row['start'], $row['start'] + $row['size']);
-				$row['end']=sprintf('%010s',(int)$row['start'] + $row['size'] - 1);
-            			$networks[$idx] = $row;
-				$size += $row['size'];
-				$assigned += $row['assigned'];
-			}
-			$networks['size'] = $size;
-			$networks['assigned'] = $assigned;
-		}
-		return $networks;
+	foreach($networks as $idx => $row)
+	{
+		$row['assigned'] = $this->wsdl->_GetNetworkList($row['start'], $row['start'] + $row['size']);
+		$row['end']=sprintf('%010s',(int)$row['start'] + $row['size'] - 1);
+		$networks[$idx] = $row;
+		$size += $row['size'];
+		$assigned += $row['assigned'];
 	}
+	$networks['size'] = $size;
+	$networks['assigned'] = $assigned;
+}
+return $networks;
+}
 
 function NetworkExists($id)
 {
@@ -128,11 +85,11 @@ function GetNetworkRecord($id)
 {
 $network = $this->lmsdb->GetRow('SELECT id, name, start, count as size FROM v_netlist where id=?',array($id));
 
-$network['assigned'] = $this->_GetNetworkRecord($network);
+$network['assigned'] = $this->wsdl->_GetNetworkRecord($network);
 $network['end']=sprintf('%010s',(int)$network['start'] + $network['size'] - 1);
 $network['page']=1;
 $network['pages']=1;
-$nodes=$this->_getnodes((int)$network['start'],(int)$network['end']);
+$nodes=$this->wsdl->_getnodes((int)$network['start'],(int)$network['end']);
 for($i=0;$i<$network['size'];$i++)
 {
 $j=sprintf('%010d',(int)$network['start']+$i);
@@ -194,17 +151,17 @@ return $tslist;
 function update_user($d)
 {
 $u=$this->lmsdb->GetRow('SELECT lastname, name, email, address, zip, city, ten,pin FROM customers WHERE id=?', array($d['id']));
-foreach($u as $key => $val)
-	$u[$key] = iconv('UTF-8','ISO-8859-2//IGNORE',$val);
+//foreach($u as $key => $val)
+//	$u[$key] = iconv('UTF-8','ISO-8859-2//IGNORE',$val);
 $u['password'] = md5($u['pin']);
 $d['type'] = 'postpaid';
-$this->_update_user($d,$u);
+$this->wsdl->_update_user($d,$u);
 }
 
 function fax_outbox($u,$limit=0)
 {
 $res=$this->lmsdb->GetAll('select * from v_fax where customerid=? order by id desc',array($u));
-$user=$this->GetAstId($u);
+$user=$this->wsdl->GetAstId($u);
 $status='';
 if(is_array($res)) foreach($res as $key=>$val)
 {
@@ -231,7 +188,7 @@ return $res;
 
 function ui_deletefout($d,$user)
 {
-$uid=$this->GetAstId($user);
+$uid=$this->wsdl->GetAstId($user);
 foreach($d as $val)
 {
 	$uniq=$this->lmsdb->GetOne('select uniqueid from v_fax where id=? and customerid=?',array($val,$user));
@@ -248,13 +205,13 @@ function ui_faxsa($id,$user)
 {
 $out=$this->lmsdb->GetRow('select nr_from,nr_to,uniqueid,filename from v_fax where id=? and customerid=?',array($id,$user));
 if(!$out) return;
-$out['id_ast_sip']=$this->_ui_faxsa($out['nr_from']);
+$out['id_ast_sip']=$this->wsdl->_ui_faxsa($out['nr_from']);
 return $out;
 }
 
 function preparetofax($f,$nrfrom,$nrto,$user=0)
 {
-$subdir=$this->GetAstId($user);
+$subdir=$this->wsdl->GetAstId($user);
 do
 	$filename=substr(md5(uniqid(rand(), true)),-10,8);
 while(file_exists($this->fax_outgoingdir.$subdir.'/'.$filename.'.tif'));
@@ -265,7 +222,7 @@ $this->lmsdb->Execute('insert into v_fax (nr_from,nr_to,data,customerid,uniqueid
 
 function preparetofax_again($f,$nrfrom,$nrto,$user=0)
 {
-$subdir=$this->GetAstId($user);
+$subdir=$this->wsdl->GetAstId($user);
 if(!file_exists($this->fax_outgoingdir.$subdir.'/'.$f.'.tif')) return false;
 do
 	$filename=substr(md5(uniqid(rand(), true)),-10,8);
@@ -285,18 +242,17 @@ return $this->lmsdb->GetOne('select id from taxes where value=?',array(22));
 function ImportInvoice($date)
 {
 global $LMS;
-$this->rategroups=$this->makerategroups();
 
 if(!$date)
 	$date=date('Y/m/d');
 list($year, $month, $day) = explode('/',$date);	
 
 $alltaxes = $LMS->GetTaxes();
-$this->UpdateTax($alltaxes);
 foreach($alltaxes as $val) if($val['id'] == $this->config['taxid'])
 {
 	$tax = $val['value'];
 	$taxid = $val['id'];
+	$this->wsdl->UpdateTax($val['value']);
 	break;
 }
 if(!$tax)
@@ -308,21 +264,21 @@ if(!$taxid) $taxid=1;
 
 $tax=$tax/100+1;
 
-$customers = $this->_ImportInvoice_customers($day);
+$customers = $this->wsdl->_ImportInvoice_customers($day);
 if(is_array($customers)) foreach($customers as $val)
 {
-	$ab = $this->_ImportInvoice_ab($val['id']);
+	$ab = $this->wsdl->_ImportInvoice_ab($val['id']);
 	$now = mktime(1, 0, 0, $month, $day, $year);
 	$last = strtotime('-1 month', $now);
 	$from = date('Y-m-d H:i:s', $last);
 	$to = str_replace('/','-', $date) . ' 01:00:00';
 	
-	$imp = $this->_ImportInvoice_imp($val['id'], $from, $to);
+	$imp = $this->wsdl->_ImportInvoice_imp($val['id'], $from, $to);
 	$netto = $imp + $ab['amount'];
 	
-	$this->_ImportInvoice_updatefreesec($ab['free'] * 60, $val['id']);
+	$this->wsdl->_ImportInvoice_updatefreesec($ab['free'] * 60, $val['id']);
 	
-	$addserv = $this->billaddserv($val['id']);
+	$addserv = $this->wsdl->billaddserv($val['id']);
 	$netto += $addserv['sum'];
 	
 	if($netto == 0) continue;
@@ -353,13 +309,13 @@ if(is_array($customers)) foreach($customers as $val)
 	echo "CID: {$val['lmsid']} VAL: ".round($tax*$netto,2)." DESC: Usługi telekomunikacyjne\n";
 	
 	$cachedrates = array();
-	$konta = $this->_ImportInvoice_konta($val['id']);
+	$konta = $this->wsdl->_ImportInvoice_konta($val['id']);
 	foreach($konta as $konto)
 	{
-		$ab = $this->_ImportInvoice_abbd($konto['id_subscriptions']);
+		$ab = $this->wsdl->_ImportInvoice_abbd($konto['id_subscriptions']);
 		if($ab['amount']>0)
 			$this->lmsdb->Execute('INSERT INTO billing_details (documents_id, name, value) VALUES (?,?,?)', array($docid, $ab['name'], $ab['amount']));
-		$pol = $this->_ImportInvoice_pol($val['id'], $from, $to, $konto['accountcode']);
+		$pol = $this->wsdl->_ImportInvoice_pol($val['id'], $from, $to, $konto['accountcode']);
 		$price = array();
 		if(is_array($pol)) foreach($pol as $po)
 		{
@@ -367,7 +323,7 @@ if(is_array($customers)) foreach($customers as $val)
 				$rategr = $cachedrates[$po['id_rates']];
 			else
 			{
-				$rategr = $this->_ImportInvoice_rategr($po['dst'], $po['id_rates']);
+				$rategr = $this->wsdl->_ImportInvoice_rategr($po['dst'], $po['id_rates']);
 				$cachedrates[$po['id_rates']] = $rategr;
 			}
 			$price[$rategr] += $po['cost'];
@@ -387,21 +343,19 @@ if(is_array($customers)) foreach($customers as $val)
 
 }
 
-$users=$this->GetCustomerNames();
+$users=$this->wsdl->GetCustomerNames();
 foreach($users as $us)
 {
-	$this->UpdateCustomerBalance($us['id'],-$LMS->GetCustomerBalance($us['id']));
+	$this->wsdl->UpdateCustomerBalance($us['id'],-$LMS->GetCustomerBalance($us['id']));
 }
-if(isset($this->config['voip_timeswitch']) and $this->config['voip_timeswitch'] == 1) $this->EnableTimeAccounts($date);
+if(isset($this->config['voip_timeswitch']) and $this->config['voip_timeswitch'] == 1) $this->wsdl->EnableTimeAccounts($date);
 }
 
 function export_user($lmsid,$type='postpaid')
 {
 $u=$this->lmsdb->GetRow('select lastname, name, email, address, zip, city, ten,pin from customers where id=?',array($lmsid));
-foreach($u as $key=>$val)
-	$u[$key]=iconv('UTF-8','ISO-8859-2//IGNORE',$val);
 $u['password']=md5($u['pin']);
-$this->_export_user($lmsid, $type, $u);
+$this->wsdl->_export_user($lmsid, $type, $u);
 $this->lmsdb->Execute('insert into v_exportedusers values (?)',array($lmsid));
 }
 
@@ -429,19 +383,17 @@ function reload_dialplan()
 
 function DeleteCustomer($lmsid)
 {
-$this->_DeleteCustomer($lmsid);
+$this->wsdl->_DeleteCustomer($lmsid);
 $this->lmsdb->Execute('delete from v_exportedusers where lmsid=?',array($lmsid));
 }
 
 function faxprint($u,$id,$type)
 {
-$user=$this->GetAstId($u);
+$user=$this->wsdl->GetAstId($u);
 switch($type)
 {
         case 'incoming':
-        	$file=$this->_faxprint($u,$id,$type);
-		$tmp = explode('/', $file, 7);
-		$file = $this->fax_incomingdir.$tmp[6];
+		$file = $this->fax_incomingdir.$user.'/'.$this->wsdl->_faxprint($u,$id,$type).'.tif';
         break;
 
         case 'outgoing':
@@ -464,7 +416,7 @@ return $this->lmsdb->GetRow('select lastname,name,'.$field.' as login, pin from 
 
 function GetTariff($id)
 {
-$tariff=$this->_GetTariff($id);
+$tariff=$this->wsdl->GetTariff($id);
 foreach((array)$tariff['idlms'] as $val)
 {
 	$temp = $this->lmsdb->GetRow('SELECT id,  '.$this->lmsdb->Concat('upper(lastname)',"' '",'name').' AS customername FROM customers WHERE id = ? AND deleted = 0', array($val['lmsid']));
@@ -476,7 +428,7 @@ return $tariff;
 
 function GetCustomersWithT($id)
 {
-$cust=$this->_GetCustomersWithT($id);
+$cust=$this->wsdl->GetCustomersWithT($id);
 foreach((array)$cust['idlms'] as $val)
 {
 	$temp = $this->lmsdb->GetRow('SELECT id,  '.$this->lmsdb->Concat('upper(lastname)',"' '",'name').' AS customername FROM customers WHERE id = ? AND deleted = 0', array($val['lmsid']));
@@ -488,11 +440,11 @@ return $cust;
 
 function ivr_uploadfile($file,$user)
 {
-$us=$this->GetAstId($user);
+$us=$this->wsdl->GetAstId($user);
 if(!is_dir($this->ivrdir.$us)) mkdir($this->ivrdir.$us);
 $roz=substr($file['name'],-3);
 do
-$filename=substr(md5(uniqid(time())),8,8).'.'.$roz;
+	$filename=substr(md5(uniqid(time())),8,8).'.'.$roz;
 while(file_exists($this->ivrdir.$us.'/'.$filename));
 execute_program('sox', $file['tmp_name'].' -r 8000 -c 1 -s '.$this->ivrdir.$us.'/'.$filename);
 return $filename;
@@ -500,8 +452,8 @@ return $filename;
 
 function ivr_deletefile($file,$user)
 {
-$us=$this->GetAstId($user);
-if(file_exists($this->ivrdir.$us.'/'.$file)) unlink($this->ivrdir.$us.'/'.$file);
+$us=$this->wsdl->GetAstId($user);
+@unlink($this->ivrdir.$us.'/'.$file);
 }
 
 function CustomerStats(&$customerdata)
@@ -526,6 +478,193 @@ function str_split($string, $split_length=1)
         }
         while ($i < $len);
         return $array;
+}
+
+function parse_dialplan()
+{
+$tmp=file($this->dialplan_file);
+foreach($tmp as $val)
+{
+	$val=trim($val);
+	if(!$val) continue;
+	if(!preg_match('/^exten => (\d{2})\/(0\d{9}),1,Dial\(SIP\/(0\d{9})\)$/',$val,$match)) continue;
+	$this->dialplan[]=array('exten'=>$match[1],'clid'=>$match[2],'dst'=>$match[3]);
+}
+}
+
+function add_to_dialplan($nr,$id)
+{
+$this->parse_dialplan();
+$numbers=$this->wsdl->get_numbers_by_id($id);
+$this->delete_old_dialplan($id,$numbers);
+foreach($nr as $key=>$val)
+if(preg_match('/^\d{2}$/',$val))
+	foreach($numbers as $number) $this->dialplan[]=array('exten'=>$val,'clid'=>$number,'dst'=>$key);
+$this->write_dialplan();
+}
+
+function write_dialplan()
+{
+$fp=fopen($this->dialplan_file,'w');
+foreach($this->dialplan as $val)
+if($val['dst']!=$val['clid'])
+{
+	$line='exten => '.$val['exten'].'/'.$val['clid'].',1,Dial(SIP/'.$val['dst'].")\n";
+	fputs($fp,$line);
+	$line='exten => '.$val['exten'].'/'.$val['clid'].",2,Hangup\n";
+	fputs($fp,$line);
+}
+fclose($fp);
+}
+
+function delete_old_dialplan($id,$numbers)
+{
+foreach($this->dialplan as $key=>$val)
+	if(in_array($val['dst'],$numbers)) unset($this->dialplan[$key]);
+}
+
+function NodeUpdate($d)
+{
+$accountcode = $this->wsdl->NodeUpdate($d);
+if(is_file($this->incvoipdir.$d['id'].'.conf'))
+{
+	@unlink($this->incvoipdir.$d['id'].'.conf');
+	$conf=file($this->incvoipdir.'0.conf');
+	$fp=fopen($this->incvoipdir.'0.conf','w');
+	foreach((array)$conf as $val)
+	{
+		$tmp=explode('/',$val);
+		if(trim($tmp[count($tmp)-1]) != $accountcode and trim($val) != '')
+			fputs($fp,$val."\n");
+	}
+	fflush($fp);
+	fclose($fp);
+}
+if(($user=$d['incuser']) && ($pass=$d['incpass']) && ($host=$d['inchost'])) $this->write_incvoip($user,$pass,$host,$d['id'],$accountcode);
+}
+
+function write_incvoip($user,$pass,$host,$num,$number)
+{
+$out=array();
+$fp=fopen($this->incvoipdir.'0.conf','a');
+fputs($fp,"register => $user:$pass@$host/$number\n");
+fclose($fp);
+$dns=dns_get_record($host,DNS_A);
+if(count($dns)==0) return;
+$i=0;
+foreach($dns as $val)
+{
+$i++;
+$out[]="[${num}_$i]";
+$out[]="name=${num}_$i";
+$out[]='type=peer';
+$out[]='allow=alaw,ulaw';
+$out[]="host={$val['ip']}";
+$out[]='qualify=no';
+$out[]='insecure=no';
+$out[]='context=incoming';
+}
+$fp=fopen($this->incvoipdir.$num.'.conf','w');
+foreach($out as $val) fputs($fp,"$val\n");
+fclose($fp);
+}
+
+function GetNode($id)
+{
+$res = $this->wsdl->GetNode($id);
+if(is_file($this->incvoipdir.$id.'.conf'))
+{
+	$tmp=file($this->incvoipdir.'0.conf');
+	foreach((array)$tmp as $val)
+		if(preg_match('/^register => ([^:]+):([^@]+)@([a-z0-9.]+)\/(\d+)$/i',$val,$m) and $m[4] == $res['name'])
+		{
+			$res['incuser']=$m[1];
+			$res['incpass']=$m[2];
+			$res['inchost']=$m[3];
+		}
+}
+//var_dump($res);
+return $res;
+}
+
+function check_monitor(&$d)
+{
+if(!($login = $d['login'])) return;
+
+$wh=array('src','dst');
+$jest=false;
+foreach($wh as $w)
+{
+	if(is_dir($this->mondir.$login.'/'.$d[$w]) && is_file($this->mondir.$login.'/'.$d[$w].'/'.$d['id'].'.wav')) $jest=true;
+}
+$d['monitor']=$jest;
+}
+
+public function GetCdrList($from, $to, $c, $order,$fnr='',$tnr='',$dir=null, $rategroup=null, $stat=null)
+{
+$res = $this->wsdl->GetCdrList($from, $to, $c, $order, $fnr, $tnr, $dir, $rategroup, $stat);
+foreach($res as $k => $v) $this->check_monitor($res[$k]);
+return $res;
+}
+
+function uilisten($cid,$id)
+{
+$login=$this->wsdl->GetCustomerLogin($cid);
+$path=$this->mondir.$login;
+$fname=null;
+$d=dir($path);
+while (false !== ($entry = $d->read()))
+	if(is_dir($path.'/'.$entry) && $entry!='.' && $entry!='..')
+	{
+		$d2=dir($path.'/'.$entry);
+		while (false !== ($entry2 = $d2->read()))
+			if(is_file($path.'/'.$entry.'/'.$entry2) && $entry2==$id.'.wav')
+				$fname=$path.'/'.$entry.'/'.$entry2;
+		$d2->close();
+	}
+$d->close();
+return $fname;
+}
+
+function fax_inbox($user,$limit=0)
+{
+$subdir=$this->wsdl->GetAstId($user);
+if(!is_dir($this->fax_incomingdir.$subdir)) return null;
+$out=array();
+foreach(glob($this->fax_incomingdir.$subdir.'/*.tif') as $filename)
+{
+	$file=basename($filename);
+	$uniqid=substr($file,0,-4);
+	$res=$this->wsdl->GetCallByUid($uniqid, $subdir);
+	if(!$res) continue;
+	$out[]=$res;
+}
+return $this->msort($out,'id',false);
+}
+
+private function msort($array, $id="id", $sort_ascending=true) {
+	$temp_array = array();
+	while(count($array)>0) {
+		$lowest_id = 0;
+		$index=0;
+		foreach ((array)$array as $item) {
+			if (isset($item[$id])) {
+				if ($array[$lowest_id][$id]) {
+					if (strtolower($item[$id]) < strtolower($array[$lowest_id][$id])) {
+						$lowest_id = $index;
+					}
+				}
+			}
+			$index++;
+		}
+		$temp_array[] = $array[$lowest_id];
+		$array = array_merge(array_slice($array, 0,$lowest_id), array_slice($array, $lowest_id+1));
+	}
+	if ($sort_ascending) {
+		return $temp_array;
+	} else {
+		return array_reverse($temp_array);
+	}
 }
 
 }

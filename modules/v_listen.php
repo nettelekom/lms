@@ -1,12 +1,10 @@
 <?php
-if($_GET['del']==1)
-$voip->uidelcdr($_GET['cid'],$_GET['id']);
-else
+$file = $voip->uilisten($_GET['cid'],$_GET['id']);
+if(file_exists($file)) 
 {
-	$file = $voip->uilisten($_GET['cid'],$_GET['id']);
-	$tmp = explode('/', $file, 4);
-	$file = $voip->mondir.$tmp[3];
-	if (file_exists($file)) 
+	if($_GET['del']==1)
+		@unlink($file);
+	else
 	{
 		header('Content-Description: File Transfer');
 		header('Content-Type: application/octet-stream');

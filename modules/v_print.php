@@ -1,7 +1,7 @@
 <?php
-$s=$voip->GetSettings();
-$n=$voip->GetNode($_GET['account']);
-$u=$voip->GetUserToSettings($voip->GetNodeOwner($_GET['account']),$s[3]);
+$s=$voip->wsdl->GetSettings();
+$n=$voip->wsdl->GetNode($_GET['account']);
+$u=$voip->GetUserToSettings($voip->wsdl->GetNodeOwner($_GET['account']),$s[3]);
 $layout['pagetitle']='Ustawienia konta '.$n['name'];
 $m=array();
 $m[]=$u['lastname'].' '.$u['name'].' - ustawienia konta '.$n['name'];

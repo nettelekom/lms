@@ -49,7 +49,7 @@ if(isset($tariff))
 
 	if(!$error)
 	{
-		$voip->TariffUpdate($tariff);
+		$voip->wsdl->TariffUpdate($tariff);
 		$SESSION->redirect('?m=v_tariffinfo&id='.$tariff['id']);
 	}
 	else

@@ -383,7 +383,7 @@ switch($mode)
 	case 'sip':
 		if(isset($_GET['ajax'])) // support for AutoSuggest
 		{
-			$candidates = $voip->QSearch($search);
+			$candidates = $voip->wsdl->QSearch($search);
 			
 			$eglible=array(); $actions=array(); $descriptions=array();
 			if ($candidates)
@@ -403,16 +403,6 @@ switch($mode)
 			exit;
 		}
 
-		if(is_numeric($search) && !strstr($search, '.')) // maybe it's node ID
-		{
-			if($nodeid = $DB->GetOne('SELECT id FROM nodes WHERE id = '.$search))
-			{
-				$target = '?m=nodeinfo&id='.$nodeid;
-				break;
-			}
-		}
-
-		// use nodesearch module to find all matching nodes
 		$s['name'] = $search;
 		
 		$SESSION->save('v_nodesearch', $s);

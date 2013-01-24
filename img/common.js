@@ -495,13 +495,9 @@ function changeMacFormat(id)
 	elem.innerHTML = curmac;
 }
 
-function v_ipchoosewin(formfield,netid)
+function v_ipchoosewin(formfield)
 {
-        if(netid)
-		okno = openSelectWindow('?m=v_chooseip&netid=' + netid,'chooseip',250,300,'true',formfield);
-	else
-                okno = openSelectWindow('?m=v_chooseip','chooseip',250,300,'true',formfield);
-        return false;
-
+    var url = '?m=v_chooseip';
+	return openSelectWindow(url,'chooseip',350,380,'true',formfield);
 }
 

@@ -6,16 +6,16 @@ switch($_GET['ff'])
 {
 case 'add':
 	$_POST['group']['name'] = trim($_POST['group']['name']);
-	$ivrid=$voip->ivr_exists($_POST['group']['name']);
+	$ivrid=$voip->wsdl->ivr_exists($_POST['group']['name']);
 	if((!$ivrid or $ivrid==$_POST['group']['id']) and preg_match('/^[0-9a-zA-Z_ ]+$/',$_POST['group']['name']))
 	{
-		$voip->ivr_add($_POST['group'],$SESSION->id);
+		$voip->wsdl->ivr_add($_POST['group'],$SESSION->id);
 		$SESSION->redirect('?m=voip&f=ivr');
 	}
 	else $SMARTY->assign('err','Błędna nazwa IVR');
 	break;
 case 'edit':
-	$ed=$voip->ivr_gettoedit($_GET['id'],$SESSION->id);
+	$ed=$voip->wsdl->ivr_gettoedit($_GET['id'],$SESSION->id);
 	if($ed)
 	{
 		$SMARTY->assign('group',$ed);
@@ -24,17 +24,17 @@ case 'edit':
 	else $SMARTY->assign('err','Błąd!');
 	break;
 case 'del':
-	$f=$voip->ivr_del($_GET['id'],$SESSION->id);
+	$f=$voip->wsdl->ivr_del($_GET['id'],$SESSION->id);
 	if(is_array($f)) foreach($f as $val) $voip->ivr_deletefile(strtok($val, "_"),$SESSION->id);
 	$SESSION->redirect('?m=voip&f=ivr');
 	break;
 case 'det':
 	if($ivr=$_POST['ivr'])
 	{
-		$voip->ivr_save($ivr,$_GET['id'],$SESSION->id);
+		$voip->wsdl->ivr_save($ivr,$_GET['id'],$SESSION->id);
 		$SESSION->redirect('?m=voip&f=ivr&ff=det&id='.$_GET['id']);
 	}
-	$list=$voip->ivr_getdet($_GET['id'],$SESSION->id);
+	$list=$voip->wsdl->ivr_getdet($_GET['id'],$SESSION->id);
 	$tmp=array();
 	if(is_array($list)) foreach($list as $val)
 	{
@@ -43,7 +43,7 @@ case 'det':
 			$act=$val['action'][0];
 			$tmp['actiont_'.$val['digit']]=$actions[$act];
 			$tmp['action_'.$val['digit']]=$val['action'];
-			if($act==2) $tmp['actiont_'.$val['digit']].=': '.$voip->ivr_getone(substr($val['action'],2),$SESSION->id);
+			if($act==2) $tmp['actiont_'.$val['digit']].=': '.$voip->wsdl->ivr_getone(substr($val['action'],2),$SESSION->id);
 			elseif($act==4) $tmp['actiont_'.$val['digit']].=': '.substr($val['action'],2);
 		}
 		if($val['message'])
@@ -57,11 +57,11 @@ case 'det':
 		}
 	}
 	$SMARTY->assign('list',$tmp);
-	$SMARTY->assign('title','IVR: '.$voip->ivr_getone($_GET['id'],$SESSION->id));
+	$SMARTY->assign('title','IVR: '.$voip->wsdl->ivr_getone($_GET['id'],$SESSION->id));
 	$det=true;
 	break;
 case 'delm':
-	$file=$voip->ivr_getfiletodel($_GET['id'],$_GET['mess'],$SESSION->id);
+	$file=$voip->wsdl->ivr_getfiletodel($_GET['id'],$_GET['mess'],$SESSION->id);
 	if($file) $voip->ivr_deletefile(strtok($file, "_"),$SESSION->id);
 	$SESSION->redirect('?m=voip&f=ivr&ff=det&id='.$_GET['id']);
 case 'uploadfile':
@@ -93,10 +93,10 @@ case 'action':
 			{
 				$SMARTY->assign('uplok',true);
 				$SMARTY->assign('action','2_'.$_POST['ivr']);
-				$SMARTY->assign('action_name',$actions[2].': '.$voip->ivr_getone($_POST['ivr'],$SESSION->id));
+				$SMARTY->assign('action_name',$actions[2].': '.$voip->wsdl->ivr_getone($_POST['ivr'],$SESSION->id));
 				break;
 			}
-			$ivr=$voip->ivr_getall($SESSION->id);
+			$ivr=$voip->wsdl->ivr_getall($SESSION->id);
 			$ilist=array();
 			foreach($ivr as $val) if($val['id']!=$_GET['ivrid']) $ilist[$val['id']]=$val['name'];
 			if(empty($ilist)) break;
@@ -128,14 +128,14 @@ if($det)
 }
 else
 {
-	$nodes=$voip->GetCustomerNodes($SESSION->id);
+	$nodes=$voip->wsdl->GetCustomerNodes($SESSION->id);
 	$nod=array();
 	if($_GET['ff']=='edit') $ed=$_GET['id']; else $ed=null;
-	$active=$voip->ivr_getassignedacc($SESSION->id,$ed);
+	$active=$voip->wsdl->ivr_getassignedacc($SESSION->id,$ed);
 	if($active==null) $active=array();
 	foreach($nodes as $val) if(is_array($val) and !in_array($val['id'],$active)) $nod[$val['id']]=$val['name'];
 	$SMARTY->assign('num',$nod);
-	$ivrlist=$voip->ivr_get($SESSION->id);
+	$ivrlist=$voip->wsdl->ivr_get($SESSION->id);
 	$SMARTY->assign('groups',$ivrlist);
 	$SMARTY->display('module:ivr.html');
 }
