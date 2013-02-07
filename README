@@ -13,5 +13,8 @@ Niezbędne do zainstalowania pakiety systemowe:
 Przed instalacją proszę o wysłanie zgłoszenia zawierającego adres IP, pod jakim
 centrala będzie widzieć serwer z zainstalowanym LMSem, oraz ID użytkownika, na
 prawach którego pracuje usługa http.
+Przy aktualizacji ze starszych wersji proszę zwrócić uwagę na zmianę sekcji dla
+zmiennych dotyczących voip - z "phpui" na "voip". Brak zmiennych w sekcji
+"voip" spowoduje brak połączenia z centralą.
 
-/* vim: tw=79: */
+/* vim: set tw=79: */
