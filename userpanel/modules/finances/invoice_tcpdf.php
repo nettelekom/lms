@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2012 LMS Developers
+ *  (C) Copyright 2001-2013 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -59,7 +59,7 @@ require_once(MODULES_DIR.'/invoice_tcpdf.inc.php');
 // handle multi-invoice print
 if(!empty($_POST['inv']))
 {
-	$pdf =& init_pdf('A4', 'portrait', trans('Invoices'));
+	$pdf = init_pdf('A4', 'portrait', trans('Invoices'));
 
 	$count = count($_POST['inv']);
         $i = 0;
@@ -98,7 +98,7 @@ if(!isset($invoice['invoice']))
 else
         $title = trans('Credit Note No. $a', $number);
 
-$pdf =& init_pdf('A4', 'portrait', $title);
+$pdf = init_pdf('A4', 'portrait', $title);
 
 $invoice['last'] = TRUE;
 $invoice['type'] = $type;

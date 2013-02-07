@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2012 LMS Developers
+ *  (C) Copyright 2001-2013 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -100,7 +100,7 @@ function address_box($x,$y,$scale)
 
 require_once(LIB_DIR.'/pdf.php');
 
-$pdf =& init_pdf('A4', 'portrait', trans('Form of Cash Transfer'));
+$pdf = init_pdf('A4', 'portrait', trans('Form of Cash Transfer'));
 
 $pdf->setLineStyle(2);
 
