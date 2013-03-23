@@ -58,7 +58,7 @@ function toiso(&$d)
 
 function GetNetworkList()
 {
-if($networks = $this->lmsdb->GetAll('SELECT id, name, start, count as size FROM v_netlist ORDER BY name'))
+if($networks = $this->lmsdb->GetAll('SELECT id, name, start, count AS size FROM v_netlist ORDER BY name'))
 {
 	$size = 0; $assigned = 0;
 
@@ -78,12 +78,12 @@ return $networks;
 
 function NetworkExists($id)
 {
-return $this->lmsdb->GetOne('select count(id) from v_netlist where id=?',array($id));
+return $this->lmsdb->GetOne('SELECT COUNT(id) FROM v_netlist WHERE id=?',array($id));
 }
 
 function GetNetworkRecord($id)
 {
-$network = $this->lmsdb->GetRow('SELECT id, name, start, count as size FROM v_netlist where id=?',array($id));
+$network = $this->lmsdb->GetRow('SELECT id, name, start, count AS size FROM v_netlist WHERE id=?',array($id));
 
 $network['assigned'] = $this->wsdl->_GetNetworkRecord($network);
 $network['end']=sprintf('%010s',(int)$network['start'] + $network['size'] - 1);
@@ -107,23 +107,23 @@ return $network;
 function NetworkUpdate($d)
 {
 $count=(int)$d['end']-(int)$d['start']+1;
-$this->lmsdb->Execute('update v_netlist set name=?,start=?,count=? where id=?',array($d['name'],$d['start'],$count,$d['id']));
+$this->lmsdb->Execute('UPDATE v_netlist SET name=?,start=?,count=? WHERE id=?',array($d['name'],$d['start'],$count,$d['id']));
 }
 
 function NetworkAdd($d)
 {
-$this->lmsdb->Execute('insert into v_netlist (name,start,count) values (?,?,?)',array($d['name'],$d['start'],$d['count']));
-return $this->lmsdb->GetOne('select last_insert_id() from v_netlist');
+$this->lmsdb->Execute('INSERT INTO v_netlist (name,start,count) VALUES (?,?,?)',array($d['name'],$d['start'],$d['count']));
+return $this->lmsdb->GetLastInsertID('v_netlist');
 }
 
 function NetworkDelete($id)
 {
-$this->lmsdb->Execute('delete from v_netlist where id=?',array($id));
+$this->lmsdb->Execute('DELETE FROM v_netlist WHERE id=?',array($id));
 }
 
 function GetNetworks()
 {
-if($netlist = $this->lmsdb->GetAll('SELECT id, name, start AS address, count as prefix FROM v_netlist ORDER BY name'))
+if($netlist = $this->lmsdb->GetAll('SELECT id, name, start AS address, count AS prefix FROM v_netlist ORDER BY name'))
 return $netlist;
 }
 
@@ -131,7 +131,7 @@ function get_billing_details($tslist)
 {
 if(is_array($tslist['id'])) foreach($tslist['id'] as $key=>$val)
 {
-if($this->lmsdb->GetOne('select count(id) from billing_details where documents_id=?',array($tslist['docid'][$key]))>0)
+if($this->lmsdb->GetOne('SELECT COUNT(id) FROM billing_details WHERE documents_id=?',array($tslist['docid'][$key]))>0)
 $tslist['details'][$key]=1;
 else $tslist['details'][$key]=0;
 }
@@ -141,7 +141,7 @@ function get_billing_details2($tslist)
 {
 if(is_array($tslist)) foreach($tslist as $key=>$val) if(is_array($val))
 {
-if($this->lmsdb->GetOne('select count(id) from billing_details where documents_id=?',array($val['id']))>0)
+if($this->lmsdb->GetOne('SELECT COUNT(id) FROM billing_details WHERE documents_id=?',array($val['id']))>0)
 $tslist[$key]['details']=1;
 else $tslist[$key]['details']=0;
 }
@@ -160,7 +160,7 @@ $this->wsdl->_update_user($d,$u);
 
 function fax_outbox($u,$limit=0)
 {
-$res=$this->lmsdb->GetAll('select * from v_fax where customerid=? order by id desc',array($u));
+$res=$this->lmsdb->GetAll('SELECT * FROM v_fax WHERE customerid=? ORDER BY id DESC',array($u));
 $user=$this->wsdl->GetAstId($u);
 $status='';
 if(is_array($res)) foreach($res as $key=>$val)
@@ -191,11 +191,11 @@ function ui_deletefout($d,$user)
 $uid=$this->wsdl->GetAstId($user);
 foreach($d as $val)
 {
-	$uniq=$this->lmsdb->GetOne('select uniqueid from v_fax where id=? and customerid=?',array($val,$user));
+	$uniq=$this->lmsdb->GetOne('SELECT uniqueid FROM v_fax WHERE id=? AND customerid=?',array($val,$user));
 	if($uniq)
 	{
 		$fname=$this->fax_outgoingdir.$uid.'/'.$uniq.'.tif';
-		$this->lmsdb->Execute('delete from v_fax where id=?',array($val));
+		$this->lmsdb->Execute('DELETE FROM v_fax WHERE id=?',array($val));
 		@unlink($fname);
 	}
 }
@@ -203,7 +203,7 @@ foreach($d as $val)
 
 function ui_faxsa($id,$user)
 {
-$out=$this->lmsdb->GetRow('select nr_from,nr_to,uniqueid,filename from v_fax where id=? and customerid=?',array($id,$user));
+$out=$this->lmsdb->GetRow('SELECT nr_from,nr_to,uniqueid,filename FROM v_fax WHERE id=? AND customerid=?',array($id,$user));
 if(!$out) return;
 $out['id_ast_sip']=$this->wsdl->_ui_faxsa($out['nr_from']);
 return $out;
@@ -217,7 +217,7 @@ do
 while(file_exists($this->fax_outgoingdir.$subdir.'/'.$filename.'.tif'));
 $fname=$nrfrom.'-'.$nrto.'-'.$filename.'.tif';
 execute_program('gs', '-q -dNOPAUSE -dBATCH -r204x98 -dSAFER -sDEVICE=tiffg3 -sOutputFile='.$this->fax_outgoingdir.$fname.' -f '.$f['tmp_name']);
-$this->lmsdb->Execute('insert into v_fax (nr_from,nr_to,data,customerid,uniqueid,filename) values (?,?,unix_timestamp(),?,?,?)',array($nrfrom,$nrto,$user,$filename,$f['name']));
+$this->lmsdb->Execute('INSERT INTO v_fax (nr_from,nr_to,data,customerid,uniqueid,filename) VALUES (?,?,?NOW?,?,?,?)',array($nrfrom,$nrto,$user,$filename,$f['name']));
 }
 
 function preparetofax_again($f,$nrfrom,$nrto,$user=0)
@@ -229,14 +229,14 @@ do
 while(file_exists($this->fax_outgoingdir.$subdir.'/'.$filename.'.tif'));
 $fname=$nrfrom.'-'.$nrto.'-'.$filename.'.tif';
 copy($this->fax_outgoingdir.$subdir.'/'.$f.'.tif',$this->fax_outgoingdir.$fname);
-$forig=$this->lmsdb->GetOne('select filename from v_fax where uniqueid=?',array($f));
-$this->lmsdb->Execute('insert into v_fax (nr_from,nr_to,data,customerid,uniqueid,filename) values (?,?,unix_timestamp(),?,?,?)',array($nrfrom,$nrto,$user,$filename,$forig));
+$forig=$this->lmsdb->GetOne('SELECT filename FROM v_fax WHERE uniqueid=?',array($f));
+$this->lmsdb->Execute('INSERT INTO v_fax (nr_from,nr_to,data,customerid,uniqueid,filename) VALUES (?,?,?NOW?,?,?,?)',array($nrfrom,$nrto,$user,$filename,$forig));
 return true;
 }
 
 function GetTaxId()
 {
-return $this->lmsdb->GetOne('select id from taxes where value=?',array(22));
+return $this->lmsdb->GetOne('SELECT id FROM taxes WHERE value=?',array(22));
 }
 
 function ImportInvoice($date)
@@ -353,15 +353,15 @@ if(isset($this->config['voip_timeswitch']) and $this->config['voip_timeswitch'] 
 
 function export_user($lmsid,$type='postpaid')
 {
-$u=$this->lmsdb->GetRow('select lastname, name, email, address, zip, city, ten,pin from customers where id=?',array($lmsid));
+$u=$this->lmsdb->GetRow('SELECT lastname, name, email, address, zip, city, ten,pin FROM customers WHERE id=?',array($lmsid));
 $u['password']=md5($u['pin']);
 $this->wsdl->_export_user($lmsid, $type, $u);
-$this->lmsdb->Execute('insert into v_exportedusers values (?)',array($lmsid));
+$this->lmsdb->Execute('INSERT INTO v_exportedusers VALUES (?)',array($lmsid));
 }
 
 function CustomerExists($id)
 {
-if($this->lmsdb->GetOne('select count(*) from v_exportedusers where lmsid=?',array($id)) > 0) return true; else return false;
+if($this->lmsdb->GetOne('SELECT COUNT(*) FROM v_exportedusers WHERE lmsid=?',array($id)) > 0) return true; else return false;
 }
 
 function GetState()
@@ -384,7 +384,7 @@ function reload_dialplan()
 function DeleteCustomer($lmsid)
 {
 $this->wsdl->_DeleteCustomer($lmsid);
-$this->lmsdb->Execute('delete from v_exportedusers where lmsid=?',array($lmsid));
+$this->lmsdb->Execute('DELETE FROM v_exportedusers WHERE lmsid=?',array($lmsid));
 }
 
 function faxprint($u,$id,$type)
@@ -397,7 +397,7 @@ switch($type)
         break;
 
         case 'outgoing':
-        	$uniqid=$this->lmsdb->GetOne('select uniqueid from v_fax where customerid=? and id=?',array($u,$id));
+        	$uniqid=$this->lmsdb->GetOne('SELECT uniqueid FROM v_fax WHERE customerid=? AND id=?',array($u,$id));
         	if(!$uniqid) return null;
         	$file=$this->fax_outgoingdir.$user.'/'.$uniqid.'.tif';
         break;
@@ -411,7 +411,7 @@ return null;
 
 function GetUserToSettings($id,$field)
 {
-return $this->lmsdb->GetRow('select lastname,name,'.$field.' as login, pin from customers where id=?',array($id));
+return $this->lmsdb->GetRow('SELECT lastname,name,'.$field.' AS login, pin FROM customers WHERE id=?',array($id));
 }
 
 function GetTariff($id)
@@ -419,7 +419,7 @@ function GetTariff($id)
 $tariff=$this->wsdl->GetTariff($id);
 foreach((array)$tariff['idlms'] as $val)
 {
-	$temp = $this->lmsdb->GetRow('SELECT id,  '.$this->lmsdb->Concat('upper(lastname)',"' '",'name').' AS customername FROM customers WHERE id = ? AND deleted = 0', array($val['lmsid']));
+	$temp = $this->lmsdb->GetRow('SELECT id,  '.$this->lmsdb->Concat('UPPER(lastname)',"' '",'name').' AS customername FROM customers WHERE id = ? AND deleted = 0', array($val['lmsid']));
 	$temp['customername'].=' ('.$val['name'].')';
 	$tariff['customers'][]=$temp;
 }
@@ -431,7 +431,7 @@ function GetCustomersWithT($id)
 $cust=$this->wsdl->GetCustomersWithT($id);
 foreach((array)$cust['idlms'] as $val)
 {
-	$temp = $this->lmsdb->GetRow('SELECT id,  '.$this->lmsdb->Concat('upper(lastname)',"' '",'name').' AS customername FROM customers WHERE id = ? AND deleted = 0', array($val['lmsid']));
+	$temp = $this->lmsdb->GetRow('SELECT id,  '.$this->lmsdb->Concat('UPPER(lastname)',"' '",'name').' AS customername FROM customers WHERE id = ? AND deleted = 0', array($val['lmsid']));
 	$temp['customername'].=' ('.$val['name'].')';
 	$cust['customers'][]=$temp;
 }
