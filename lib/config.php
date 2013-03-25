@@ -215,7 +215,7 @@ $DEFAULTS = array(
 		'default_mx' => 'localhost'
 	),
 	'voip' => array(
-		'enabled' => '1',
+		'enabled' => '0',
 		'taxid' => '1',
 		'pg_pass' => '',
 		'pg_host' => '',
