@@ -165,7 +165,7 @@ class LMS {
 			// Note: add all referenced tables to the list
 			$order = array('users', 'customers', 'customergroups', 'nodes', 'numberplans',
 					'assignments', 'rtqueues', 'rttickets', 'rtmessages', 'domains',
-					'cashsources', 'sourcefiles', 'ewx_channels');
+					'cashsources', 'sourcefiles', 'ewx_channels', 'hosts');
 
 			foreach ($tables as $idx => $table) {
 				if (in_array($table, $order)) {
@@ -534,6 +534,9 @@ class LMS {
 		$this->DB->Execute('UPDATE customers SET deleted=1, moddate=?NOW?, modid=?
 				WHERE id=?', array($this->AUTH->id, $id));
 		$this->DB->Execute('DELETE FROM customerassignments WHERE customerid=?', array($id));
+		$liabs = $this->DB->GetCol('SELECT liabilityid FROM assignments WHERE liabilityid <> 0 AND customerid = ?', array($id));
+		if (!empty($liabs))
+			$this->DB->Execute('DELETE FROM liabilities WHERE liabilityid IN (' . implode(',', $liabs) . ')');
 		$this->DB->Execute('DELETE FROM assignments WHERE customerid=?', array($id));
 		// nodes
 		$nodes = $this->DB->GetCol('SELECT id FROM nodes WHERE ownerid=?', array($id));
@@ -1582,9 +1585,6 @@ class LMS {
 				))) {
 			$id = $this->DB->GetLastInsertID('nodes');
 
-			foreach ($nodedata['macs'] as $mac)
-				$this->DB->Execute('INSERT INTO macs (mac, nodeid) VALUES(?, ?)', array(strtoupper($mac), $id));
-
 			// EtherWerX support (devices have some limits)
 			// We must to replace big ID with smaller (first free)
 			if ($id > 99999 && chkconfig($this->CONFIG['phpui']['ewx_support'])) {
@@ -1602,6 +1602,9 @@ class LMS {
 				$this->DB->UnLockTables();
 				$this->DB->CommitTrans();
 			}
+
+			foreach ($nodedata['macs'] as $mac)
+				$this->DB->Execute('INSERT INTO macs (mac, nodeid) VALUES(?, ?)', array(strtoupper($mac), $id));
 
 			return $id;
 		}
@@ -2239,7 +2242,7 @@ class LMS {
 			$result['pesel'] = $result['ssn'];
 			$result['nip'] = $result['ten'];
 			if ($result['post_name'] || $result['post_address']) {
-				$reulst['serviceaddr'] = $result['post_name'];
+				$result['serviceaddr'] = $result['post_name'];
 				if ($result['post_address'])
 					$result['serviceaddr'] .= "\n" . $result['post_address'];
 				if ($result['post_zip'] && $result['post_city'])
@@ -2497,7 +2500,15 @@ class LMS {
 				taxes.label AS tax, t.period
 				FROM tariffs t
 				LEFT JOIN taxes ON t.taxid = taxes.id
+				WHERE t.disabled = 0
 				ORDER BY t.name, t.value DESC');
+	}
+
+	function TariffSet($id) {
+		if($this->DB->GetOne('SELECT disabled FROM tariffs WHERE id = ?', array($id)) == 1 )
+			return $this->DB->Execute('UPDATE tariffs SET disabled = 0 WHERE id = ?', array($id));
+		else
+			return $this->DB->Execute('UPDATE tariffs SET disabled = 1 WHERE id = ?', array($id));
 	}
 
 	function TariffExists($id) {
@@ -2865,7 +2876,7 @@ class LMS {
 	function NetworkUpdate($networkdata) {
 		return $this->DB->Execute('UPDATE networks SET name=?, address=inet_aton(?), 
 			mask=?, interface=?, gateway=?, dns=?, dns2=?, domain=?, wins=?, 
-			dhcpstart=?, dhcpend=?, notes=? WHERE id=?', array(strtoupper($networkdata['name']),
+			dhcpstart=?, dhcpend=?, notes=?, hostid=? WHERE id=?', array(strtoupper($networkdata['name']),
 						$networkdata['address'],
 						$networkdata['mask'],
 						strtolower($networkdata['interface']),
@@ -2877,6 +2888,7 @@ class LMS {
 						$networkdata['dhcpstart'],
 						$networkdata['dhcpend'],
 						$networkdata['notes'],
+						$networkdata['hostid'],
 						$networkdata['id']
 				));
 	}
@@ -2964,7 +2976,7 @@ class LMS {
 	function GetNetworkRecord($id, $page = 0, $plimit = 4294967296, $firstfree = false) {
 		$network = $this->DB->GetRow('SELECT id, name, inet_ntoa(address) AS address, 
 				address AS addresslong, mask, interface, gateway, dns, dns2, 
-				domain, wins, dhcpstart, dhcpend, 
+				domain, wins, dhcpstart, dhcpend, hostid,
 				mask2prefix(inet_aton(mask)) AS prefix,
 				inet_ntoa(broadcast(address, inet_aton(mask))) AS broadcast, 
 				notes 
@@ -2978,6 +2990,8 @@ class LMS {
 				FROM nodes WHERE ipaddr_pub > ? AND ipaddr_pub < ?', 'ipaddr', array($network['addresslong'], ip_long($network['broadcast']),
 				$network['addresslong'], ip_long($network['broadcast'])));
 
+		if($network['hostid'])
+			$network['hostname'] = $this->DB->GetOne('SELECT name FROM hosts WHERE id=?', array($network['hostid']));
 		$network['size'] = pow(2, 32 - $network['prefix']);
 		$network['assigned'] = sizeof($nodes);
 		$network['free'] = $network['size'] - $network['assigned'] - 2;

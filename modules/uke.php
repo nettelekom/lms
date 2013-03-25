@@ -162,17 +162,17 @@ $borough_types = array(
 );
 
 $linktypes = array(
-	array('linia' => "linia kablowa", 'trakt' => "podziemny", 'technologia' => "kablowa", 'typ' => "UTP",
+	array('linia' => "kablowa", 'trakt' => "podziemny", 'technologia' => "kablowa", 'typ' => "UTP",
 		'pasmo' => "", 'szybkosc_radia' => "",
 		'technologia_dostepu' => "Ethernet", 'szybkosc' => "100", 'liczba_jednostek' => "1",
 		'jednostka' => "linie w kablu",
 		'specyficzne' => array('szybkosc_dystrybucyjna' => "100")),
-	array('linia' => "linia bezprzewodowa", 'trakt' => "", 'technologia' => "radiowa", 'typ' => "WLAN",
-		'pasmo' => "5GHz", 'szybkosc_radia' => "100",
+	array('linia' => "bezprzewodowa", 'trakt' => "NIE DOTYCZY", 'technologia' => "radiowa", 'typ' => "WLAN",
+		'pasmo' => "5", 'szybkosc_radia' => "100",
 		'technologia_dostepu' => "WLAN-urządzenie abonenckie", 'szybkosc' => "54", 'liczba_jednostek' => "1",
 		'jednostka' => "kanały",
 		'specyficzne' => array('szybkosc_dystrybucyjna' => "100")),
-	array('linia' => "linia kablowa", 'trakt' => "podziemny w kanalizacji", 'technologia' => "światłowodowa", 'typ' => "SMF", 
+	array('linia' => "kablowa", 'trakt' => "podziemny w kanalizacji", 'technologia' => "światłowodowa", 'typ' => "SMF", 
 		'pasmo' => "", 'szybkosc_radia' => "",
 		'technologia_dostepu' => "FTTH", 'szybkosc' => "100", 'liczba_jednostek' => "2",
 		'jednostka' => "włókna",
@@ -337,19 +337,20 @@ foreach ($netnodes as $netnodename => $netnode) {
 	}
 	$snetnodes .= $netnode['id'].",własny,skrzynka,"
 		.(isset($netnode['area_woj'])
-			? implode(',', array($netnode['area_woj'], $netnode['area_pow'], $netnode['area_gmi']." (".$netnode['area_rodz_gmi'].")",
+			? implode(',', array($netnode['area_woj'], $netnode['area_pow'], $netnode['area_gmi'],
 				$netnode['area_terc'], $netnode['area_city'], $netnode['area_simc'], $netnode['address_cecha'],
 				$netnode['address_ulica'], $netnode['address_symul'], $netnode['address_budynek'], ZIP_CODE))
 			: "LMS netdevinfo ID's: ".implode(' ', $netnode['netdevices']).",".implode(',', array_fill(0, 10, '')))
 		.",0,".(isset($netnode['longitude']) ? $netnode['latitude'].",".$netnode['longitude'] : ",")
-		.",Nie,".($netnode['cabledistports'] + $netonode['radiodistports'] + $netnode['fiberdistports'] > 1
+		.",Nie,".($netnode['cabledistports'] + $netnode['radiodistports'] + $netnode['fiberdistports'] > 1
 			|| $netnode['personalaccessports'] + $netnode['commercialaccessports'] == 0 ? "Tak" : "Nie").","
 		.($netnode['cablepersonalaccessports'] || $netnode['cablecommercialaccessports']
 			|| $netnode['radiopersonalaccessports'] || $netnode['radiocommercialaccessports']
 			|| $netnode['fiberpersonalaccessports'] || $netnode['fibercommercialaccessports'] ? "Tak" : "Nie").",\n";
 
 	// save info about network interfaces located in distribution layer
-	if ($netnode['cabledistports'] + $netnode['radiodistports'] + $netnode['fiberdistports'] > 1) {
+	if ($netnode['cabledistports'] + $netnode['radiodistports'] + $netnode['fiberdistports'] > 1
+		|| $netnode['personalaccessports'] + $netnode['commercialaccessports'] == 0) {
 		if ($netnode['cabledistports']) {
 			$snetinterfaces .= $netintid.",".$netnode['id'].",sieć szkieletowa lub dystrybucyjna,kablowe,,Ethernet,,0,100,0,"
 				.$netnode['cabledistports'].","
@@ -502,8 +503,12 @@ foreach ($netnodes as $netnodename => $netnode) {
 						$set = 12;
 					elseif ($node['downstream'] == 30000)
 						$set = 13;
-					else
+					elseif ($node['downstream'] < 100000)
 						$set = 14;
+					elseif ($node['downstream'] == 100000)
+						$set = 15;
+					else
+						$set = 16;
 					if ($node['type'] == 0)
 						$personalnodes[$node['servicetypes']][$set]++;
 					else
@@ -512,13 +517,13 @@ foreach ($netnodes as $netnodename => $netnode) {
 				// save info about computers connected to this network node
 			foreach ($personalnodes as $servicetype => $servicenodes) {
 				$services = array();
-				foreach (array_fill(0, 15, '0') as $key => $value)
+				foreach (array_fill(0, 17, '0') as $key => $value)
 					$services[] = isset($servicenodes[$key]) ? $servicenodes[$key] : $value;
 				$personalnodes[$servicetype] = $services;
 			}
 			foreach ($commercialnodes as $servicetype => $servicenodes) {
 				$services = array();
-				foreach (array_fill(0, 15, '0') as $key => $value)
+				foreach (array_fill(0, 17, '0') as $key => $value)
 					$services[] = isset($servicenodes[$key]) ? $servicenodes[$key] : $value;
 				$commercialnodes[$servicetype] = $services;
 			}
@@ -529,15 +534,17 @@ foreach ($netnodes as $netnodename => $netnode) {
 					if (isset($services[$service]))
 						$ukeservices[] = $service;
 				$snetranges .= $netrangeid.",".$netnode['id'].","
-					.implode(',', array($teryt['area_woj'], $teryt['area_pow'], $teryt['area_gmi']." ("
-						.$borough_types[intval($area_rodz)].")",
+					.implode(',', array($teryt['area_woj'], $teryt['area_pow'], $teryt['area_gmi'],
 						$teryt['area_terc'], $teryt['area_city'], $teryt['area_simc'],
 						$teryt['address_cecha'], $teryt['address_ulica'], $teryt['address_symul'],
 						$teryt['address_budynek'], ZIP_CODE))
-					.",0,".$linktypes[$range['linktype']]['technologia_dostepu'].",".implode('_', $ukeservices).",WLASNA,"
-					.$linktypes[$range['linktype']]['szybkosc'].","
-					.(implode(',', isset($personalnodes[$servicetype]) ? $personalnodes[$servicetype] : array_fill(0, 15, '0'))).","
-					.(implode(',', isset($commercialnodes[$servicetype]) ? $commercialnodes[$servicetype] : array_fill(0, 15, '0')))."\n";
+					.",0,".$linktypes[$range['linktype']]['technologia_dostepu'];
+				$snetranges .= ",Nie,Nie," . (array_search('INT', $ukeservices) !== FALSE ? "Tak" : "Nie")
+					. ",Nie,Nie," . (array_search('TV', $ukeservices) !== FALSE ? "Tak" : "Nie") . ","
+					. (array_search('TEL', $ukeservices) !== FALSE ? "Tak" : "Nie") . ",Nie,Nie,";
+				$snetranges .= ",WLASNA," . $linktypes[$range['linktype']]['szybkosc'].","
+					.(implode(',', isset($personalnodes[$servicetype]) ? $personalnodes[$servicetype] : array_fill(0, 17, '0'))).","
+					.(implode(',', isset($commercialnodes[$servicetype]) ? $commercialnodes[$servicetype] : array_fill(0, 17, '0')))."\n";
 				$netrangeid++;
 			}
 		}
@@ -586,7 +593,7 @@ if ($netlinks)
 			$snetlines .= $netlineid.",węzeł sieci,".$netnodes[$netlink['src']]['id'].",węzeł sieci,".$netnodes[$netlink['dst']]['id'].",Nie,Tak,Nie,"
 				.implode(',', array_slice($linktypes[$netlink['type']], 0, 6)).","
 				.implode(',', array_fill(0, 3, $linktypes[$netlink['type']]['liczba_jednostek'])).","
-				.$linktypes[$netlink['type']]['jednostka'].",0,0\n";
+				.$linktypes[$netlink['type']]['jednostka'].",0," . $linktypes[$netlink['type']]['jednostka'] . ",0\n";
 			$netlineid++;
 		}
 
@@ -597,9 +604,9 @@ if ($netlinks)
 	foreach ($netlinks as $netlink)
 		if ($netnodes[$netlink['src']]['id'] != $netnodes[$netlink['dst']]['id']) {
 			$snetlinks .= $netlinkid.",".$netnodes[$netlink['src']]['id'].",".$netnodes[$netlink['dst']]['id'].",Nie,Tak,Nie,"
-				."0,0,"
+				.",,"
 				.implode(',', array_fill(0, 2, floor($netlink['speed'] / 1000))).","
-				."0,0,0,0\n";
+				.",,0,0\n";
 			$netlinkid++;
 		}
 
@@ -612,7 +619,7 @@ $filename = tempnam('/tmp', 'LMS_SIIS_').'.zip';
 if ($zip->open($filename, ZIPARCHIVE::OVERWRITE)) {
 	$zip->addFromString('WEZLY.csv', $snetnodes);
 	$zip->addFromString('W_INTERFACE.csv', $snetinterfaces);
-	$zip->addFromString('W_ZASIEG.csv', $snetranges);
+	$zip->addFromString('USLUGI_SZER.csv', $snetranges);
 	$zip->addFromString('LINIE.csv', $snetlines);
 	$zip->addFromString('POLACZENIA.csv', $snetlinks);
 	$zip->close();
