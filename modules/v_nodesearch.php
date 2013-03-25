@@ -1,10 +1,4 @@
 <?php
-
-/*
- *  $Id:  $
- */
-
-
 $SESSION->save('backto', $_SERVER['QUERY_STRING']);
 
 if(isset($_POST['search']))
@@ -20,13 +14,13 @@ if(isset($_GET['search']))
 	$layout['pagetitle'] = trans('SIP Search Results');
 
 	$nodelist = $voip->wsdl->GetNodeList($nodesearch);
-	$listdata['total']=count($nodelist);
+	$listdata['total'] = count($nodelist);
 
-	$SMARTY->assign('nodelist',$nodelist);
-	$SMARTY->assign('listdata',$listdata);
+	$SMARTY->assign('nodelist', $nodelist);
+	$SMARTY->assign('listdata', $listdata);
 	
-	if($listdata['total']==1)
-		$SESSION->redirect('?m=v_nodeinfo&id='.$nodelist[0]['id']);
+	if($listdata['total'] == 1)
+		$SESSION->redirect('?m=v_nodeinfo&id=' . $nodelist[0]['id']);
 	else
 		$SMARTY->display('v_nodesearchresults.html');
 }

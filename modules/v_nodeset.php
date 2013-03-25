@@ -1,9 +1,4 @@
 <?php
-
-/*
- *  $Id: $
- */
-
 $ownerid = isset($_GET['ownerid']) ? $_GET['ownerid'] : 0;
 $id = isset($_GET['id']) ? $_GET['id'] : 0;
 
@@ -13,10 +8,10 @@ if($voip->CustomerExists($ownerid))
 
 	$backid = $ownerid;
 	$redir = $SESSION->get('backto');
-	if($SESSION->get('lastmodule')=='customersearch')
+	if($SESSION->get('lastmodule') == 'customersearch')
 		$redir .= '&search=1';
 
-	$SESSION->redirect('?'.$redir.'#'.$backid);
+	$SESSION->redirect('?' . $redir . '#' . $backid);
 }
 
 if($voip->wsdl->NodeExists($id))
@@ -25,6 +20,6 @@ if($voip->wsdl->NodeExists($id))
 	$backid = $id;
 }
 
-header('Location: ?'.$SESSION->get('backto').'#'.$backid);
+header('Location: ?' . $SESSION->get('backto') . '#' . $backid);
 
 ?>

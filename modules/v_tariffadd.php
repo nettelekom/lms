@@ -1,9 +1,4 @@
 <?php
-
-/*
- *  $Id: $
- */
-
 $tariffadd = $_POST['tariffadd'];
 
 if(isset($tariffadd))
@@ -11,14 +6,14 @@ if(isset($tariffadd))
 	foreach($tariffadd as $key => $value)
 		$tariffadd[$key] = trim($value);
 
-	if($tariffadd['name']=='' && $tariffadd['amount']=='')
+	if($tariffadd['name'] == '' && $tariffadd['amount'] == '')
 	{
 		$SESSION->redirect('Location: ?m=v_tarifflist');
 	}
 
-	$tariffadd['amount'] = str_replace(',','.',$tariffadd['amount']);
+	$tariffadd['amount'] = str_replace(',', '.', $tariffadd['amount']);
 
-	if(!preg_match('/^[-]?[0-9.,]+$/',$tariffadd['amount']))
+	if(!preg_match('/^[-]?[0-9.,]+$/', $tariffadd['amount']))
 		$error['amount'] = 'Błędna wartość';
 	if($tariffadd['name'] == '')
 		$error['name'] = 'Nazwa jest wymagana';
@@ -39,8 +34,8 @@ if(isset($tariffadd))
 
 $layout['pagetitle'] = 'Nowy abonament';
 
-$SMARTY->assign('error',$error);
-$SMARTY->assign('tariffadd',$tariffadd);
+$SMARTY->assign('error', $error);
+$SMARTY->assign('tariffadd', $tariffadd);
 
 $SMARTY->display('v_tariffadd.html');
 

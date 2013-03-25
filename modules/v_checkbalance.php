@@ -1,10 +1,10 @@
 <?php
-$users=$voip->wsdl->GetCustomerNames();
+$users = $voip->wsdl->GetCustomerNames();
 foreach($users as $us)
 {
-	$voip->wsdl->UpdateCustomerBalance($us['id'],-$LMS->GetCustomerBalance($us['id']));
+	$voip->wsdl->UpdateCustomerBalance($us['id'], -$LMS->GetCustomerBalance($us['id']));
 }
 $t = $LMS->GetTaxes();
 if(is_array($t)) foreach($t as $val) if($val['id'] == $voip->config['taxid']) $voip->wsdl->UpdateTax($val['value']);
-$SESSION->redirect('?'.$SESSION->get('backto'));
+$SESSION->redirect('?' . $SESSION->get('backto'));
 ?>

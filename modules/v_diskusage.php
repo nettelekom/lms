@@ -11,7 +11,7 @@ if(isset($_POST['du']) and !empty($_POST['du']))
 {
 	$err = $voip->wsdl->UpdateQuota($_POST['du']);
 	if($err)
-		$SMARTY->assign('err',$err);
+		$SMARTY->assign('err', $err);
 	else
 		$SESSION->redirect('?m=v_diskusage');
 }
@@ -21,9 +21,9 @@ $s = $voip->wsdl->GetSettings();
 $maxlimit = $s[8];
 foreach($c as $val) $maxlimit -= $val['quotamax'];
 if($maxlimit < 0) $maxlimit = 0;
-$SMARTY->assign('quotaleft',$maxlimit);
+$SMARTY->assign('quotaleft', $maxlimit);
 if(isset($s[9]))
-	$SMARTY->assign('email',$s[9]);
-$SMARTY->assign('du',$c);
+	$SMARTY->assign('email', $s[9]);
+$SMARTY->assign('du', $c);
 $SMARTY->display('v_diskusage.html');
 ?>
