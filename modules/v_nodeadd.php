@@ -15,15 +15,10 @@ if(isset($nodedata))
 			$SESSION->redirect('?m=nodelist');
 		}
 	
-	if($nodedata['name'] == '')
-		$error['name'] = trans('Node name is required!');
-	elseif(strlen($nodedata['name']) > 16)
-		$error['name'] = trans('Node name is too long (max.16 characters)!');
+	if(!preg_match('/^0[1-9][0-9]{8}$/', $nodedata['name']))
+		$error['name'] = 'Nieprawidłowy login! (10 cyfr z zerem na początku)';		
 	elseif($voip->wsdl->GetNodeIDByName($nodedata['name']))
 		$error['name'] = trans('Specified name is in use!');
-	elseif(!preg_match('/^[_a-z0-9-]+$/', $nodedata['name']))
-		$error['name'] = trans('Specified name contains forbidden characters!');		
-
 	
 	if(strlen($nodedata['secret']) > 32)
 		$error['secret'] = trans('Password is too long (max.32 characters)!');
