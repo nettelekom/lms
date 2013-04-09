@@ -158,6 +158,14 @@ if($CONFIG['voip']['enabled'] == 1)
 	$layout['v_errors'] =& $voip->errors;
 }
 
+// Initialize Swekey class
+
+if (chkconfig($CONFIG['phpui']['use_swekey'])) {
+	require_once(LIB_DIR . '/swekey/lms_integration.php');
+	$LMS_SWEKEY = new LmsSwekeyIntegration($DB, $AUTH, $LMS);
+	$SMARTY->assign('lms_swekey', $LMS_SWEKEY->GetIntegrationScript($AUTH->id));
+}
+
 // Set some template and layout variables
 
 $SMARTY->template_dir = SMARTY_TEMPLATES_DIR;

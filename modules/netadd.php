@@ -108,7 +108,10 @@ if(isset($_POST['netadd']))
 		if($netadd['dhcpstart'] != '' && $netadd['dhcpend'] != '' && !(ip_long($netadd['dhcpend']) >= ip_long($netadd['dhcpstart'])))
 			$error['dhcpend'] = trans('End of DHCP range has to be equal or greater than start!');
 	}
-	
+
+	if (empty($netadd['hostid']))
+		$error['hostid'] = trans('Host should be selected!');
+
 	if(!$error)
 	{
 		$SESSION->redirect('?m=netinfo&id='.$LMS->NetworkAdd($netadd));
@@ -121,6 +124,7 @@ if(isset($_POST['netadd']))
 $layout['pagetitle'] = trans('New Network');
 
 $SMARTY->assign('prefixlist', $LMS->GetPrefixList());
+$SMARTY->assign('hostlist', $LMS->DB->GetAll('SELECT id, name FROM hosts ORDER BY name'));
 $SMARTY->display('netadd.html');
 
 ?>

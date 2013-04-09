@@ -152,7 +152,10 @@ if(isset($_POST['networkdata']))
 		if($networkdata['dhcpstart']!='' && $networkdata['dhcpend']!='' && !(ip_long($networkdata['dhcpend']) >= ip_long($networkdata['dhcpstart'])))
 			$error['dhcpend'] = trans('End of DHCP range has to be equal or greater than start!');
 	}
-	
+
+	if (empty($networkdata['hostid']))
+		$error['hostid'] = trans('Host should be selected!');
+
 	if(!$error)
 	{
 	        if(isset($networkdata['needshft']) && $networkdata['needshft'])
@@ -162,6 +165,7 @@ if(isset($_POST['networkdata']))
 		$SESSION->redirect('?m=netinfo&id='.$networkdata['id']);
 	}	
 
+	$network['name'] = $networkdata['name'];
 	$network['interface'] = $networkdata['interface'];
 	$network['prefix'] = $networkdata['prefix'];
 	$network['address'] = $networkdata['address'];
@@ -186,7 +190,7 @@ $SMARTY->assign('network',$network);
 $SMARTY->assign('networks',$networks);
 $SMARTY->assign('netlistsize',sizeof($networks));
 $SMARTY->assign('prefixlist', $LMS->GetPrefixList());
-$SMARTY->assign('hostlist', $LMS->DB->GetAll("SELECT id, name FROM hosts ORDER BY name"));
+$SMARTY->assign('hostlist', $LMS->DB->GetAll('SELECT id, name FROM hosts ORDER BY name'));
 $SMARTY->assign('error',$error);
 $SMARTY->display('netinfo.html');
 
