@@ -41,6 +41,7 @@ function module_main()
 	JOIN documents d ON (c.docid = d.id)
 	LEFT JOIN numberplans n ON (d.numberplanid = n.id)
 	WHERE d.customerid = ?
+		AND d.type = -2
 	ORDER BY cdate', array($SESSION->id));
 
     $fields_changed = $LMS->DB->GetRow('SELECT id FROM up_info_changes WHERE customerid = ?', 
@@ -71,6 +72,7 @@ function module_updateuserform()
 	JOIN documents d ON (c.docid = d.id)
 	LEFT JOIN numberplans n ON (d.numberplanid = n.id)
 	WHERE d.customerid = ?
+		AND d.type = -2
 	ORDER BY cdate', array($SESSION->id));
     
     $userinfo['im'] = isset($userinfo['messengers'][IM_GG]) ? $userinfo['messengers'][IM_GG]['uid'] : '';
