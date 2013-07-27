@@ -24,12 +24,12 @@
  *  $Id$
  */
 
-$_LANG['Access denied!'] = 'Brak dostępu!';
+$_LANG['Access denied!'] = 'Brak dostępu!<br/>Podano nieprawidłowy ID lub PIN';
 $_LANG['and'] = 'i';
 $_LANG['Cancel'] = 'Anuluj';
 $_LANG['classic'] = 'klasyczny';
 $_LANG['Configure Module: $a'] = 'Konfiguracja Modułu: $a';
-$_LANG['Customer ID:'] = 'ID klienta:';
+$_LANG['Customer ID:'] = 'ID:';
 $_LANG['Customers\' rights'] = 'Uprawnienia klientów';
 $_LANG['Database errors occurred!'] = 'Wystąpiły błędy w obsłudze bazy danych!';
 $_LANG['Database version'] = 'Wersja bazy danych';
@@ -54,7 +54,7 @@ $_LANG['monthly'] = 'miesięcznie';
 $_LANG['No modules found!'] = 'Nie odnaleziono żadnych modułów!';
 $_LANG['none'] = 'żaden';
 $_LANG['PIN:'] = 'PIN:';
-$_LANG['Please login.'] = 'Proszę się zalogować.';
+$_LANG['Please login.'] = 'Logowanie';
 $_LANG['Prio'] = 'Prio';
 $_LANG['quarterly'] = 'kwartalnie';
 $_LANG['Query:'] = 'Zapytanie:';
@@ -71,8 +71,8 @@ $_LANG['Userpanel module <b>$a</b> not found!'] = 'Nie znaleziono modułu <b>$a<
 $_LANG['Userpanel Rights:'] = 'Uprawnienia w Userpanelu:';
 $_LANG['Userpanel style:'] = 'Styl Userpanela:';
 $_LANG['Select All'] = 'Zaznacz wszystko';
-$_LANG['VCS'] = 'wBOK';
-$_LANG['Virtual Customer Service'] = 'Wirtualne Biuro Obsługi Klienta';
+$_LANG['VCS'] = 'iBOK Netarea';
+$_LANG['Virtual Customer Service'] = 'iBOK - internetowe Biuro Obsługi Klienta Netarea';
 $_LANG['weekly'] = 'tygodniowo';
 $_LANG['yearly'] = 'rocznie';
 $_LANG['Rights'] = 'Uprawnienia';
