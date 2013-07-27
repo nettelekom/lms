@@ -3,66 +3,75 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="{$_ui_language}">
 <head>
   <meta content="text/html; charset={$LANGDEFS.$_ui_language.charset}" http-equiv="content-type" />
-  <title>{trans("Virtual Customer Service")}</title>
+  <title>iBOK - internetowe Biuro Obsługi Klienta Netarea</title>
 <link type="text/css" rel="stylesheet" href="{stylefile}" />
 </head>
-<body>
-<div class="login">
-<table style="vertical-align: middle; width:100%; height: 100%; margin:auto">
-    <tr>
-	<td align="center">
-	    <table>
-		<tr>
-		    <td>
-			{img src="logo.jpg" alt=""}
-		    </td>
-		    <td>&nbsp;</td>
-		    <td align="center">
-			{box title="VCS"}
-			<div style="white-space: nowrap; text-align: center;"><b>{trans("Virtual Customer Service")}</b></div><br/>
-			{if $error}<div style="color:red;text-align: center;"><b>{$error}</b></div>{else}&nbsp;{/if}
-			<br/><br/>
-			<form id="login" method="post" action="{$target}">
-			<table style="height: 100%; width: 100%;">
-			    <tr>
-				<td align="right" style="white-space: nowrap;">
-				    <b>{trans("Customer ID:")}</b>
-				</td>
-				<td align="left">
-				    <input type="text" name="loginform[login]" style="width: 50pt" />
-				</td>
-			    </tr>
-			    <tr>
-				<td align="right" style="white-space: nowrap;">
-				    <b>{trans("PIN:")}</b>
-				</td>
-				<td align="left">
-				    <input type="password" name="loginform[pwd]" style="width: 50pt" />
-				</td>
-			    </tr>
-			    <tr>
-				<td colspan="2" align="center">
-				    <br/><input type="submit" name="loginform[submit]" style="font-weight: bold;" value="{trans("Login")}"/>
-				</td>
-			    </tr>
-			</table>
-			</form>
-			{/box}
-		    </td>
-    		</tr>
-	    </table>
-	    <div class="copyrights"><b>LMS Userpanel {$layout.upv}</b><br/>
-	    {trans("This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License version 2.")}<br/>
-	    {trans("For more information see")} <a href="doc/COPYING">doc/COPYING</a> {trans("and")} <a href="doc/AUTHORS">doc/AUTHORS</a>
-	    </div>
-	</td>
-    </tr>
-</table>
+
+<body style="background: url('style/default/wrapper_shadow.png') repeat-y center top; margin: 0 auto; width: 962px;">
+
+	<div>
+		<div style="background:url('style/default/line_header.png') no-repeat center 67px; height:112px; padding:18px 0;">
+			
+			<div style="margin-left: 70px; float:left;">
+				<a title="Internet Rumia, Telewizja Rumia, Telefon Rumia - Netarea" name="Logo Netarea" href="http://www.netarea24.pl"><img src="style/default/logo.png" alt="Najlepszy internet w Rumi - Netarea" /></a>
+			</div>
+			
+			<div style="float:right; margin-top:15px; margin-right:10px; color:#647883; font-size:24px;">
+				<span>{trans("Virtual Customer Service")}</span>
+			</div>
+		</div>
+	</div>		   
+
+	<div class="login" >
+		
+		<h2 id="login_beam">Logowanie do <strong>iBOK</strong></h2>	
+		
+			<div>				
+				{if $error}<div style="color: #ff0000; text-align: center; font-size: 20px; text-shadow: 0 0 1px #ff0000;"><strong>{$error}</strong></div>{else}&nbsp;{/if}
+
+				<form style="margin: 0 auto; width: 350px; margin-top: 20px;" id="login" method="post" action="{$target}">
+
+					<p style="font-size: 10px;">Wprowadź ID i PIN<br/>Dane znajdują się na pierwszej stronie umowy</p>
+
+					<table border="0" width="100%">
+						<tr>
+							<td style="text-align: right;">
+								<label style="color:#647883; font-size:30px; font-weight: bold;">{trans("Customer ID:")}</label>
+							</td>
+							<td>
+								<input type="text" name="loginform[login]" style="width: 50pt; padding: 9px;" />
+							</td>
+							<td rowspan="2" style="text-align: right;">
+								<div id="none"><script type="text/javascript">Seal("https://www.netarea24.pl/ibok/style/old/website_seal_small.gif", "GSSL", "none");</script><a href="javascript:if(window.open('https://seal.globessl.com/?domain=www.netarea24.pl','tl_wnd_credentials'+(new Date()).getTime(),'toolbar=0,scrollbars=1,location=1,status=1,menubar=1,resizable=1,width=360,height=580,left=60,top=120')){};tLlB(tLTB);" onmouseover="tLeB(event,'https://seal.globessl.com/?domain=www.netarea24.pl','tl_popupGSSL')" onmousemove="tLXB(event)" onmouseout="tLTC('tl_popupGSSL')" ondragstart="return false;"><img src="https://www.netarea24.pl/ibok/style/old/website_seal_small.gif" onmousedown="return tLKB(event,'https://seal.globessl.com/?domain=www.netarea24.pl');" oncontextmenu="return tLLB(event);" border="0"></a><!----><div id="tl_popupGSSL" name="tl_popupGSSL" style="position:absolute;z-index:0;visibility: hidden;background-color: transparent;overflow:hidden;" onmouseover="tLoB('tl_popupGSSL')" onmousemove="tLpC('tl_popupGSSL')" onmouseout="tLpB('tl_popupGSSL')"></div></div>
+							</td>
+						</tr>
+						
+						<tr>
+							<td style="text-align: right;">
+								<label style="color:#647883; font-size:30px; font-weight: bold;">{trans("PIN:")}</label>
+							</td>
+							<td>
+								<input type="password" name="loginform[pwd]" style="width: 50pt; padding: 9px;" />
+							</td>
+						</tr>
+						<tr>
+							<td style="text-align: center; padding: 20px;" colspan="2">
+								<input id="button" type="submit" name="loginform[submit]" style="font-weight: bold;" value="{trans("Login")}"/>
+
+							</td>
+						</tr>
+					</table>
+				</form>
+			</div> 
+
 <script type="text/javascript">
 <!--
 document.forms['login'].elements['loginform[login]'].focus();
 //-->
 </script>
-</div>
+			<hr style="height:0; border:none; border-top: 1px solid #667b85;" width="90%" />
+				<div style="text-align:center; font-size:10px; color:#b5b5b5; margin-bottom: 20px;">
+					Copyright © 2009-2013 <a name="Netarea" href="http://www.netarea24.pl" title="Netarea" alt="Netarea">Netarea</a>
+				</div>
 </body>
 </html>
