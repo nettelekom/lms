@@ -7,9 +7,10 @@ elseif($_POST['notuinvoicec']==1) $voip->ui_setinvoice($SESSION->id,false);
 $userinfo=$LMS->GetCustomer($SESSION->id);
 $assignments=$voip->wsdl->uiGetCustomerNodes($SESSION->id);
 $userinfo=$voip->wsdl->GetCustomer($userinfo,$SESSION->id);
+$sip=$voip->wsdl->ui_getsip($assignments[0][id]);
 $SMARTY->assign('userinfo', $userinfo);
 $SMARTY->assign('assignments', $assignments);
-
+$SMARTY->assign('sip', $sip);
 /* CDR */
 		if(isset($_POST['from']))
 		$from = $_POST['from'];
@@ -69,6 +70,7 @@ $listdata['cost_br']=number_format(round($listdata['cost']*($tax/100)+$listdata[
 $SMARTY->assign('listdata',$listdata);
 $SMARTY->assign('rategroups',$voip->rategroups);
 $SMARTY->assign('cdr',$cdr);
+
 $SMARTY->display('module:voip.html');
 
 ?>

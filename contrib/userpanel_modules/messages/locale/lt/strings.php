@@ -1,9 +1,9 @@
 <?php
 
 /*
- *  LMS Userpanel version 1.0rc1-Kai
+ *  LMS version 1.11-git
  *
- *  (C) Copyright 2004-2006 Userpanel Developers
+ *  (C) Copyright 2001-2013 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -21,15 +21,14 @@
  *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307,
  *  USA.
  *
- *  $Id: configuration.php,v 1.10.2.1 2006/01/16 09:49:58 lexx Exp $
+ *  $Id$
  */
 
-$USERPANEL->AddModule('Telefon',	// Display name
-		    'voip', 		// Module name - must be the same as directory name
-		    trans('VOIP'), // Tip 
-		    21,			// Priority
-		    '',	// Description
-		    2005090601
-		    );
+$_LANG['I confirm reading of message'] = 'Patvirtinu, jog žinutę perskaičiau';
+$_LANG['Message to you'] = 'Žinutės Tau';
+$_LANG['Messages'] = 'Žinutės';
+$_LANG['Shows administrative messages'] = 'Rodo administracines žinutes';
+$_LANG['This module is for showing administrative informations for your customer'] = 'Šis modulis rodo administracines žinutes skirtas Tavo klientui';
+$_LANG['We don\'t have any messages to you.'] = 'Neturi žinučių.';
 
 ?>

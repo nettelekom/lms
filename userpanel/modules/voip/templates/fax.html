@@ -15,7 +15,7 @@
 <tr><td colspan="2" align="center" style="color:#FF0000;">{$err[err]}</td></tr>
 {/section}
 <tr><td>Z numeru:</td><td>{html_options name=fromnr options=$nodes selected=$faxform.id_ast_sip}</td></tr>
-<tr><td>Na numer:</td><td><input type="text" name="tonr" value="{$faxform.nr_to}">&nbsp;
+<tr><td>Na numer:</td><td><input type="text" name="tonr" value="0{$faxform.nr_to}">&nbsp;
 <select name="void" onchange="document.forms['fax'].elements['tonr'].value=document.forms['fax'].elements['void'].options[document.forms['fax'].elements['void'].selectedIndex].value;"><option value="" selected="selected">-wybierz-</option>{html_options options=$addressbook}</select>&nbsp;&nbsp;
 Do grupy <select name="dogr"><option value="0" selected="selected">-wybierz-</option>{html_options options=$addressbookgr}</select>
 </td></tr>

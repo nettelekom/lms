@@ -1,9 +1,9 @@
 <?php
 
 /*
- *  LMS Userpanel version 1.0rc1-Kai
+ *  LMS version 1.11-git
  *
- *  (C) Copyright 2004-2006 Userpanel Developers
+ *  (C) Copyright 2001-2013 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -21,15 +21,14 @@
  *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307,
  *  USA.
  *
- *  $Id: configuration.php,v 1.10.2.1 2006/01/16 09:49:58 lexx Exp $
+ *  $Id$
  */
 
-$USERPANEL->AddModule('Telefon',	// Display name
-		    'voip', 		// Module name - must be the same as directory name
-		    trans('VOIP'), // Tip 
-		    21,			// Priority
-		    '',	// Description
-		    2005090601
+$USERPANEL->AddModule(trans('Help'),	// Display name
+		    'help', 		// Module name - must be the same as directory name
+		    trans('Runs problems solving center'), // Tip 
+		    5,			// Priority
+		    trans('This module shows problems solving center')	// Description
 		    );
 
 ?>

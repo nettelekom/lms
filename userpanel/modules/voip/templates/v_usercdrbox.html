@@ -54,10 +54,10 @@ Status: &nbsp;
 		<td width="1%" align="right" class="nobr">{$cdr[c].calldate}</td>
 		<td width="1%" align="right">{$cdr[c].src}</td>
 		<td width="1%" align="right" class="nobr">{$cdr[c].dst}</td>
-		<td width="1%" align="right">{$cdr[c].seconds}</td>
+		<td width="1%" align="right">{$cdr[c].seconds|seconds_to_words}</td>
 		<td width="1%" align="right">{$cdr[c].tmp_cost}</td>
-		<td width="1%" align="right">{$cdr[c].cost}</td>
-		<td width="1%" align="right">{$cdr[c].cost_br}</td>
+		<td width="1%" align="right">{$cdr[c].cost} zł</td>
+		<td width="1%" align="right">{$cdr[c].cost_br} zł</td>
 		<td width="1%" align="right">{$cdr[c].disposition}</td>
 		<td width="1%" align="right">{$cdr[c].rate|default:'[BRAK]'}</td>
 		<td width="1%" align="right">{if $cdr[c].monitor}<a href="?m=voip&f=listen&id={$cdr[c].id}">{img src="audio_icon.gif" border="0"}</a><br><a href="?m=voip&f=delcdr&id={$cdr[c].id}">Usuń</a>{else}&nbsp;{/if}</td>
@@ -73,10 +73,10 @@ Status: &nbsp;
 	{/section}
 <tr class="dark">
 <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td align="right"><b>Razem:</b></td>
-<td align="right">{$listdata.seconds}</td>
+<td align="right">{$listdata.seconds|seconds_to_words}</td>
 <td align="right">{$listdata.tmp_cost}</td>
-<td align="right">{$listdata.cost}</td>
-<td align="right">{$listdata.cost_br}</td>
+<td align="right">{$listdata.cost} zł</td>
+<td align="right">{$listdata.cost_br} zł</td>
 <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
 </table>
 <SCRIPT>

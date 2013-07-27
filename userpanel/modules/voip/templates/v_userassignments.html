@@ -16,10 +16,7 @@
 		<td class="nobr" align="right">{$assignment.subscription}</td>
 		<td class="nobr" align="right">{$assignment.period} ({$assignment.at})</td>
 		<td class="nobr"><a href="?m=voip&f=settings&id={$assignment.id}">Edytuj</a></td>
-		<td><a href="?m=voip&f=allowedrates&id={$assignment.id}">Dozwolone strefy</a></td>
 		<td><a href="?m=voip&f=cost&id={$assignment.id}">Sprawdź koszt połączenia</a></td>
-		<td><a href="?m=voip&f=tariff&id={$assignment.id}" target="_blank">Wydrukuj cennik</a><br>
-		<a href="?m=voip&f=tariff&csv=1&id={$assignment.id}">Pobierz jako CSV</a></td>
 	</tr>
 	{foreachelse}
 	<tr>
@@ -38,7 +35,7 @@
 <td colspan="4">&nbsp;</td>
 	</tr>
 	<tr class="dark">
-<td align="center" colspan="8"><b><a href="?m=voip&f=fax">Skrzynka FAX</a></b>&nbsp;&nbsp;<b><a href="?m=voip&f=addressbook">Książka telefoniczna</a></b>&nbsp;&nbsp;<b><a href="?m=voip&f=ivr">IVR</a></b></td>
+<td align="center" colspan="8"><b>{if $sip.faxonly == "t"} <a href="?m=voip&f=fax">Skrzynka FAX</a></b>&nbsp;&nbsp;{/if}<b><a href="?m=voip&f=addressbook">Książka telefoniczna</a></b>&nbsp;&nbsp;<b></b></td>
 </tr>
 </table>
 {/box}
