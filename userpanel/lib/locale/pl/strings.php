@@ -24,7 +24,7 @@
  *  $Id$
  */
 
-$_LANG['Access denied!'] = 'Brak dostępu!<br/>Podano nieprawidłowy ID lub PIN';
+$_LANG['Access denied!'] = 'Brak dostępu<span style="text-decoration:blink;">!</span><br/>Nieprawidłowy ID lub PIN';
 $_LANG['and'] = 'i';
 $_LANG['Cancel'] = 'Anuluj';
 $_LANG['classic'] = 'klasyczny';
@@ -43,7 +43,7 @@ $_LANG['Error!'] = 'Błąd!';
 $_LANG['For more information see'] = 'Aby dowiedzieć się więcej zobacz';
 $_LANG['Function <b>$a</b> in module <b>$b</b> not found!'] = 'Funkcja <b>$a</b> w module <b>$b</b> nie odnaleziona!';
 $_LANG['Hint style:'] = 'Styl podpowiedzi:';
-$_LANG['Idle time limit exceeded ($a sec.)'] = 'Przekroczony limit czasu bezczynności ($a sek.)';
+$_LANG['Idle time limit exceeded ($a sec.)'] = 'Wylogowanie nastąpiło automatycznie z powodu braku aktywności';
 $_LANG['Login'] = 'Zaloguj się';
 $_LANG['Basic Configuration:'] = 'Konfiguracja podstawowa:';
 $_LANG['modern'] = 'nowoczesny';
@@ -72,7 +72,7 @@ $_LANG['Userpanel Rights:'] = 'Uprawnienia w Userpanelu:';
 $_LANG['Userpanel style:'] = 'Styl Userpanela:';
 $_LANG['Select All'] = 'Zaznacz wszystko';
 $_LANG['VCS'] = 'iBOK Netarea';
-$_LANG['Virtual Customer Service'] = 'iBOK - internetowe Biuro Obsługi Klienta Netarea';
+$_LANG['Virtual Customer Service'] = '<strong>iBOK</strong> - internetowe Biuro Obsługi Klienta';
 $_LANG['weekly'] = 'tygodniowo';
 $_LANG['yearly'] = 'rocznie';
 $_LANG['Rights'] = 'Uprawnienia';
