@@ -1,3 +1,4 @@
+<div style="padding: 10px;">
 {box title="Konta SIP"}
 <table style="width: 100%;" cellpadding="3">
 	<tr class="darkest">
@@ -5,8 +6,10 @@
 		<td width="1%" class="nobr" align="center">Wartość netto:</td>
 		<td width="1%" class="nobr" align="center">Abonament</td>
 		<td width="1%" class="nobr" align="center">{t}Accounting day:{/t}</td>
-		<td width="1%" class="nobr" colspan="4" align="center">Ustawienia</td>
+		<!--<td width="1%" class="nobr" colspan="4" align="center">Ustawienia</td>-->
 	</tr>
+
+
 	{foreach from=$assignments item=assignment}
 	<tr class="dark">
 		<td class="nobr" align="right"><b>
@@ -14,9 +17,7 @@
 		</b></td>
 		<td class="nobr" align="right">{$assignment.value|money_format}</td>
 		<td class="nobr" align="right">{$assignment.subscription}</td>
-		<td class="nobr" align="right">{$assignment.period} ({$assignment.at})</td>
-		<td class="nobr"><a href="?m=voip&f=settings&id={$assignment.id}">Edytuj</a></td>
-		<td><a href="?m=voip&f=cost&id={$assignment.id}">Sprawdź koszt połączenia</a></td>
+		<td class="nobr" align="right">{$assignment.period} ({$assignment.at} dzień)</td>
 	</tr>
 	{foreachelse}
 	<tr>
@@ -27,15 +28,20 @@
 		</td>
 	</tr>
 	{/foreach}
-	<tr class="darkest">
+<tr class="darkest">
 		<td align="right"><b>{t}Total:{/t}</b></td>
 		<td class="nobr" align="right">{sum array=$assignments column="value" string_format=$LANGDEFS.$_language.money_format}</td>
 		<td class="nobr" align="right"></td>
 		<td>&nbsp;</td>
-<td colspan="4">&nbsp;</td>
 	</tr>
-	<tr class="dark">
-<td align="center" colspan="8"><b>{if $sip.faxonly == "t"} <a href="?m=voip&f=fax">Skrzynka FAX</a></b>&nbsp;&nbsp;{/if}<b><a href="?m=voip&f=addressbook">Książka telefoniczna</a></b>&nbsp;&nbsp;<b></b></td>
-</tr>
 </table>
+
+<div style="text-align: center; padding: 10px; border-top: 2px solid #cccccc; border-bottom: 2px solid #cccccc; margin-top: 20px; background: #a6ce39;">
+{if $fax}<a href="?m=voip&f=fax">Skrzynka FAX</a>{/if} |
+<a href="?m=voip&f=addressbook">Książka telefoniczna</a> |
+<a href="?m=voip&f=cost&id={$assignment.id}">Sprawdź koszt połączenia</a> |
+<a href="?m=voip&f=settings&id={$assignment.id}">Zmień ustawienia konta</a> |
+</div>
+
 {/box}
+</div>
