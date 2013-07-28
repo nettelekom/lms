@@ -50,12 +50,14 @@ else document.getElementById(id).innerText='';
 <tr><td>Numer przekierowania (gdy niedostępny):</td><td><input type="text" name="sip[unavail_forward_number]" value="{$sip.unavail_forward_number}"></td></tr>
 
 <tr><td>Nagrywanie połączeń:</td><td><input type="checkbox" name="sip[monitor]" class="check" value="t"{if $sip.monitor == 't'} checked="checked"{/if} disabled="disabled">
-{if $addserv.monitor}<span style="color:#FF0000;">Koszt {$addserv.monitor} PLN</span><br/>Skontaktuj się z Netarea w celu uruchomienia{/if}
+{if $addserv.monitor}<span style="color:#FF0000;">Koszt {$addserv.monitor} PLN</span>{/if}<br/>{if $sip.monitor == 'f'}Skontaktuj się z Netarea w celu uruchomienia{/if}
 </td></tr>
 
 <tr><td>Informuj o koszcie połączenia na nr zagraniczne</td><td><input type="checkbox" name="sip[saycost]" class="check" value="t"{if $sip.saycost== 't'} checked="checked"{/if}></td></tr>
 
 <tr><td colspan="2"><hr></td></tr>
+<tr><td>Wirtualny FAX</td><td><input type="checkbox" name="sip[faxonly]" class="check" value="t"{if $sip.faxonly == 't'} checked="checked"{/if} disabled="disabled"> {if $addserv.faxonly}<span style="color:#FF0000;">Koszt {$addserv.faxonly} PLN</span>{/if}{if $sip.faxonly == 'f'}<br/>Skontaktuj się z Netarea w celu uruchomienia{/if}
+</td></tr>
 
 <tr><td>Wysyłaj odebrane faxy na email</td><td><input type="checkbox" name="sip[fax2email]" class="check" value="t"{if $sip.fax2email == 't'} checked="checked"{/if}></td></tr>
 
