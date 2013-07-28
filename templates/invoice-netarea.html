@@ -9,10 +9,10 @@
 			{number number=$invoice.number template=$invoice.template time=$invoice.cdate assign=number}
 			{if $invoice.invoice}
 			    {number number=$invoice.invoice.number template=$invoice.invoice.template time=$invoice.invoice.cdate assign=number_ref}
-			    <B>{t 0=$number}Credit Note No. $0{/t}</B><BR>
-			    <B class="mdf">{t 0=$number_ref}for Invoice No. $0{/t}</B><BR>
+			    <B>{t a=$number}Credit Note No. $a{/t}</B><BR>
+			    <B class="mdf">{t a=$number_ref}for Invoice No. $a{/t}</B><BR>
 			{else}
-			    <B>{t 0=$number}Invoice No. $0{/t}</B><BR>
+			    <B>{t a=$number}Invoice No. $a{/t}</B><BR>
 			{/if}
 			<B>{$type}</B>
 			{if $duplicate}
@@ -352,7 +352,7 @@
 			{if $_config.phpui.to_words_short_version}
 				{$invoice.value|string_format:"%d"|to_words:0:"":1} {$invoice.valuep|string_format:"%02d"}/100
 			{else}
-				{t 0=$invoice.value|string_format:"%d"|to_words 1=$invoice.valuep|to_words}$0 dollars $1 cents{/t}
+				{t a=$invoice.value|string_format:"%d"|to_words 1=$invoice.valuep|to_words}$a dollars $1 cents{/t}
 			{/if}
 		</TD>
 	</TR>
@@ -363,23 +363,6 @@
 <div>
 	<br/><img align="right" src="http://www.netarea24.pl/gfx/pieczec_prewencyjna.png" border="0"><br/><br/>
 </div>
-
-<!--
-<div align="center">
-
-	{if $type == 'xxxORYGINAŁ'}
-			<img src="http://netarea24.pl/przelew/przelew_generuj.php?&kwota={$invoice.value|number_format:2}&nd1={$invoice.name} &nd2={$invoice.address} {$invoice.zip} {$invoice.city}&tyt1={t 0=$number}Invoice No. $0{/t}" BORDER="0" width="100%">
-	{else}
-			<BLOCKQUOTE>
-			<B>{t}Cautions:{/t}</B><BR>
-
-			{t}Prosimy pamiętać, że wyłączny adres do korespo{/t}<BR>
-			{t}You may use our automated Customer Care Web Panel, just remember your PIN (it's printed on the other side of this page){/t}
-			</BLOCKQUOTE>
-	{/if}
-
-</div>
--->
 
 <TABLE WIDTH="100%" CELLPADDING="3">
 	<TR>
