@@ -1,42 +1,52 @@
 {include file="header.html"}
-<table width="100%" cellspacing="0" class="icu_tab">
-        <tr>
-                <td valign="top" width="100%">
-{box title="Książka adresowa - grupy"}
-<table width="100%">
-<tr><th>Nazwa</th><th>Ilość wpisów</th><th>Blokuj przychodzące<br>z tej grupy</th><th colspan="2">Akcja</th></tr>
-{section name=a loop=$groups}
-<TR>
-<td><a href="?m=voip&f=addressbookd&gr={$groups[a].id}">{$groups[a].name}</a></td>
-<td>{$groups[a].count|default:0}</td>
-<td>{if $groups[a].dropcall eq 't'}TAK{else}NIE{/if}</td>
-<td><a href="?m=voip&f=addressbook&edit={$groups[a].id}">Edytuj</a></td>
-<td><a href="?m=voip&f=addressbook&del={$groups[a].id}" onclick="return confirm('Na pewno? Wszystkie kontakty z tej grupy zostaną usunięte!');">Usuń</a></td>
 
-{/section}
-</table>
-{/box}
-</td></tr>
-        <tr>
-                <td valign="top" width="100%">
+
+
+<div style="padding: 10px;">
+
 {if $groupaction}
-{assign var='title' value="Książka adresowa - Edytuj"}
+{assign var='title' value="Książka telefoniczna - edycja"}
 {else}
-{assign var='title' value="Książka adresowa - Dodaj"}
+{assign var='title' value="Książka telefoniczna - dodawanie nowej grupy"}
 {/if}
 {box title=$title}
-{if $error}<span style="color:#FF0000; font-weight:bold;">{$error}</span>{/if}
-<form action="?m=voip&f=addressbook" method="post">
-<input type="text" name="group[name]" value="{$group.name}">
-&nbsp;
-<label><input type="checkbox" name="group[block]" value="1"{if $group.dropcall eq 't'} checked="checked"{/if}>Blokuj połączenia przychodzące z tej grupy</label>
-&nbsp;
-<input type="hidden" name="group[id]" value="{$group.id}">
-<input type="submit" value="Zapisz">
-</form>
+
+<h3>Dodaj nową grupę</h3>
+{if $error}<span style="color:#FF0000;">{$error}</span>{/if}
+
+	<form action="?m=voip&f=addressbook" method="post">
+		Podaj nazwę nowej grupy: <input type="text" name="group[name]" value="{$group.name}">
+		<label><input type="checkbox" name="group[block]" value="1"{if $group.dropcall eq 't'} checked="checked"{/if}>Blokuj połączenia przychodzące z tej grupy</label>
+	<input type="hidden" name="group[id]" value="{$group.id}">
+	<input id="button" type="submit" value="Zapisz">
+	</form>
 {/box}
-</td>
-</tr>
-</table>
+
+			{box title="Książka telefoniczna - grupy"}
+			<h3>Lista zdefiniowanych grup</h3>
+			<table width="100%">
+				<tr class="darkest">
+					<th>Nazwa grupy</th>
+					<th>Liczba wpisów</th>
+					<th>Blokuj połączenia przychodzące<br/>z tej grupy</th>
+					<th>Dodawanie kontaktów<br/>do tej grupy</th>
+					<th colspan="2"></th>		
+				</tr>
+			{section name=a loop=$groups}
+				<tr class="dark">
+					<td>{$groups[a].name}</td>
+					<td align="center">{$groups[a].count|default:0}</td>
+					<td align="center">{if $groups[a].dropcall eq 't'}Tak{else}Nie{/if}</td>
+					<td align="center"><img src="modules/voip/img/add.png" alt="add"> <a href="?m=voip&f=addressbookd&gr={$groups[a].id}">Dodaj kontakty</a></td>
+					<td align="center"><img src="modules/voip/img/edit.png" alt="edit"> <a href="?m=voip&f=addressbook&edit={$groups[a].id}">Edytuj grupę</a></td>
+					<td align="center"><img src="modules/voip/img/delete.png" alt="delete"> <a href="?m=voip&f=addressbook&del={$groups[a].id}" onclick="return confirm('Na pewno? Wszystkie kontakty z tej grupy zostaną usunięte!');">Usuń grupę</a></td>
+				</tr>
+			{/section}
+			</table>
+			{/box}
+<div style="text-align: right; margin-right: 40px;">
+	<a href="?m=voip">Powrót</a>
+</div>
+</div>
 {include file="footer.html"}
 

@@ -12,9 +12,10 @@
 
 	{foreach from=$assignments item=assignment}
 	<tr class="dark">
-		<td class="nobr" align="right"><b>
-		{$assignment.name}
-		</b></td>
+		<td class="nobr" align="right">
+		<a title="Zmień ustawienia konta" href="?m=voip&f=settings&id={$assignment.id}">{$assignment.name}</a>
+		<a title="Zmień ustawienia konta" href="?m=voip&f=settings&id={$assignment.id}"><img src="modules/voip/img/edit.png" title="Zmień ustawienia konta" alt="ustawienia"></a>
+		</td>
 		<td class="nobr" align="right">{$assignment.value|money_format}</td>
 		<td class="nobr" align="right">{$assignment.subscription}</td>
 		<td class="nobr" align="right">{$assignment.period} ({$assignment.at} dzień)</td>
@@ -36,13 +37,16 @@
 	</tr>
 </table>
 
-<div style="text-align: center; padding: 10px; border-top: 2px solid #cccccc; border-bottom: 2px solid #cccccc; margin-top: 20px; background: #a6ce39;">
+<div style="text-align: center; padding: 10px; border-bottom: 1px solid #cccccc; margin-top: 20px; background: #ececec; 	border-top-left-radius:5px;
+	border-top-right-radius:5px;
+	-moz-box-shadow: 3px -3px 3px #888;
+	-webkit-box-shadow: 3px -3px 3px #888;
+	box-shadow: 3px -3px 3px #888;">
 {if $fax} 
-	<a href="?m=voip&f=fax">Skrzynka FAX</a> 
+|<img src="modules/voip/img/fax.png"> <a href="?m=voip&f=fax">Wirtualny Fax</a> 
 {/if} |
-<a href="?m=voip&f=addressbook">Książka telefoniczna</a> |
-<a href="?m=voip&f=cost&id={$assignment.id}">Sprawdź koszt połączenia</a> |
-<a href="?m=voip&f=settings&id={$assignment.id}">Zmień ustawienia konta</a> |
+<img src="modules/voip/img/cennik.png"> <a href="?m=voip&f=cost&id={$assignment.id}">Sprawdź koszt połączenia</a> |
+<img src="modules/voip/img/phone_book.png"> <a href="?m=voip&f=addressbook">Książka telefoniczna</a> |
 </div>
 
 {/box}

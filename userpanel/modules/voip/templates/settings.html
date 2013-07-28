@@ -34,10 +34,10 @@ else document.getElementById(id).innerText='';
 <tr><td>Numer poczty głosowej:</td><td>{$sip.mailboxnumber}</td></tr>
 <tr><td>Pin poczty głosowej:</td><td><input type="password" name="sip[mailboxpin]"></td></tr>
 <tr><td>Prezentacja numeru:</td><td><input type="checkbox" name="sip[number_presentation]" class="check" value="t"{if $sip.number_presentation == 't'} checked="checked"{/if}>
-{if $addserv.number_presentation}<span style="color:#FF0000;">Wyłączenie - koszt {$addserv.number_presentation} PLN</span>{/if}
+{if $addserv.number_presentation}<span style="color:#FF0000;">Wyłączenie/włączenie - koszt {$addserv.number_presentation} zł</span>{/if}
 </td></tr>
 <tr><td>Blokuj nieidentyfikowane połączenia przychodzące:</td><td><input type="checkbox" name="sip[blockanon]" class="check" value="t"{if $sip.blockanon == 't'} checked="checked"{/if}>
-{if $addserv.blockanon}<span style="color:#FF0000;">Koszt {$addserv.blockanon} PLN</span>{/if}
+{if $addserv.blockanon}<span style="color:#FF0000;">Włączenia/wyłączenia - koszt {$addserv.blockanon} zł</span>{/if}
 </td></tr>
 <tr><td>W przypadku zajętości:</td><td>{html_options name="sip[busy_action]" options=$busy_action selected=$sip.busy_action onchange="change_price(this.selectedIndex,'s1');"} 
 <span id="s1" style="color:#FF0000;"></span>
@@ -50,20 +50,20 @@ else document.getElementById(id).innerText='';
 <tr><td>Numer przekierowania (gdy niedostępny):</td><td><input type="text" name="sip[unavail_forward_number]" value="{$sip.unavail_forward_number}"></td></tr>
 
 <tr><td>Nagrywanie połączeń:</td><td><input type="checkbox" name="sip[monitor]" class="check" value="t"{if $sip.monitor == 't'} checked="checked"{/if} disabled="disabled">
-{if $addserv.monitor}<span style="color:#FF0000;">Koszt {$addserv.monitor} PLN</span>{/if}<br/>{if $sip.monitor == 'f'}Skontaktuj się z Netarea w celu uruchomienia{/if}
+{if $addserv.monitor}<span style="color:#FF0000;">Koszt usługi {$addserv.monitor} zł</span>{/if}<br/>{if $sip.monitor == 'f'}Skontaktuj się z Netarea w celu uruchomienia{/if}
 </td></tr>
 
 <tr><td>Informuj o koszcie połączenia na nr zagraniczne</td><td><input type="checkbox" name="sip[saycost]" class="check" value="t"{if $sip.saycost== 't'} checked="checked"{/if}></td></tr>
 
 <tr><td colspan="2"><hr></td></tr>
-<tr><td>Wirtualny FAX</td><td><input type="checkbox" name="sip[faxonly]" class="check" value="t"{if $sip.faxonly == 't'} checked="checked"{/if} disabled="disabled"> {if $addserv.faxonly}<span style="color:#FF0000;">Koszt {$addserv.faxonly} PLN</span>{/if}{if $sip.faxonly == 'f'}<br/>Skontaktuj się z Netarea w celu uruchomienia{/if}
+<tr><td>Wirtualny Fax</td><td><input type="checkbox" name="sip[faxonly]" class="check" value="t"{if $sip.faxonly == 't'} checked="checked"{/if} disabled="disabled"> {if $addserv.faxonly}<span style="color:#FF0000;">Koszt usługi {$addserv.faxonly} zł</span>{/if}{if $sip.faxonly == 'f'}<br/>Skontaktuj się z nami w celu uruchomienia{/if}
 </td></tr>
 
 <tr><td>Wysyłaj odebrane faxy na email</td><td><input type="checkbox" name="sip[fax2email]" class="check" value="t"{if $sip.fax2email == 't'} checked="checked"{/if}></td></tr>
 
 <tr><td>Adres email do wysyłania faxów<br>(jeśli nie podany, będą wysyłane na główny)</td><td><input type="text" name="sip[faxmailaddr]" value="{$sip.faxmailaddr}"></td></tr>
 
-<tr><td>Wysyłaj fax również na główny</td><td><input type="checkbox" name="sip[faxtomainaddr]" class="check" value="t"{if $sip.faxtomainaddr == 't'} checked="checked"{/if}></td></tr>
+<tr><td>Wysyłaj Fax również na główny adres email</td><td><input type="checkbox" name="sip[faxtomainaddr]" class="check" value="t"{if $sip.faxtomainaddr == 't'} checked="checked"{/if}></td></tr>
 
 <tr><td colspan="2"><hr></td></tr>
 
@@ -83,7 +83,7 @@ else document.getElementById(id).innerText='';
 </td></tr>
 {/if}
 
-<tr><td colspan="2" align="center"><input type="submit" value="Zapisz"></td></tr>
+<tr><td colspan="2" align="center"><input id="button" type="submit" value="Zapisz"></td></tr>
 <input type="hidden" name="sip[id]" value="{$smarty.get.id}">
 </form>
 </table>
