@@ -7,10 +7,13 @@ elseif($_POST['notuinvoicec']==1) $voip->ui_setinvoice($SESSION->id,false);
 $userinfo=$LMS->GetCustomer($SESSION->id);
 $assignments=$voip->wsdl->uiGetCustomerNodes($SESSION->id);
 $userinfo=$voip->wsdl->GetCustomer($userinfo,$SESSION->id);
-$sip=$voip->wsdl->ui_getsip($assignments[0][id]);
+foreach($assignments as $zm){
+	$sip=$voip->wsdl->ui_getsip($zm[id]);
+	if ($sip[faxonly] == "t") $fax = true;
+}
 $SMARTY->assign('userinfo', $userinfo);
 $SMARTY->assign('assignments', $assignments);
-$SMARTY->assign('sip', $sip);
+$SMARTY->assign('fax', $fax);
 /* CDR */
 		if(isset($_POST['from']))
 		$from = $_POST['from'];

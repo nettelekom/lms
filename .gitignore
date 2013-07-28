@@ -51,6 +51,7 @@ lib/Smarty/plugins/shared.mb_unicode.php
 lib/Smarty/plugins/shared.mb_wordwrap.php
 lib/Smarty/plugins/variablefilter.htmlspecialchars.php
 lib/Smarty/sysplugins
+up_test/
 backups/
 documents/
 nbproject/private

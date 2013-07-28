@@ -37,7 +37,9 @@
 </table>
 
 <div style="text-align: center; padding: 10px; border-top: 2px solid #cccccc; border-bottom: 2px solid #cccccc; margin-top: 20px; background: #a6ce39;">
-{if $fax}<a href="?m=voip&f=fax">Skrzynka FAX</a>{/if} |
+{if $fax} 
+	<a href="?m=voip&f=fax">Skrzynka FAX</a> 
+{/if} |
 <a href="?m=voip&f=addressbook">Książka telefoniczna</a> |
 <a href="?m=voip&f=cost&id={$assignment.id}">Sprawdź koszt połączenia</a> |
 <a href="?m=voip&f=settings&id={$assignment.id}">Zmień ustawienia konta</a> |
