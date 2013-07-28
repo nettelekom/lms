@@ -2,41 +2,48 @@
 <script type="text/javascript" language="JavaScript" src="img/overlib.js"></script>
 <script type="text/javascript" language="JavaScript" src="img/common.js"></script>
 {include file="module:calendar_js.html"}
-{box title="Lista połączeń"}
-<table style="width: 100%;" cellpadding="3">
+<div style="padding: 10px;">
+{box title="Historia połączeń"}
+<h3>Wyszukaj połączenia</h3>
+<table style="width: 100%; border-top: 1px solid #cccccc; border-bottom: 1px solid #cccccc; margin-bottom: 10px;" cellpadding="3">
+
 <FORM METHOD="POST" NAME="page" action="?m=voip">
 	<TR class="DARK">
 		<TD class="fall">
-				<B>{t}Filter:{/t} </B> 
-				Od: <INPUT name="from" value="{$listdata.from}" onClick="cal5.popup();">&nbsp;
-				Do: <INPUT name="to" value="{$listdata.to}" onClick="cal6.popup();">&nbsp;
-				Z numeru: <INPUT name="fnr" size="10" value="{$listdata.fnr}">&nbsp;
-				Na numer: <INPUT name="tnr" size="10" value="{$listdata.tnr}">&nbsp;
+				Od: <img src="modules/voip/img/kalendarz.png" alt="dzien"><INPUT name="from" value="{$listdata.from}" onClick="cal5.popup();">&nbsp;
+				Do: <img src="modules/voip/img/kalendarz.png" alt="dzien"><INPUT name="to" value="{$listdata.to}" onClick="cal6.popup();">&nbsp;
+				Z numeru: <img src="modules/voip/img/sluchawka.png" alt="tel."><INPUT name="fnr" size="16" value="{$listdata.fnr}">&nbsp;
+				Na numer: <img src="modules/voip/img/sluchawka.png" alt="tel."><INPUT name="tnr" size="16" value="{$listdata.tnr}">&nbsp;<br/>
+
+
+Kierunek: &nbsp;<img src="modules/voip/img/sluchawka-strzalki.png" alt="tel.">
 <select name="dir">
 <option value="0">wszystkie</option>
 <option value="1"{if $listdata.dir eq 1} selected="selected"{/if}>przychoodzące</option>
 <option value="2"{if $listdata.dir eq 2} selected="selected"{/if}>wychodzące</option>
 </select>&nbsp;
-Kierunek: &nbsp;
+
 <select name="rategroups">
 <option value="0">Wszystkie</option>
 {html_options options=$rategroups selected=$listdata.rategroups}
 </select>&nbsp;
 Status: &nbsp;
+<img src="modules/voip/img/sluchawki.png" alt="tel.">
 <select name="stat">
 <option value="0">wszystkie</option>
 <option value="1"{if $listdata.stat eq 1} selected="selected"{/if}>odebrane</option>
 <option value="2"{if $listdata.stat eq 2} selected="selected"{/if}>nieodebrane</option>
 </select>&nbsp;
-<LABEL>Do CSV: <INPUT type="checkbox" name="csv" value="1"></LABEL>
+<img src="modules/voip/img/icon_csv.gif" alt="csv">
+<LABEL><strong id="do_csv">Do CSV:</strong> <INPUT type="checkbox" name="csv" value="1"></LABEL>
 &nbsp;
-<input type="submit" value="Szukaj"></td></tr>
+<input id="button" style="float: right;" type="submit" value="Szukaj"></td></tr>
 </form>
 </table>
 <table style="width: 100%;" cellpadding="3">
 	<tr class="darkest">
-	<td width="1%">ID</td>
-		<td width="1%" align="right">Data</td>
+		<td width="1%">ID</td>
+		<td width="1%" align="right">Data i godzina</td>
 		<td width="1%" align="right">Z numeru</td>
 		<td width="1%" align="right">Na numer</td>
 		<td width="1%" align="right">Czas połączenia</td>
@@ -86,3 +93,4 @@ var cal6 = new calendar(document.forms['page'].elements['to']);
 -->
 		</SCRIPT>
 {/box}
+</div>
