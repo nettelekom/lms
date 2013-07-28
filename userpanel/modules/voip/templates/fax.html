@@ -1,85 +1,88 @@
 {include file="header.html"}
-<tr>
-		<td class="tabelka1_gora_p">
-</td>
-	</tr>
-	<tr>
-		<td class="tabelka1_srodek_p" valign="top">
-<table width="100%" cellspacing="0">
-	<tr>
-		<td valign="top" width="100%">
-{box title="Wyślij FAX"}
+
+		
+<div style="padding: 10px;">	
+{box title="Wirtualny Fax"}
+<h3>Wyślij Fax</h3>
 <table cellpadding="3" align="center">
+
 <form action="?m=voip&f=fax" method="post" enctype="multipart/form-data" name="fax">
 {section name=err loop=$err}
-<tr><td colspan="2" align="center" style="color:#FF0000;">{$err[err]}</td></tr>
+<tr>
+	<td colspan="2" align="center" style="color:#FF0000; font-weight: bold;">{$err[err]}</td></tr>
 {/section}
-<tr><td>Z numeru:</td><td>{html_options name=fromnr options=$nodes selected=$faxform.id_ast_sip}</td></tr>
-<tr><td>Na numer:</td><td><input type="text" name="tonr" value="0{$faxform.nr_to}">&nbsp;
+<tr><td>Z numeru:</td><td><img src="modules/voip/img/sluchawka.png" alt="tel.">{html_options name=fromnr options=$nodes selected=$faxform.id_ast_sip}</td></tr>
+<tr><td>Na numer:</td><td><img src="modules/voip/img/sluchawka.png" alt="tel."><input type="text" name="tonr" value="0{$faxform.nr_to}">&nbsp;
 <select name="void" onchange="document.forms['fax'].elements['tonr'].value=document.forms['fax'].elements['void'].options[document.forms['fax'].elements['void'].selectedIndex].value;"><option value="" selected="selected">-wybierz-</option>{html_options options=$addressbook}</select>&nbsp;&nbsp;
-Do grupy <select name="dogr"><option value="0" selected="selected">-wybierz-</option>{html_options options=$addressbookgr}</select>
+Do grupy: <select name="dogr"><option value="0" selected="selected">-wybierz-</option>{html_options options=$addressbookgr}</select>
 </td></tr>
-<tr><td>Plik do wysłania:</td><td>
+
+<tr><td colspan="2" ><p style="font-size: 10px; text-align: center;"><strong>Uwaga:</strong> akceptowane są wyłącznie pliki w formacie <span style="color:#FF0000; font-weight: bold;">PDF</span></p></td></tr>
+
+<tr>
+<td colspan="2" align="center"><img src="modules/voip/img/pdf.png" alt="pdf"> <strong>Załacz plik PDF do wysłania:</strong>
 {if $faxform.uniqueid}
 {$faxform.filename}
 <input type="hidden" name="faxfile_uniqueid" value="{$faxform.uniqueid}">
 {else}
 <input type="file" name="faxfile">
 {/if}
-</td></tr>
-<tr><td colspan="2" align="center"><input type="submit" value="Zapisz"></td></tr>
+</td>
+
+</tr>
+<tr><td colspan="2" align="center"><input id="button" type="submit" value="Zapisz"></td></tr>
 </form>
 </table>
 {/box}
-<br>
+</div>
+
+
+<div style="padding: 10px;">	
 {box title="Skrzynka odbiorcza"}
 <form action="?m=voip&f=fax" method="post" name="fin">
 <table cellpadding="3" align="center" width="100%">
 <tr class="darkest">
-<td>Data otrzymania</td><td>Z numeru</td><td>Na numer</td><td>Pobierz</td><td><a href="#" onclick="CheckAll(document.forms['fin']);return false;">Zaznacz</a></td>
+<td>Data otrzymania</td><td>Z numeru</td><td>Na numer</td><td>Pobierz</td><td></td>
 </tr>
 {section name=f loop=$fin}
 <tr class="dark">
-<td>{$fin[f].calldate}</td><td>{$fin[f].src}</td><td>{$fin[f].dst}</td><td><a href="?m=voip&f=faxprint&t=incoming&id={$fin[f].id}" target="_blank">{img src="print.gif" alt="[ Print ]"}</a></td><td><input type="checkbox" name="fin[]" value="{$fin[f].id}"></td>
+<td>{$fin[f].calldate}</td><td>{$fin[f].src}</td><td>{$fin[f].dst}</td><td><a href="?m=voip&f=faxprint&t=incoming&id={$fin[f].id}" target="_blank">{img src="print.png" alt="[ Print ]"}</a></td><td><input type="checkbox" name="fin[]" value="{$fin[f].id}"></td>
 </tr>
 {if $smarty.section.f.last}
-<tr><td colspan="5" align="right"><input type="submit" value="Usuń zaznaczone"></td></tr>
+<tr>
+
+<td colspan="5" align="right"><a href="#" onclick="CheckAll(document.forms['fin']);return false;">Zaznacz wszystkie</a><input type="submit" value="Usuń zaznaczone"></td></tr>
 {/if}
 {sectionelse}
-<tr class="dark"><td colspan="5" align="center">Skrzynka jest pusta.</td></tr>
+<tr class="dark"><td colspan="5" align="center">Skrzynka odbiorcza jest pusta</td></tr>
 {/section}
 </table>
 </form>
 {/box}
-<br>
+</div>
+
+<div style="padding: 10px;">	
 {box title="Skrzynka nadawcza"}
 <form action="?m=voip&f=fax" method="post" name="fout">
 <table cellpadding="3" align="center" width="100%">
 <tr class="darkest">
-<td>Data nadania</td><td>Z numeru</td><td>Na numer</td><td>Nazwa pliku</td><td>Status</td><td>Pobierz</td><td><a href="#" onclick="CheckAll(document.forms['fout']);return false;">Zaznacz</a></td><td>Wyślij ponownie</td>
+<td>Data nadania</td><td>Z numeru</td><td>Na numer</td><td>Nazwa pliku</td><td>Status</td><td>Pobierz</td><td></td><td>Wyślij ponownie</td>
 </tr>
 {section name=fo loop=$fout}
 <tr class="dark">
-<td>{$fout[fo].data|date_format:'%Y-%m-%d %H:%M:%S'}</td><td>{$fout[fo].nr_from}</td><td>{$fout[fo].nr_to}</td><td>{$fout[fo].filename}</td><td>{$fout[fo].status}</td><td>{if $fout[fo].allowprint}<a href="?m=voip&f=faxprint&t=outgoing&id={$fout[fo].id}" target="_blank">{img src="print.gif" alt="[ Print ]"}</a>{else}&nbsp;{/if}</td><td><input type="checkbox" name="fout[]" value="{$fout[fo].id}"></td>
+<td>{$fout[fo].data|date_format:'%Y-%m-%d %H:%M:%S'}</td><td>{$fout[fo].nr_from}</td><td>{$fout[fo].nr_to}</td><td>{$fout[fo].filename}</td><td>{$fout[fo].status}</td><td>{if $fout[fo].allowprint}<a href="?m=voip&f=faxprint&t=outgoing&id={$fout[fo].id}" target="_blank">{img src="print.png" alt="[ Print ]"}</a>{else}&nbsp;{/if}</td><td><input type="checkbox" name="fout[]" value="{$fout[fo].id}"></td>
 <td>{if $fout[fo].allowprint}<a href="?m=voip&f=fax&sa={$fout[fo].id}">Wyślij</a>{else}&nbsp;{/if}</td>
 </tr>
 {if $smarty.section.fo.last}
-<tr><td colspan="8" align="right"><input type="submit" value="Usuń zaznaczone"></td></tr>
+<tr><td colspan="8" align="right"><a href="#" onclick="CheckAll(document.forms['fout']);return false;">Zaznacz wszystkie</a><input style="cursor: pointer;" type="submit" value="Usuń zaznaczone"></td></tr>
 {/if}
 {sectionelse}
-<tr class="dark"><td colspan="8" align="center">Skrzynka jest pusta.</td></tr>
+<tr class="dark"><td colspan="8" align="center">Skrzynka nadawcza jest pusta</td></tr>
 {/section}
 </table>
 {/box}
-</td>
-</tr>
-</table>
-</td>
-</tr>
-<tr>
-	<td class="tabelka2_dol_p"></td>
-</tr>
-</table>
+</div>
+
 {literal}
 <SCRIPT language=JavaScript>
 	<!--
