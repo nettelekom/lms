@@ -30,9 +30,9 @@ $_LANG['Admin:'] = 'Administrator:';
 $_LANG['After:'] = 'Po:';
 $_LANG['All your covenants are settled'] = 'Wszystkie Twoje zobowiązania są rozliczone';
 $_LANG['Amount:'] = 'Ilość:';
-$_LANG['Balance'] = 'Saldo';
+$_LANG['Balance'] = 'Saldo konta';
 $_LANG['Cancel'] = 'Anuluj';
-$_LANG['Click here to print payment form'] = 'Kliknij tutaj by wydrukować formularz wpłaty';
+$_LANG['Click here to print payment form'] = 'Wydrukuj formularz przelewu';
 $_LANG['Customer No.: $0'] = 'Numer klienta: $0';
 $_LANG['Date:'] = 'Data:';
 $_LANG['Deadline:'] = 'Termin płatności:';
@@ -88,7 +88,7 @@ $_LANG['Uprate (ceil):'] = 'Uprate (ceil):';
 $_LANG['Value:'] = 'Wartość:';
 $_LANG['yes'] = 'tak';
 $_LANG['You haven\'t got any assigned subscriptions.'] = 'Nie posiadasz żadnych przypisanych taryf';
-$_LANG['Your balance'] = 'Twoje konto';
-$_LANG['Your subscriptions'] = 'Twoje taryfy';
+$_LANG['Your balance'] = 'Historia operacji na koncie';
+$_LANG['Your subscriptions'] = 'Taryfy';
 
 ?>

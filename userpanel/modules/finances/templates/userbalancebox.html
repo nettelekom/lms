@@ -66,10 +66,10 @@ function confirmLink(theLink, message)
 			<table width="100%" cellpadding="0" cellspacing="0">
 			    <tr>
 				<td width="50%">
-				{img src="print.gif" alt="[ Print ]"} <a href="javascript:document.invoices.submit()">{trans("Print selected")}</a>
+				{img src="printer.png" alt="[ Print ]"} <a style="color: #ffffff;" href="javascript:document.invoices.submit()">{trans("Print selected")}</a>
 				</td>
 				<td width="50%" align="right">
-				<label for="allbox">{trans("Check all")}</label><input style="vertical-align: middle" type="checkbox" name="allbox" id="allbox" onchange="CheckAll('invoices', this)" value="1" />
+				<label id="check_all" for="allbox">{trans("Check all")}</label><input style="vertical-align: middle;" type="checkbox" name="allbox" id="allbox" onchange="CheckAll('invoices', this)" value="1" />
 				</td>
 			    </tr>
 			</table>
