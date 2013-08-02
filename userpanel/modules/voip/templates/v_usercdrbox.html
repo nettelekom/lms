@@ -35,39 +35,42 @@ Status: &nbsp;
 <option value="2"{if $listdata.stat eq 2} selected="selected"{/if}>nieodebrane</option>
 </select>&nbsp;
 <img src="modules/voip/img/icon_csv.gif" alt="csv">
-<LABEL><strong id="do_csv">Do CSV:</strong> <INPUT type="checkbox" name="csv" value="1"></LABEL>
+<LABEL><strong id="do_csv">Do CSV: <INPUT type="checkbox" name="csv" value="1"></LABEL>
 &nbsp;
 <input id="button" style="float: right;" type="submit" value="Szukaj"></td></tr>
 </form>
 </table>
+
+<h4>Szczegóły połączeń</h4>
+
 <table style="width: 100%;" cellpadding="3">
 	<tr class="darkest">
 		<td width="1%">ID</td>
-		<td width="1%" align="right">Data i godzina</td>
-		<td width="1%" align="right">Z numeru</td>
-		<td width="1%" align="right">Na numer</td>
-		<td width="1%" align="right">Czas połączenia</td>
-		<td width="1%" align="right">Koszt</td>
-		<td width="1%" align="right">Opłata</td>
-		<td width="1%" align="right">Opłata brutto</td>
-		<td width="1%" align="right">Status</td>
-		<td width="1%" align="right">Kierunek</td>
-		<td width="1%" align="right">Odsłuchaj</td>
+		<td width="1%" align="left">Data i godzina połaczenia</td>
+		<td width="1%" align="left">Z numeru</td>
+		<td width="1%" align="left">Na numer</td>
+		<td width="1%" align="left">Czas</td>
+		<td width="1%" align="left">Stawka</td>
+		<td width="1%" align="left">Opłata netto</td>
+		<td width="1%" align="left">Opłata brutto</td>
+		<td width="1%" align="left">Status</td>
+		<td width="1%" align="left">Kierunek</td>
+		<td width="1%" align="left">Odsłuchaj</td>
 	</tr>
 	{section name=c loop=$cdr}
 {if $cdr[c].id}
 	<tr class="dark">
 		<td width="1%" class="nobr">{$cdr[c].id}</td>
-		<td width="1%" align="right" class="nobr">{$cdr[c].calldate}</td>
-		<td width="1%" align="right">{$cdr[c].src}</td>
-		<td width="1%" align="right" class="nobr">{$cdr[c].dst}</td>
-		<td width="1%" align="right">{$cdr[c].seconds|seconds_to_words}</td>
-		<td width="1%" align="right">{$cdr[c].tmp_cost}</td>
-		<td width="1%" align="right">{$cdr[c].cost} zł</td>
-		<td width="1%" align="right">{$cdr[c].cost_br} zł</td>
-		<td width="1%" align="right">{$cdr[c].disposition}</td>
-		<td width="1%" align="right">{$cdr[c].rate|default:'[BRAK]'}</td>
-		<td width="1%" align="right">{if $cdr[c].monitor}<a href="?m=voip&f=listen&id={$cdr[c].id}">{img src="audio_icon.gif" border="0"}</a><br><a href="?m=voip&f=delcdr&id={$cdr[c].id}">Usuń</a>{else}&nbsp;{/if}</td>
+		<td width="1%" align="left" class="nobr">{$cdr[c].calldate}</td>
+		<td width="1%" align="left">{$cdr[c].src}</td>
+		<td width="1%" align="left" class="nobr">{$cdr[c].dst}</td>
+		<td width="1%" align="left">{$cdr[c].seconds|seconds_to_words}</td>
+		<td width="1%" align="left">{$cdr[c].tmp_cost} zł</td>
+		<td width="1%" align="left">{$cdr[c].cost} zł</td>
+		<td width="1%" align="left">{$cdr[c].cost_br} zł</td>
+		<td width="1%" align="left">{$cdr[c].disposition}</td>
+		<td width="1%" align="left">{$cdr[c].rate|default:'[BRAK]'}</td>
+		<td width="1%" align="left">{if $cdr[c].monitor}<a href="?m=voip&f=listen&id={$cdr[c].id}">{img src="audio_icon.gif" border="0"}</a><br><a href="?m=voip&f=delcdr&id={$cdr[c].id}">Usuń</a>{else}&nbsp;{/if}</td>
 	</tr>{/if}
 		{sectionelse}
 	<tr>
@@ -80,10 +83,10 @@ Status: &nbsp;
 	{/section}
 <tr class="dark">
 <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td align="right"><b>Razem:</b></td>
-<td align="right">{$listdata.seconds|seconds_to_words}</td>
-<td align="right">{$listdata.tmp_cost}</td>
-<td align="right">{$listdata.cost} zł</td>
-<td align="right">{$listdata.cost_br} zł</td>
+<td align="left">{$listdata.seconds|seconds_to_words}</td>
+<td align="left">{$listdata.tmp_cost} zł</td>
+<td align="left">{$listdata.cost} zł</td>
+<td align="left">{$listdata.cost_br} zł</td>
 <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
 </table>
 <SCRIPT>
