@@ -24,6 +24,20 @@
  *  $Id$
  */
 
+function getMessageTemplate($tmplid) {
+	global $DB;
+
+	$result = new xajaxResponse();
+	$message = $DB->GetOne('SELECT message FROM templates WHERE id = ?', array($tmplid));
+	$result->call('messageTemplateReceived', $message);
+
+	return $result;
+}
+
+$LMS->InitXajax();
+$LMS->RegisterXajaxFunction(array('getMessageTemplate'));
+$SMARTY->assign('xajax', $LMS->RunXajax());
+
 $setwarnings = isset($_POST['setwarnings']) ? $_POST['setwarnings'] : array();
 
 if(isset($setwarnings['mnodeid']))
@@ -32,14 +46,42 @@ if(isset($setwarnings['mnodeid']))
 	$warnon  = isset($setwarnings['warnon']) ? $setwarnings['warnon'] : FALSE;
 	$warnoff = isset($setwarnings['warnoff']) ? $setwarnings['warnoff'] : FALSE;
 
+	$msgtmplid = intval($setwarnings['tmplid']);
+	$msgtmploper = intval($setwarnings['tmploper']);
+	$msgtmplname = $setwarnings['tmplname'];
+	if ($msgtmploper > 1)
+		switch ($msgtmploper) {
+			case 2:
+				if (empty($msgtmplid))
+					break;
+				$LMS->UpdateMessageTemplate($msgtmplid, TMPL_WARNING, null, $setwarnings['message']);
+				break;
+			case 3:
+				if (!strlen($msgtmplname))
+					break;
+				$LMS->AddMessageTemplate(TMPL_WARNING, $msgtmplname, $setwarnings['message']);
+				break;
+		}
+
 	$nodes = array_filter($setwarnings['mnodeid'], 'is_natural');
 
 	if (!empty($nodes)) {
 		$LMS->NodeSetWarn($nodes, $warnon ? 1 : 0);
-		if ($message)
+		if ($message) {
+			$cids = $DB->GetCol('SELECT DISTINCT n.ownerid FROM nodes n WHERE n.id IN (' . implode(',', $nodes) . ')');
 			$DB->Execute('UPDATE customers SET message = ? WHERE id IN 
-				(SELECT DISTINCT n.ownerid FROM nodes n WHERE n.id IN (' . implode(',', $nodes) . '))',
-				array($message));
+				(' . implode(',', $cids) . ')', array($message));
+			if ($SYSLOG) {
+				foreach ($cids as $cid) {
+					$args = array(
+						$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_CUST] => $cid,
+						'message' => $message
+					);
+					$SYSLOG->AddMessage(SYSLOG_RES_CUST, SYSLOG_OPER_UPDATE, $args,
+						array($SYSLOG_RESOURCE_KEYS[SYSLOG_RES_CUST]));
+				}
+			}
+		}
 		$data = array('nodes' => $nodes);
 		$LMS->ExecHook('node_warn_after', $data);
 	}
@@ -116,6 +158,7 @@ unset($nodelist['direction']);
 unset($nodelist['totalon']);
 unset($nodelist['totaloff']);
 
+$SMARTY->assign('messagetemplates', $LMS->GetMessageTemplates(TMPL_WARNING));
 $SMARTY->assign('warnmessage', $SESSION->get('warnmessage'));
 $SMARTY->assign('warnon', $SESSION->get('warnon'));
 $SMARTY->assign('warnoff', $SESSION->get('warnoff'));

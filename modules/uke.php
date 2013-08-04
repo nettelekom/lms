@@ -342,31 +342,31 @@ foreach ($netnodes as $netnodename => $netnode) {
 				$netnode['address_ulica'], $netnode['address_symul'], $netnode['address_budynek'], ZIP_CODE))
 			: "LMS netdevinfo ID's: ".implode(' ', $netnode['netdevices']).",".implode(',', array_fill(0, 10, '')))
 		.",0,".(isset($netnode['longitude']) ? $netnode['latitude'].",".$netnode['longitude'] : ",")
-		.",Nie,".($netnode['cabledistports'] + $netnode['radiodistports'] + $netnode['fiberdistports'] > 1
+		.",Nie,".($netnode['cabledistports'] + $netnode['radiodistports'] + $netnode['fiberdistports'] > 0
 			|| $netnode['personalaccessports'] + $netnode['commercialaccessports'] == 0 ? "Tak" : "Nie").","
 		.($netnode['cablepersonalaccessports'] || $netnode['cablecommercialaccessports']
 			|| $netnode['radiopersonalaccessports'] || $netnode['radiocommercialaccessports']
 			|| $netnode['fiberpersonalaccessports'] || $netnode['fibercommercialaccessports'] ? "Tak" : "Nie").",\n";
 
 	// save info about network interfaces located in distribution layer
-	if ($netnode['cabledistports'] + $netnode['radiodistports'] + $netnode['fiberdistports'] > 1
+	if ($netnode['cabledistports'] + $netnode['radiodistports'] + $netnode['fiberdistports'] > 0
 		|| $netnode['personalaccessports'] + $netnode['commercialaccessports'] == 0) {
 		if ($netnode['cabledistports']) {
 			$snetinterfaces .= $netintid.",".$netnode['id'].",sieć szkieletowa lub dystrybucyjna,kablowe,,Ethernet,,0,100,0,"
 				.$netnode['cabledistports'].","
-				.$netnode['cabledistports'].",0,Nie,0,0\n";
+				.$netnode['cabledistports'].",0,Nie,,\n";
 			$netintid++;
 		}
 		if ($netnode['radiodistports']) {
 			$snetinterfaces .= $netintid.",".$netnode['id'].",sieć szkieletowa lub dystrybucyjna,radiowe,,Ethernet,,0,54,0,"
 				.$netnode['radiodistports'].","
-				.$netnode['radiodistports'].",0,Nie,0,0\n";
+				.$netnode['radiodistports'].",0,Nie,,\n";
 			$netintid++;
 		}
 		if ($netnode['fiberdistports']) {
 			$snetinterfaces .= $netintid.",".$netnode['id'].",sieć szkieletowa lub dystrybucyjna,światłowodowe niezwielokrotnione,,Ethernet,,0,1000,0,"
 				.$netnode['fiberdistports'].","
-				.$netnode['fiberdistports'].",0,Nie,0,0\n";
+				.$netnode['fiberdistports'].",0,Nie,,\n";
 			$netintid++;
 		}
 	}
@@ -378,21 +378,21 @@ foreach ($netnodes as $netnodename => $netnode) {
 				- $netnode['fiberpersonalaccessports'] - $netnode['fibercommercialaccessports']).","
 			.($netnode['cablepersonalaccessports'] + $netnode['cablecommercialaccessports']).","
 			.($netnode['ports'] - $netnode['cabledistports'] - $netnode['radiodistports'] - $netnode['fiberdistports']
-				- $netnode['personalaccessports'] - $netnode['commercialaccessports']).",Nie,0,0\n";
+				- $netnode['personalaccessports'] - $netnode['commercialaccessports']).",Nie,,\n";
 		$netintid++;
 	}
 	if ($netnode['radiopersonalaccessports'] + $netnode['radiocommercialaccessports']) {
 		$snetinterfaces .= $netintid.",".$netnode['id'].",sieć dostępowa,radiowe,,Ethernet,54,,,,"
 			.($netnode['radiopersonalaccessports'] + $netnode['radiocommercialaccessports']).","
 			.($netnode['radiopersonalaccessports'] + $netnode['radiocommercialaccessports']).","
-			."0,Nie,0,0\n";
+			."0,Nie,,\n";
 		$netintid++;
 	}
 	if ($netnode['fiberpersonalaccessports'] + $netnode['fibercommercialaccessports']) {
 		$snetinterfaces .= $netintid.",".$netnode['id'].",sieć dostępowa,światłowodowe niezwielokrotnione,,Ethernet,100,,,,"
 			.($netnode['fiberpersonalaccessports'] + $netnode['fibercommercialaccessports']).","
 			.($netnode['fiberpersonalaccessports'] + $netnode['fibercommercialaccessports']).","
-			."0,Nie,0,0\n";
+			."0,Nie,,\n";
 		$netintid++;
 	}
 
@@ -437,8 +437,13 @@ foreach ($netnodes as $netnodename => $netnode) {
 			$teryt['area_simc'] = sprintf("%07d", $teryt['area_simc']);
 			$teryt['address_budynek'] = $range['location_house'];
 			if (empty($teryt['address_ulica'])) {
-				$teryt['address_ulica'] = "BRAK ULICY";
-				$teryt['address_symul'] = "99999";
+				if ($DB->GetOne("SELECT COUNT(*) FROM location_streets WHERE cityid = ?", array($range['location_city']))) {
+					$teryt['address_ulica'] = "ULICA SPOZA ZAKRESU";
+					$teryt['address_symul'] = "99998";
+				} else {
+					$teryt['address_ulica'] = "BRAK ULICY";
+					$teryt['address_symul'] = "99999";
+				}
 			}
 			if (empty($teryt['address_symul'])) {
 				$teryt['address_ulica'] = "ULICA SPOZA ZAKRESU";

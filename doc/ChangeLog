@@ -154,6 +154,29 @@ version ? (????-??-??):
   - mysql schema fixes [LoLe/chilan]
   - it's possible to add new config sections from ui [chilan]
   - host owner selection for networks [red/chilan]
+  - separation of privileges: finance management and cash registry administration [chilan]
+  - show last 10 node sessions in nodeinfo and nodedit [chilan]
+  - transaction logging engine introduced [chilan]
+  - transaction logging for finances [chilan]
+  - new css classes - lmsbox and lmsbox-inner - for separating content from presentation [maciejlew]
+  - common old css classes like fall, fright etc can now be applied to any block html element [maciejlew]
+  - support of sms message length limits [chilan]
+  - phpui.custom_templates_dir setting allows to select used template set [chilan]
+  - the same networks bound to different hosts can overlap [chilan]
+  - network selection for node and netdev ip addresses [chilan]
+  - transaction logging for networks [chilan]
+  - fixed mysql database dump - don't check foreign key constraints during database recover [chilan]
+  - transaction logging for network devices [chilan]
+  - tinymce3 integration: customer, node info, message and notes support [chilan]
+  - message templates: mail and sms messages [chilan]
+  - message templates: customer and node warnings [chilan]
+  - node traffic statistics are loaded in background [chilan]
+  - messageadd: selection of multiple customer groups is possible [chilan]
+  - helpdesk: notes with proper info are automatically added when ticket changes owner or is moved
+    from one queue to another [chilan]
+  - assignment edit: autoselect tax value for tariffless assignments when assignment
+    tax value is already defined [chilan]
+  - userpanel: added credential reminder support [chilan]
 
 version 1.11.13 Dira (2011-04-07)
 

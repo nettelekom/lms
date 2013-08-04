@@ -24,6 +24,20 @@
  *  $Id$
  */
 
+function getMessageTemplate($tmplid) {
+	global $DB;
+
+	$result = new xajaxResponse();
+	$message = $DB->GetOne('SELECT message FROM templates WHERE id = ?', array($tmplid));
+	$result->call('messageTemplateReceived', $message);
+
+	return $result;
+}
+
+$LMS->InitXajax();
+$LMS->RegisterXajaxFunction(array('getMessageTemplate'));
+$SMARTY->assign('xajax', $LMS->RunXajax());
+
 $setwarnings = isset($_POST['setwarnings']) ? $_POST['setwarnings'] : array();
 
 if (isset($setwarnings['mcustomerid']))
@@ -32,12 +46,39 @@ if (isset($setwarnings['mcustomerid']))
 	$warnoff = isset($setwarnings['warnoff']) ? $setwarnings['warnoff'] : FALSE;
 	$message = isset($setwarnings['message']) ? $setwarnings['message'] : NULL;
 
+	$msgtmplid = intval($setwarnings['tmplid']);
+	$msgtmploper = intval($setwarnings['tmploper']);
+	$msgtmplname = $setwarnings['tmplname'];
+	if ($msgtmploper > 1)
+		switch ($msgtmploper) {
+			case 2:
+				if (empty($msgtmplid))
+					break;
+				$LMS->UpdateMessageTemplate($msgtmplid, TMPL_WARNING, null, $setwarnings['message']);
+				break;
+			case 3:
+				if (!strlen($msgtmplname))
+					break;
+				$LMS->AddMessageTemplate(TMPL_WARNING, $msgtmplname, $setwarnings['message']);
+				break;
+		}
+
 	$cids = array_filter($setwarnings['mcustomerid'], 'is_natural');
 	if (!empty($cids)) {
 		$LMS->NodeSetWarnU($cids, $warnon ? 1 : 0);
-		if (isset($message))
+		if (isset($message)) {
 			$DB->Execute('UPDATE customers SET message = ? WHERE id IN (' . implode(',', $cids) . ')',
 				array($message));
+			if ($SYSLOG)
+				foreach ($cids as $cid) {
+					$args = array(
+						$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_CUST] => $cid,
+						'message' => $message
+					);
+					$SYSLOG->AddMessage(SYSLOG_RES_CUST, SYSLOG_OPER_UPDATE, $args,
+						array($SYSLOG_RESOURCE_KEYS[SYSLOG_RES_CUST]));
+				}
+		}
 	}
 
 	$SESSION->save('warnmessage', $message);
@@ -85,6 +126,7 @@ $customerlist = $DB->GetAllByKey('SELECT c.id AS id, MAX(warning) AS warning, '.
 		    GROUP BY c.id, lastname, c.name 
 		    ORDER BY customername ASC', 'id');
 
+$SMARTY->assign('messagetemplates', $LMS->GetMessageTemplates(TMPL_WARNING));
 $SMARTY->assign('warnmessage', $SESSION->get('warnmessage'));
 $SMARTY->assign('warnon', $SESSION->get('warnon'));
 $SMARTY->assign('warnoff', $SESSION->get('warnoff'));

@@ -1,3 +1,4 @@
+assets/bootstrap/*
 templates_c/*
 userpanel/templates_c/*
 lib/Smarty/Smarty.class.php
@@ -51,11 +52,24 @@ lib/Smarty/plugins/shared.mb_unicode.php
 lib/Smarty/plugins/shared.mb_wordwrap.php
 lib/Smarty/plugins/variablefilter.htmlspecialchars.php
 lib/Smarty/sysplugins
-up_test/
 backups/
 documents/
 nbproject/private
 lms.ini
+backups/*
+documents/*
+!documents/templates
+
+# Temporary files
 *~
 *.swp
 *.swo
+
+# Object files
+*.o
+
+# Shared objects
+*.so
+
+# Executables
+daemon/lmsd

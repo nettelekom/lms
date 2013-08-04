@@ -137,11 +137,17 @@ include_once(LIB_DIR.'/definitions.php');
 require_once(LIB_DIR.'/unstrip.php');
 require_once(LIB_DIR.'/common.php');
 require_once(LIB_DIR.'/LMS.class.php');
+require_once(LIB_DIR . '/SYSLOG.class.php');
+
+if (check_conf('phpui.logging') && class_exists('SYSLOG'))
+	$SYSLOG = new SYSLOG($DB);
+else
+	$SYSLOG = null;
 
 // Initialize Session, Auth and LMS classes
 
 $AUTH = NULL;
-$LMS = new LMS($DB, $AUTH, $CONFIG);
+$LMS = new LMS($DB, $AUTH, $CONFIG, $SYSLOG);
 $LMS->ui_lang = $_ui_language;
 $LMS->lang = $_language;
 
@@ -162,7 +168,7 @@ function parse_file($filename, $contents) {
 		return;
 	}
 
-	$file		= explode("\n", $contents);
+	$file		= preg_split('/\r?\n/', $contents);
 	$patterns_cnt	= isset($patterns) ? sizeof($patterns) : 0;
 	$ln		= 0;
 	$sum		= array();

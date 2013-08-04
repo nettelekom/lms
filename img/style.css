@@ -5,26 +5,27 @@ TABLE		{ border-collapse: collapse; border-color: #000000 }
 #pageleftbar	{ position: absolute; left: 0px; width: 160px; background-color: #CEBD9B; overflow: hidden; border: 1px solid black; }
 #pagecontent	{ margin-left: 172px; _width: 100%; margin-right: 10px; margin-bottom: 10px; padding: 5px 0px; }
 
+.bottomline { border-bottom-style: solid; border-bottom-width: 1px; border-bottom-color: #bdac8a; }
+
 TD		{ font-size: 8pt; font-family: Tahoma, Verdana, Arial, Helvetica; vertical-align: middle; border-color: black; }
-TD.fleft	{ border-left-width: 1pt; border-left-style: solid; }
-TD.fright	{ border-right-width: 1pt; border-right-style: solid; }
-TD.ftop		{ border-top-width: 1pt; border-top-style: solid; }
-TD.fbottom	{ border-bottom-width: 1pt; border-bottom-style: solid; }
-TD.fleftu	{ border-top-width: 1pt; border-top-style: solid; border-bottom-width: 1pt; border-bottom-style: solid; border-left-width: 1pt; border-left-style: solid; }
-TD.frightu	{ border-top-width: 1pt; border-top-style: solid; border-bottom-width: 1pt; border-bottom-style: solid; border-right-width: 1pt; border-right-style: solid; }
-TD.ftopu	{ border-top-width: 1pt; border-top-style: solid; border-left-width: 1pt; border-left-style: solid; border-right-width: 1pt; border-right-style: solid; }
-TD.fbottomu	{ border-bottom-width: 1pt; border-bottom-style: solid; border-left-width: 1pt; border-left-style: solid; border-right-width: 1pt; border-right-style: solid; }
-TD.fall		{ border-width: 1pt; border-style: solid; }
-TD.fbt		{ border-bottom-width: 1pt; border-bottom-style: solid; border-top-width: 1pt; border-top-style: solid; }
-TD.fbl		{ border-bottom-width: 1pt; border-bottom-style: solid; border-left-width: 1pt; border-left-style: solid; }
-TD.fbr		{ border-bottom-width: 1pt; border-bottom-style: solid; border-right-width: 1pt; border-right-style: solid; }
-TD.ftl		{ border-top-width: 1pt; border-top-style: solid; border-left-width: 1pt; border-left-style: solid; }
-TD.ftr		{ border-top-width: 1pt; border-top-style: solid; border-right-width: 1pt; border-right-style: solid; }
-TD.flr		{ border-left-width: 1pt; border-left-style: solid; border-right-width: 1pt; border-right-style: solid; }
-TD.loginform	{ border-width: 1pt; border-style: solid; border-color: #888888; }
-TD.hand		{ cursor: pointer; }
-TR.hand		{ cursor: pointer; }
-TD.container { padding: 0; }
+.fleft           { border-left-width: 1pt; border-left-style: solid; }
+.fright          { border-right-width: 1pt; border-right-style: solid; }
+.ftop		{ border-top-width: 1pt; border-top-style: solid; }
+.fbottom         { border-bottom-width: 1pt; border-bottom-style: solid; }
+.fleftu          { border-top-width: 1pt; border-top-style: solid; border-bottom-width: 1pt; border-bottom-style: solid; border-left-width: 1pt; border-left-style: solid; }
+.frightu         { border-top-width: 1pt; border-top-style: solid; border-bottom-width: 1pt; border-bottom-style: solid; border-right-width: 1pt; border-right-style: solid; }
+.ftopu           { border-top-width: 1pt; border-top-style: solid; border-left-width: 1pt; border-left-style: solid; border-right-width: 1pt; border-right-style: solid; }
+.fbottomu	{ border-bottom-width: 1pt; border-bottom-style: solid; border-left-width: 1pt; border-left-style: solid; border-right-width: 1pt; border-right-style: solid; }
+.fall		{ border-width: 1pt; border-style: solid; }
+.fbt		{ border-bottom-width: 1pt; border-bottom-style: solid; border-top-width: 1pt; border-top-style: solid; }
+.fbl		{ border-bottom-width: 1pt; border-bottom-style: solid; border-left-width: 1pt; border-left-style: solid; }
+.fbr		{ border-bottom-width: 1pt; border-bottom-style: solid; border-right-width: 1pt; border-right-style: solid; }
+.ftl		{ border-top-width: 1pt; border-top-style: solid; border-left-width: 1pt; border-left-style: solid; }
+.ftr		{ border-top-width: 1pt; border-top-style: solid; border-right-width: 1pt; border-right-style: solid; }
+.flr		{ border-left-width: 1pt; border-left-style: solid; border-right-width: 1pt; border-right-style: solid; }
+.loginform	{ border-width: 1pt; border-style: solid; border-color: #888888; }
+.hand		{ cursor: pointer; }
+.container       { padding: 0; }
 FORM		{ display: inline; }
 
 LABEL       { cursor: pointer; }
@@ -158,9 +159,10 @@ div.multiselectlayer ul li input { border: none; }
 .light		{ background-color: #DFD5BD; }
 .lucid		{ background-color: #EBE4D6; }
 .superlight	{ background-color: #F4F0EC; }
-.highlight	{ background-color: #CCFFCC; }
+.highlight:hover{ background-color: #CCFFCC; }
 .blendbg	{ background-color: #888888; }
 .blend		{ color: #888888; }
+.green		{ color: green; }
 .red		{ color: #FF0000; }
 .brown		{ color: #A52A2A; }
 .white		{ color: #FFFFFF; }
@@ -179,6 +181,8 @@ div.multiselectlayer ul li input { border: none; }
 .suggestion_list .selected a { color: black; }
 #autosuggest { display: none; z-index: 10000; }
 
+.acl		{ list-style-type: square; }
+
 .overlib {
     width: 150px;
     font-family: Tahoma, Verdana, Arial, Helvetica;
@@ -193,3 +197,75 @@ div.multiselectlayer ul li input { border: none; }
     -webkit-box-shadow: #333 1px 1px 12px;
     behavior: url(img/pie.htc);
 }
+
+table.lmsbox,
+table.lmsbox-inner {
+    width: 100%;
+}
+
+table.lmsbox td {
+    padding: 2px;
+}
+
+table.lmsbox-inner * td {
+    padding: 2px;
+    border-spacing: 0px;
+}
+
+table.lmsbox > thead,
+table.lmsbox > tfoot,
+table.lmsbox > tbody,
+table.lmsbox-inner > thead,
+table.lmsbox-inner > tfoot {
+    border-width: 1px;
+    border-style: solid;
+    border-color: black;
+}
+
+table.lmsbox > thead,
+table.lmsbox-inner > thead {
+    background-color: #CEBD9B;
+}
+
+table.lmsbox > tbody,
+table.lmsbox > tfoot,
+table.lmsbox-inner > tbody,
+table.lmsbox-inner > tfoot {
+    background-color: #DFD5BD;
+}
+
+table.lmsbox > thead > tr,
+table.lmsbox > tfoot > tr {
+    border-top: 1px solid black;
+}
+
+.summary {
+	text-align: right;
+	font-weight: bold;
+}
+
+.buttons {
+	text-align: right;
+}
+
+.navigation {
+	text-align: center;
+	white-space: nowrap;
+	background-color: #CEBD9B;
+}
+
+.pagination {
+    background-color: #CEBD9B;
+}
+
+table.lmsbox > thead { text-align: left; }
+
+td.empty-table { text-align: center; font-weight: bold; padding: 2em; background-color: #EBE4D6; }
+
+.nobr { white-space: nowrap; }
+.text-right { text-align: right; }
+.text-left { text-align: left; }
+.text-center { text-align: center; }
+.lighter { font-weight: lighter; }
+.valign-top { vertical-align: top; }
+.valign-bottom { vertical-align: bottom; }

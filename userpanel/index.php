@@ -134,7 +134,8 @@ if($CONFIG['voip']['enabled'] == 1)
 }
 
 $AUTH = NULL;
-$LMS = new LMS($DB, $AUTH, $CONFIG);
+$SYSLOG = null;
+$LMS = new LMS($DB, $AUTH, $CONFIG, $SYSLOG);
 
 require_once(USERPANEL_LIB_DIR.'/Session.class.php');
 require_once(USERPANEL_LIB_DIR.'/Userpanel.class.php');
@@ -143,7 +144,7 @@ require_once(USERPANEL_LIB_DIR.'/ULMS.class.php');
 
 unset($LMS); // reset LMS class to enable wrappers for LMS older versions
 
-$LMS = new ULMS($DB, $AUTH, $CONFIG);
+$LMS = new ULMS($DB, $AUTH, $CONFIG, $SYSLOG);
 $SESSION = new Session($DB, $_TIMEOUT);
 $USERPANEL = new USERPANEL($DB, $SESSION, $CONFIG);
 $LMS->ui_lang = $_ui_language;
@@ -178,8 +179,8 @@ while (false !== ($filename = readdir($dh))) {
 $SMARTY->assignByRef('LANGDEFS', $LANGDEFS);
 $SMARTY->assignByRef('_ui_language', $LMS->ui_lang);
 $SMARTY->assignByRef('_language', $LMS->lang);
-$SMARTY->template_dir = USERPANEL_DIR.'/templates/';
-$SMARTY->compile_dir = SMARTY_COMPILE_DIR;
+$SMARTY->setTemplateDir(USERPANEL_DIR . '/templates');
+$SMARTY->setCompileDir(SMARTY_COMPILE_DIR);
 $SMARTY->debugging = check_conf('phpui.smarty_debug');
 require_once(USERPANEL_LIB_DIR.'/smarty_addons.php');
 

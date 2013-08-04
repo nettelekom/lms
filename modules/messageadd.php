@@ -24,13 +24,40 @@
  *  $Id$
  */
 
-function GetRecipients($filter, $type=MSG_MAIL)
-{
+function getMessageTemplate($tmplid, $elem) {
+	global $DB;
+
+	$result = new xajaxResponse();
+	$message = $DB->GetOne('SELECT message FROM templates WHERE id = ?', array($tmplid));
+	$result->call('messageTemplateReceived', $elem, $message);
+
+	return $result;
+}
+
+function getMessageTemplates($tmpltype) {
+	global $LMS;
+
+	$result = new xajaxResponse();
+	$templates = $LMS->GetMessageTemplates($tmpltype);
+	$result->call('messageTemplatesReceived', $templates);
+
+	return $result;
+}
+
+$LMS->InitXajax();
+$LMS->RegisterXajaxFunction(array('getMessageTemplate', 'getMessageTemplates'));
+$SMARTY->assign('xajax', $LMS->RunXajax());
+
+function GetRecipients($filter, $type = MSG_MAIL) {
 	global $LMS;
 
 	$group = $filter['group'];
 	$network = $filter['network'];
-	$customergroup = $filter['customergroup'];
+	if (is_array($filter['customergroup'])) {
+		$customergroup = array_map('intval', $filter['customergroup']);
+		$customergroup = implode(',', $customergroup);
+	} else
+		$customergroup = intval($filter['customergroup']);
 	$nodegroup = $filter['nodegroup'];
 	$linktype = $filter['linktype'];
 
@@ -78,7 +105,7 @@ function GetRecipients($filter, $type=MSG_MAIL)
 			(ipaddr > '.$net['address'].' AND ipaddr < '.$net['broadcast'].') 
 			OR (ipaddr_pub > '.$net['address'].' AND ipaddr_pub < '.$net['broadcast'].'))' : '')
 		.($customergroup ? ' AND c.id IN (SELECT customerid FROM customerassignments
-			WHERE customergroupid = '.intval($customergroup).')' : '')
+			WHERE customergroupid IN (' . $customergroup . '))' : '')
 		.($nodegroup ? ' AND c.id IN (SELECT ownerid FROM nodes
 			JOIN nodegroupassignments ON (nodeid = nodes.id)
 			WHERE nodegroupid = '.intval($nodegroup).')' : '')
@@ -126,7 +153,7 @@ function BodyVars(&$body, $data)
 	$body = str_replace('%cid', $data['id'], $body);
 	$body = str_replace('%pin', $data['pin'], $body);
 	if (strpos($body, '%bankaccount') !== false)
-		$body = str_replace('%bankaccount', format_bankaccount(bankaccount($data['id']), $body));
+		$body = str_replace('%bankaccount', format_bankaccount(bankaccount($data['id'])), $body);
 
 	if(!(strpos($body, '%last_10_in_a_table') === FALSE))
 	{
@@ -184,6 +211,25 @@ if(isset($_POST['message']))
 				$phonenumbers = array_merge($phonenumbers, $message['users']);
 			if (empty($phonenumbers))
 				$error['phonenumber'] = trans('Specified phone number is not correct!');
+		}
+	}
+
+	$msgtmplid = intval($message['tmplid']);
+	$msgtmploper = intval($message['tmploper']);
+	$msgtmplname = $message['tmplname'];
+	if ($msgtmploper > 1) {
+		$msgtmpltype = $message['type'] == MSG_MAIL ? TMPL_MAIL : TMPL_SMS;
+		switch ($msgtmploper) {
+			case 2:
+				if (empty($msgtmplid))
+					break;
+				$LMS->UpdateMessageTemplate($msgtmplid, $msgtmpltype, null, $message['body']);
+				break;
+			case 3:
+				if (!strlen($msgtmplname))
+					break;
+				$LMS->AddMessageTemplate($msgtmpltype, $msgtmplname, $message['body']);
+				break;
 		}
 	}
 
@@ -372,6 +418,14 @@ else if (!empty($_GET['customerid']))
 	$SMARTY->assign('message', $message);
 }
 
+if (isset($message['type'])) {
+	if ($message['type'] == MSG_MAIL)
+		$msgtmpltype = TMPL_MAIL;
+	else
+		$msgtmpltype = TMPL_SMS;
+} else
+	$msgtmpltype = TMPL_MAIL;
+$SMARTY->assign('messagetemplates', $LMS->GetMessageTemplates($msgtmpltype));
 $SMARTY->assign('networks', $LMS->GetNetworks());
 $SMARTY->assign('customergroups', $LMS->CustomergroupGetAll());
 $SMARTY->assign('nodegroups', $LMS->GetNodeGroupNames());

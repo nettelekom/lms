@@ -87,10 +87,10 @@ function openSelectWindow2(theURL, winName, myWidth, myHeight, isCenter, formfie
 	return false;
 }
 
-function ipchoosewin(formfield, netid, device)
+function ipchoosewin(formfield1, formfield2, netid, device)
 {
-    var url = '?m=chooseip' +  (netid ? '&netid=' + netid : '') + (device ? '&device=' + device : '');
-	return openSelectWindow(url,'chooseip',350,380,'true',formfield);
+	var url = '?m=chooseip' +  (netid ? '&netid=' + netid : '') + (device ? '&device=' + device : '');
+	return openSelectWindow2(url, 'chooseip', 350, 380, 'true', formfield1, formfield2);
 }
 
 function macchoosewin(formfield)
@@ -501,3 +501,44 @@ function v_ipchoosewin(formfield)
 	return openSelectWindow(url,'chooseip',350,380,'true',formfield);
 }
 
+function tinymce_init(ui_language) {
+	tinyMCE.init({
+		mode: "none",
+		language: ui_language,
+		theme: "advanced",
+		plugins: "advimage,advlink,preview,autoresize,contextmenu,fullscreen,inlinepopups,searchreplace,style,table",
+		theme_advanced_buttons1_add: "|,forecolor,backcolor,|,styleprops",
+		theme_advanced_buttons2_add: "|,preview,fullscreen",
+		theme_advanced_buttons3_add: "|,search,replace,|,tablecontrols",
+		//theme_advanced_toolbar_location: "external",
+		theme_advanced_toolbar_align: "left",
+		//theme_advanced_statusbar_location: "bottom",
+		theme_advanced_statusbar_location: "none",
+		theme_advanced_resizing: true,
+		autoresize_max_height: 250,
+		dialog_type: "window",
+		skin: "lms",
+	});
+}
+
+function toggle_visual_editor(id) {
+	if (document.getElementById(id) == undefined)
+		return;
+	if (tinymce.get(id))
+		tinyMCE.execCommand('mceToggleEditor', false, id);
+	else
+		tinyMCE.execCommand('mceAddControl', true, id);
+}
+
+function init_links() {
+	for (i in document.links) {
+		link = document.links[i];
+		if (link.rel && link.rel.indexOf('external') != -1) {
+			link.onclick = function() { window.open(this.href); return false; }
+			link.onkeypress = function() { window.open(this.href); return false; }
+		}
+	}
+}
+
+if (window.addEventListener) window.addEventListener("load", init_links, false);
+else if (window.attachEvent) window.attachEvent("onload", init_links);

@@ -6,7 +6,6 @@
   <title>iBOK - internetowe Biuro Obsługi Klienta Netarea</title>
 <link type="text/css" rel="stylesheet" href="{stylefile}" />
 </head>
-
 <body style="background: url('style/default/wrapper_shadow.png') repeat-y center top; margin: 0 auto; width: 962px;">
 
 	<div>
@@ -33,7 +32,7 @@
 
 					<p style="font-size: 10px;">Wprowadź ID i PIN<br/>Dane znajdują się na pierwszej stronie umowy</p>
 
-					<table border="0" width="100%">
+					<table border="0" width="100%" id="logindata">
 						<tr>
 							<td style="text-align: right;">
 								<label style="color:#647883; font-size:30px; font-weight: bold;">{trans("Customer ID:")}</label>
@@ -60,6 +59,53 @@
 
 							</td>
 						</tr>
+						<tr>
+							<td colspan="2" class="text-center bold nobr">
+								<br /><a href="javascript:switch_form('remind');">{trans("Remind credentials")}</a>
+							</td>
+						</tr>
+					</table>
+				</form>
+				
+				<form id="remind" method="post" action="{$target}">
+					<table id="reminddata" style="height: 100%; width: 100%; display: none;">
+						<tr>
+							<td colspan="2" class="text-center bold nobr">
+								<input type="radio" id="emailradio" name="remindform[type]" value="1" onclick="javascript:show_email_phone('email');" checked /><label for="emailradio">{trans("E-mail")}</label>
+								<input type="radio" id="smsradio" name="remindform[type]" value="2" onclick="javascript:show_email_phone('phone');" /><label for="smsradio">{trans("SMS")}</label>
+								<br />&nbsp;
+							</td>
+						</tr>
+						<tr id="email">
+							<td class="text-right bold nobr">
+								{trans("E-Mail:")}
+							</td>
+							<td class="text-left">
+								<input type="text" name="remindform[email]" style="width: 120pt;" />
+							</td>
+						</tr>
+						<tr id="phone" style="display: none;">
+							<td class="text-right bold nobr">
+								{trans("Phone:")}
+							</td>
+							<td class="text-left">
+								<input type="text" name="remindform[phone]" style="width: 120pt;" />
+							</td>
+						</tr>
+						<tr>
+							<td class="text-right bold nobr">
+								{trans("SSN or TEN:")}
+							</td>
+							<td class="text-left">
+								<input type="text" name="remindform[ten]" style="width: 120pt;" />
+							</td>
+						</tr>
+						
+						<tr>
+							<td colspan="2" class="text-center bold nobr">
+								<br /><a href="javascript:switch_form('login');">{trans("Login form")}</a>
+							</td>
+						</tr>
 					</table>
 				</form>
 			</div> 
@@ -67,6 +113,26 @@
 <script type="text/javascript">
 <!--
 document.forms['login'].elements['loginform[login]'].focus();
+
+function switch_form(type) {
+		if (type == 'login') {
+			document.getElementById('logindata').style.display = '';
+			document.getElementById('reminddata').style.display = 'none';
+		} else {
+			document.getElementById('logindata').style.display = 'none';
+			document.getElementById('reminddata').style.display = '';
+		}
+	}
+
+function show_email_phone(type) {
+		if (type == 'email') {
+			document.getElementById('email').style.display = '';
+			document.getElementById('phone').style.display = 'none';
+		} else {
+			document.getElementById('email').style.display = 'none';
+			document.getElementById('phone').style.display = '';
+		}
+	}
 //-->
 </script>
 			<hr style="height:0; border:none; border-top: 1px solid #667b85;" width="90%" />
