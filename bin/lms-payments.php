@@ -196,7 +196,7 @@ define('TARIFF_OTHER', -1);
 
 $TARIFFTYPES = array(
 	TARIFF_INTERNET	=> isset($CONFIG['tarifftypes']['internet']) ? $CONFIG['tarifftypes']['internet'] : trans('internet'),
-	TARIFF_HOSTING	=> isset($CONFIG['tarifftypes']['hosting']) ? $CONFIG['tarifftypes']['config'] : trans('hosting'),
+	TARIFF_HOSTING	=> isset($CONFIG['tarifftypes']['hosting']) ? $CONFIG['tarifftypes']['hosting'] : trans('hosting'),
 	TARIFF_SERVICE	=> isset($CONFIG['tarifftypes']['service']) ? $CONFIG['tarifftypes']['service'] : trans('service'),
 	TARIFF_PHONE	=> isset($CONFIG['tarifftypes']['phone']) ? $CONFIG['tarifftypes']['phone'] : trans('phone'),
 	TARIFF_TV	=> isset($CONFIG['tarifftypes']['tv']) ? $CONFIG['tarifftypes']['tv'] : trans('tv'),
@@ -218,7 +218,7 @@ if (is_leap_year($year) && $yearday > 31 + 28)
 if (!empty($fakedate))
 	$today = $currtime;
 else
-	$today = mktime(0, 0, 0, $dom, $month, $year);
+	$today = mktime(0, 0, 0, $month, $dom, $year);
 
 if ($month == 1 || $month == 4 || $month == 7 || $month == 10)
 	$quarter = $dom;
@@ -561,6 +561,8 @@ foreach($assigns as $assign)
 			$sdesc = preg_replace("/\%desc/", $assign['description'], $sdesc);
 			$sdesc = preg_replace("/\%period/", $period, $sdesc);
 			$sdesc = preg_replace("/\%current_month/", $current_month, $sdesc);
+			$sdesc = preg_replace("/\%current_period/", $current_period, $sdesc);
+			$sdesc = preg_replace("/\%next_period/", $next_period, $sdesc);
 
 			if ($assign['invoice'])
 			{

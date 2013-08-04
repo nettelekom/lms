@@ -139,20 +139,30 @@ require_once(LIB_DIR.'/LMS.class.php');
 require_once(LIB_DIR.'/Auth.class.php');
 require_once(LIB_DIR.'/accesstable.php');
 require_once(LIB_DIR.'/Session.class.php');
-if($CONFIG['voip']['enabled'] == 1)
+
+if(check_conf('voip.enabled'))
 {
 	require_once(LIB_DIR.'/LMSVOIP.class.php');
 	require_once(LIB_DIR.'/floAPI.php');
 }
 
+require_once(LIB_DIR . '/SYSLOG.class.php');
+
+if (check_conf('phpui.logging') && class_exists('SYSLOG'))
+	$SYSLOG = new SYSLOG($DB);
+else
+	$SYSLOG = null;
+
 // Initialize Session, Auth and LMS classes
 
 $SESSION = new Session($DB, $CONFIG['phpui']['timeout']);
-$AUTH = new Auth($DB, $SESSION);
-$LMS = new LMS($DB, $AUTH, $CONFIG);
+$AUTH = new Auth($DB, $SESSION, $SYSLOG);
+if ($SYSLOG)
+	$SYSLOG->SetAuth($AUTH);
+$LMS = new LMS($DB, $AUTH, $CONFIG, $SYSLOG);
 $LMS->ui_lang = $_ui_language;
 $LMS->lang = $_language;
-if($CONFIG['voip']['enabled'] == 1)
+if(check_conf('voip.enabled'))
 {
 	$voip = new LMSVOIP($DB, $CONFIG['voip']);
 	$layout['v_errors'] =& $voip->errors;
@@ -168,9 +178,19 @@ if (chkconfig($CONFIG['phpui']['use_swekey'])) {
 
 // Set some template and layout variables
 
-$SMARTY->template_dir = SMARTY_TEMPLATES_DIR;
-$SMARTY->compile_dir = SMARTY_COMPILE_DIR;
-$SMARTY->debugging = (isset($CONFIG['phpui']['smarty_debug']) ? chkconfig($CONFIG['phpui']['smarty_debug']) : FALSE);
+$SMARTY->setTemplateDir(null);
+$custom_templates_dir = get_conf('phpui.custom_templates_dir');
+if (!empty($custom_templates_dir) && file_exists(SMARTY_TEMPLATES_DIR . '/' . $custom_templates_dir)
+	&& !is_file(SMARTY_TEMPLATES_DIR . '/' . $custom_templates_dir))
+	$SMARTY->AddTemplateDir(SMARTY_TEMPLATES_DIR . '/' . $custom_templates_dir);
+$SMARTY->AddTemplateDir(
+	array(
+		SMARTY_TEMPLATES_DIR . '/default',
+		SMARTY_TEMPLATES_DIR,
+	)
+);
+$SMARTY->setCompileDir(SMARTY_COMPILE_DIR);
+$SMARTY->debugging = check_conf('phpui.smarty_debug');
 
 $layout['logname'] = $AUTH->logname;
 $layout['logid'] = $AUTH->id;
@@ -253,14 +273,20 @@ if ($AUTH->islogged) {
 					$CONFIG['privileges'][$access['table'][$level]['privilege']] = TRUE;
 			}
 
+		if ($SYSLOG)
+			$SYSLOG->NewTransaction($module);
+
 		if ($global_allow || ($allow && !$deny))
 		{
 			$layout['module'] = $module;
 			$LMS->InitUI();
 			include(MODULES_DIR.'/'.$module.'.php');
-		}
-		else
+		} else {
+			if ($SYSLOG)
+				$SYSLOG->AddMessage(SYSLOG_RES_USER, SYSLOG_OPER_USERNOACCESS,
+					array($SYSLOG_RESOURCE_KEYS[SYSLOG_RES_USER] => $AUTH->id), array($SYSLOG_RESOURCE_KEYS[SYSLOG_RES_USER]));
 			$SMARTY->display('noaccess.html');
+		}
 	}
 	else
 	{

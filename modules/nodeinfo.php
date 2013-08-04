@@ -24,18 +24,6 @@
  *  $Id$
  */
 
-function NodeStats($id, $dt) {
-	global $DB;
-	if ($stats = $DB->GetRow('SELECT SUM(download) AS download, SUM(upload) AS upload 
-			    FROM stats WHERE nodeid=? AND dt>?', array($id, time() - $dt))) {
-		list($result['download']['data'], $result['download']['units']) = setunits($stats['download']);
-		list($result['upload']['data'], $result['upload']['units']) = setunits($stats['upload']);
-		$result['downavg'] = $stats['download'] * 8 / 1000 / $dt;
-		$result['upavg'] = $stats['upload'] * 8 / 1000 / $dt;
-	}
-	return $result;
-}
-
 if (isset($_GET['nodegroups'])) {
 	$nodegroups = $LMS->GetNodeGroupNamesByNode(intval($_GET['id']));
 
@@ -74,10 +62,6 @@ $customerid = $nodeinfo['ownerid'];
 include(MODULES_DIR . '/customer.inc.php');
 include(MODULES_DIR.'/customer.voip.inc.php');
 
-$nodestats['hour'] = NodeStats($nodeid, 60 * 60);
-$nodestats['day'] = NodeStats($nodeid, 60 * 60 * 24);
-$nodestats['month'] = NodeStats($nodeid, 60 * 60 * 24 * 30);
-
 $SESSION->save('backto', $_SERVER['QUERY_STRING']);
 
 if (!isset($_GET['ownerid']))
@@ -96,10 +80,11 @@ $nodeinfo = $LMS->ExecHook('node_info_init', $nodeinfo);
 
 $SMARTY->assign('xajax', $LMS->RunXajax());
 
+$SMARTY->assign('nodesessions', $LMS->GetNodeSessions($nodeid));
 $SMARTY->assign('netdevices', $netdevices);
-$SMARTY->assign('nodestats', $nodestats);
 $SMARTY->assign('nodegroups', $nodegroups);
 $SMARTY->assign('othernodegroups', $othernodegroups);
 $SMARTY->assign('nodeinfo', $nodeinfo);
 $SMARTY->display('nodeinfo.html');
+
 ?>

@@ -32,29 +32,48 @@ if (!$LMS->NodeExists($_GET['id']))
 	else
 		header('Location: ?m=nodelist');
 
+$nodeid = intval($_GET['id']);
+$customerid = $LMS->GetNodeOwner($nodeid);
+
 switch ($action) {
 	case 'link':
 		if (empty($_GET['devid']) || !($netdev = $LMS->GetNetDev($_GET['devid']))) {
-			$SESSION->redirect('?m=nodeinfo&id=' . $_GET['id']);
+			$SESSION->redirect('?m=nodeinfo&id=' . $nodeid);
 		} else if ($netdev['ports'] > $netdev['takenports']) {
-			$LMS->NetDevLinkNode($_GET['id'], $_GET['devid'], isset($_GET['linktype']) ? intval($_GET['linktype']) : 0, isset($_GET['linkspeed']) ? intval($_GET['linkspeed']) : 100000, intval($_GET['port']));
-			$SESSION->redirect('?m=nodeinfo&id=' . $_GET['id']);
+			$LMS->NetDevLinkNode($nodeid, $_GET['devid'], isset($_GET['linktype']) ? intval($_GET['linktype']) : 0, isset($_GET['linkspeed']) ? intval($_GET['linkspeed']) : 100000, intval($_GET['port']));
+			$SESSION->redirect('?m=nodeinfo&id=' . $nodeid);
 		} else {
-			$SESSION->redirect('?m=nodeinfo&id=' . $_GET['id'] . '&devid=' . $_GET['devid']);
+			$SESSION->redirect('?m=nodeinfo&id=' . $nodeid . '&devid=' . $_GET['devid']);
 		}
 		break;
 	case 'chkmac':
-		$DB->Execute('UPDATE nodes SET chkmac=? WHERE id=?', array($_GET['chkmac'], $_GET['id']));
-		$SESSION->redirect('?m=nodeinfo&id=' . $_GET['id']);
+		$DB->Execute('UPDATE nodes SET chkmac=? WHERE id=?', array($_GET['chkmac'], $nodeid));
+		if ($SYSLOG) {
+			$args = array(
+				$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NODE] => $nodeid,
+				$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_CUST] => $customerid,
+				'chkmac' => $_GET['chkmac']
+			);
+			$SYSLOG->AddMessage(SYSLOG_RES_NODE, SYSLOG_OPER_UPDATE, $args,
+				array($SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NODE], $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_CUST]));
+		}
+		$SESSION->redirect('?m=nodeinfo&id=' . $nodeid);
 		break;
 	case 'duplex':
-		$DB->Execute('UPDATE nodes SET halfduplex=? WHERE id=?', array($_GET['duplex'], $_GET['id']));
-		$SESSION->redirect('?m=nodeinfo&id=' . $_GET['id']);
+		$DB->Execute('UPDATE nodes SET halfduplex=? WHERE id=?', array($_GET['duplex'], $nodeid));
+		if ($SYSLOG) {
+			$args = array(
+				$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NODE] => $nodeid,
+				$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_CUST] => $customerid,
+				'halfduplex' => $_GET['duplex']
+			);
+			$SYSLOG->AddMessage(SYSLOG_RES_NODE, SYSLOG_OPER_UPDATE, $args,
+				array($SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NODE], $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_CUST]));
+		}
+		$SESSION->redirect('?m=nodeinfo&id=' . $nodeid);
 		break;
 }
 
-$nodeid = intval($_GET['id']);
-$customerid = $LMS->GetNodeOwner($nodeid);
 $nodeinfo = $LMS->GetNode($nodeid);
 
 $macs = array();
@@ -72,6 +91,7 @@ $layout['pagetitle'] = trans('Node Edit: $a', $nodeinfo['name']);
 if (isset($_POST['nodeedit'])) {
 	$nodeedit = $_POST['nodeedit'];
 
+	$nodeedit['netid'] = $_POST['nodeeditnetid'];
 	$nodeedit['ipaddr'] = $_POST['nodeeditipaddr'];
 	$nodeedit['ipaddr_pub'] = $_POST['nodeeditipaddrpub'];
 	foreach ($nodeedit['macs'] as $key => $value)
@@ -87,8 +107,11 @@ if (isset($_POST['nodeedit'])) {
 
 	if (check_ip($nodeedit['ipaddr'])) {
 		if ($LMS->IsIPValid($nodeedit['ipaddr'])) {
+			if (empty($nodeedit['netid']))
+				$nodeedit['netid'] = $DB->GetOne('SELECT id FROM networks WHERE INET_ATON(?) & INET_ATON(mask) = address ORDER BY id LIMIT 1',
+					array($nodeedit['ipaddr']));
 			$ip = $LMS->GetNodeIPByID($nodeedit['id']);
-			if ($ip != $nodeedit['ipaddr'] && !$LMS->IsIPFree($nodeedit['ipaddr']))
+			if ($ip != $nodeedit['ipaddr'] && !$LMS->IsIPFree($nodeedit['ipaddr'], $nodeedit['netid']))
 				$error['ipaddr'] = trans('Specified IP address is in use!');
 			elseif ($ip != $nodeedit['ipaddr'] && $LMS->IsIPGateway($nodeedit['ipaddr']))
 				$error['ipaddr'] = trans('Specified IP address is network gateway!');
@@ -248,10 +271,13 @@ include(MODULES_DIR . '/nodexajax.inc.php');
 
 $SMARTY->assign('xajax', $LMS->RunXajax());
 
+$SMARTY->assign('nodesessions', $LMS->GetNodeSessions($nodeid));
+$SMARTY->assign('networks', $LMS->GetNetworks(true));
 $SMARTY->assign('netdevices', $LMS->GetNetDevNames());
 $SMARTY->assign('nodegroups', $LMS->GetNodeGroupNamesByNode($nodeid));
 $SMARTY->assign('othernodegroups', $LMS->GetNodeGroupNamesWithoutNode($nodeid));
 $SMARTY->assign('error', $error);
 $SMARTY->assign('nodeinfo', $nodeinfo);
 $SMARTY->display('nodeedit.html');
+
 ?>

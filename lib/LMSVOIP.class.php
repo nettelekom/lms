@@ -483,7 +483,8 @@ return $array;
 
 function parse_dialplan()
 {
-$tmp = file($this->dialplan_file);
+$tmp = @file($this->dialplan_file);
+if($tmp and is_array($tmp))
 foreach($tmp as $val)
 {
 	$val = trim($val);

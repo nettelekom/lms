@@ -68,14 +68,29 @@ switch ($action) {
 
 			$DB->BeginTrans();
 
-			$DB->Execute('UPDATE netdevices SET location = ? WHERE id = ?', array($dev1['location'], $dev2['id']));
-			$DB->Execute('UPDATE netdevices SET location = ? WHERE id = ?', array($dev2['location'], $dev1['id']));
+			$DB->Execute('UPDATE netdevices SET location = ?, latitude = ?, longitude = ?
+				WHERE id = ?', array($dev1['location'], $dev1['latitude'], $dev1['longitude'], $dev2['id']));
+			$DB->Execute('UPDATE netdevices SET location = ?, latitude = ?, longitude = ?
+				WHERE id = ?', array($dev2['location'], $dev2['latitude'], $dev2['longitude'], $dev1['id']));
 
-			$DB->Execute('UPDATE netdevices SET latitude = ? WHERE id = ?', array($dev1['latitude'], $dev2['id']));
-			$DB->Execute('UPDATE netdevices SET latitude = ? WHERE id = ?', array($dev2['latitude'], $dev1['id']));
-
-			$DB->Execute('UPDATE netdevices SET longitude = ? WHERE id = ?', array($dev1['longitude'], $dev2['id']));
-			$DB->Execute('UPDATE netdevices SET longitude = ? WHERE id = ?', array($dev2['longitude'], $dev1['id']));
+			if ($SYSLOG) {
+				$args = array(
+					$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETDEV] => $dev2['id'],
+					'location' => $dev1['location'],
+					'latitude' => $dev1['latitude'],
+					'longitude' => $dev1['longitude'],
+				);
+				$SYSLOG->AddMessage(SYSLOG_RES_NETDEV, SYSLOG_OPER_UPDATE, $args,
+					array($SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETDEV]));
+				$args = array(
+					$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETDEV] => $dev1['id'],
+					'location' => $dev2['location'],
+					'latitude' => $dev2['latitude'],
+					'longitude' => $dev2['longitude'],
+				);
+				$SYSLOG->AddMessage(SYSLOG_RES_NETDEV, SYSLOG_OPER_UPDATE, $args,
+					array($SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETDEV]));
+			}
 
 			$LMS->NetDevDelLinks($dev1['id']);
 			$LMS->NetDevDelLinks($dev2['id']);
@@ -141,16 +156,44 @@ switch ($action) {
 		$SESSION->redirect('?m=netdevinfo&id=' . $_GET['id']);
 
 	case 'chkmac':
-
+		if ($SYSLOG) {
+			$args = array(
+				$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NODE] => $_GET['ip'],
+				$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETDEV] => $_GET['id'],
+				'chkmac' => $_GET['chkmac'],
+			);
+			$SYSLOG->AddMessage(SYSLOG_RES_NODE, SYSLOG_OPER_UPDATE, $args,
+				array($SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NODE],
+					$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETDEV]));
+		}
 		$DB->Execute('UPDATE nodes SET chkmac=? WHERE id=?', array($_GET['chkmac'], $_GET['ip']));
 		$SESSION->redirect('?m=netdevinfo&id=' . $_GET['id'] . '&ip=' . $_GET['ip']);
 
 	case 'duplex':
-
+		if ($SYSLOG) {
+			$args = array(
+				$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NODE] => $_GET['ip'],
+				$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETDEV] => $_GET['id'],
+				'halfduplex' => $_GET['duplex'],
+			);
+			$SYSLOG->AddMessage(SYSLOG_RES_NODE, SYSLOG_OPER_UPDATE, $args,
+				array($SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NODE],
+					$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETDEV]));
+		}
 		$DB->Execute('UPDATE nodes SET halfduplex=? WHERE id=?', array($_GET['duplex'], $_GET['ip']));
 		$SESSION->redirect('?m=netdevinfo&id=' . $_GET['id'] . '&ip=' . $_GET['ip']);
 
 	case 'nas':
+		if ($SYSLOG) {
+			$args = array(
+				$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NODE] => $_GET['ip'],
+				$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETDEV] => $_GET['id'],
+				'nas' => $_GET['nas'],
+			);
+			$SYSLOG->AddMessage(SYSLOG_RES_NODE, SYSLOG_OPER_UPDATE, $args,
+				array($SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NODE],
+					$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETDEV]));
+		}
 		$DB->Execute('UPDATE nodes SET nas=? WHERE id=?', array($_GET['nas'], $_GET['ip']));
 		$SESSION->redirect('?m=netdevinfo&id=' . $_GET['id'] . '&ip=' . $_GET['ip']);
 
@@ -243,6 +286,7 @@ switch ($action) {
 		$subtitle = trans('New IP address');
 		$nodeipdata['access'] = 1;
 		$nodeipdata['macs'] = array(0 => '');
+		$SMARTY->assign('networks', $LMS->GetNetworks(true));
 		$SMARTY->assign('nodeipdata', $nodeipdata);
 		$edit = 'addip';
 		break;
@@ -256,24 +300,42 @@ switch ($action) {
 		foreach ($nodeipdata['macs'] as $key => $value)
 			$macs[] = $nodeipdata['macs'][$key]['mac'];
 		$nodeipdata['macs'] = $macs;
+		$SMARTY->assign('networks', $LMS->GetNetworks(true));
 		$SMARTY->assign('nodeipdata', $nodeipdata);
 		$edit = 'ip';
 		break;
 
 	case 'ipdel':
-
 		if ($_GET['is_sure'] == '1' && !empty($_GET['ip'])) {
+			if ($SYSLOG) {
+				$args = array(
+					$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NODE] => $_GET['ip'],
+					$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETDEV] => $_GET['id'],
+				);
+				$SYSLOG->AddMessage(SYSLOG_RES_NODE, SYSLOG_OPER_UPDATE, $args, array_keys($args));
+			}
 			$DB->Execute('DELETE FROM nodes WHERE id = ? AND ownerid = 0', array($_GET['ip']));
 		}
 
 		$SESSION->redirect('?m=netdevinfo&id=' . $_GET['id']);
 
 	case 'ipset':
-
-		if (!empty($_GET['ip']))
+		if (!empty($_GET['ip'])) {
+			if ($SYSLOG) {
+				$access = $DB->GetOne('SELECT access FROM nodes WHERE id = ? AND ownerid = 0',
+					array($_GET['ip']));
+				$args = array(
+					$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NODE] => $_GET['ip'],
+					$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETDEV] => $_GET['id'],
+					'access' => intval(!$access),
+				);
+				$SYSLOG->AddMessage(SYSLOG_RES_NODE, SYSLOG_OPER_UPDATE, $args,
+					array($SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NODE],
+						$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETDEV]));
+			}
 			$DB->Execute('UPDATE nodes SET access = (CASE access WHEN 1 THEN 0 ELSE 1 END)
 			WHERE id = ? AND ownerid = 0', array($_GET['ip']));
-		else
+		} else
 			$LMS->IPSetU($_GET['id'], $_GET['access']);
 
 		header('Location: ?' . $SESSION->get('backto'));
@@ -310,8 +372,13 @@ switch ($action) {
 			$error['ipaddr'] = trans('Incorrect IP address!');
 		elseif (!$LMS->IsIPValid($nodeipdata['ipaddr']))
 			$error['ipaddr'] = trans('Specified address does not belongs to any network!');
-		elseif (!$LMS->IsIPFree($nodeipdata['ipaddr']))
-			$error['ipaddr'] = trans('Specified IP address is in use!');
+		else {
+			if (empty($nodeipdata['netid']))
+				$nodeipdata['netid'] = $DB->GetOne('SELECT id FROM networks WHERE INET_ATON(?) & INET_ATON(mask) = address ORDER BY id LIMIT 1',
+					array($nodeipdata['ipaddr']));
+			if (!$LMS->IsIPFree($nodeipdata['ipaddr'], $nodeipdata['netid']))
+				$error['ipaddr'] = trans('Specified IP address is in use!');
+		}
 
 		if ($nodeipdata['ipaddr_pub'] != '0.0.0.0' && $nodeipdata['ipaddr_pub'] != '') {
 			if (!check_ip($nodeipdata['ipaddr_pub']))
@@ -393,9 +460,14 @@ switch ($action) {
 			$error['ipaddr'] = trans('Incorrect IP address!');
 		elseif (!$LMS->IsIPValid($nodeipdata['ipaddr']))
 			$error['ipaddr'] = trans('Specified address does not belongs to any network!');
-		elseif (!$LMS->IsIPFree($nodeipdata['ipaddr']) &&
+		else {
+			if (empty($nodeipdata['netid']))
+				$nodeipdata['netid'] = $DB->GetOne('SELECT id FROM networks WHERE INET_ATON(?) & INET_ATON(mask) = address ORDER BY id LIMIT 1',
+					array($nodeipdata['ipaddr']));
+			if (!$LMS->IsIPFree($nodeipdata['ipaddr'], $nodeipdata['netid']) &&
 				$LMS->GetNodeIPByID($_GET['ip']) != $nodeipdata['ipaddr'])
-			$error['ipaddr'] = trans('IP address is in use!');
+				$error['ipaddr'] = trans('IP address is in use!');
+		}
 
 		if ($nodeipdata['ipaddr_pub'] != '0.0.0.0' && $nodeipdata['ipaddr_pub'] != '') {
 			if (check_ip($nodeipdata['ipaddr_pub'])) {

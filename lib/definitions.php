@@ -60,6 +60,11 @@ define('MSG_MAIL', 1);
 define('MSG_SMS', 2);
 define('MSG_ANYSMS', 3);
 
+// Template types
+define('TMPL_WARNING', 1);
+define('TMPL_MAIL', 2);
+define('TMPL_SMS', 3);
+
 // Account types
 define('ACCOUNT_SHELL', 1);
 define('ACCOUNT_MAIL', 2);
