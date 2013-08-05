@@ -1,24 +1,18 @@
 {include file="header.html"}
-<table width="100%" cellspacing="0" class="icu_tab">
-        <tr>
-                <td valign="top" width="100%">
 {box title="Książka adresowa - grupy"}
 <table width="100%">
-<tr><th>Nazwa</th><th>Ilość wpisów</th><th>Blokuj przychodzące<br>z tej grupy</th><th colspan="2">Akcja</th></tr>
+<tr><th>Nazwa</th><th>Ilość wpisów</th><th>Blokuj przychodzące<br>z tej grupy</th><th>Akcja</th></tr>
 {section name=a loop=$groups}
-<TR>
-<td><a href="?m=voip&f=addressbookd&gr={$groups[a].id}">{$groups[a].name}</a></td>
-<td>{$groups[a].count|default:0}</td>
-<td>{if $groups[a].dropcall eq 't'}TAK{else}NIE{/if}</td>
-<td><a href="?m=voip&f=addressbook&edit={$groups[a].id}">Edytuj</a></td>
-<td><a href="?m=voip&f=addressbook&del={$groups[a].id}" onclick="return confirm('Na pewno? Wszystkie kontakty z tej grupy zostaną usunięte!');">Usuń</a></td>
+<tr>
+<td class="text-center"><a href="?m=voip&f=addressbookd&gr={$groups[a].id}">{$groups[a].name}</a></td>
+<td class="text-center">{$groups[a].ccount|default:0}</td>
+<td class="text-center">{if $groups[a].dropcall eq 't'}TAK{else}NIE{/if}</td>
+<td class="text-center"><a href="?m=voip&f=addressbook&edit={$groups[a].id}">Edytuj</a> 
+<a href="?m=voip&f=addressbook&del={$groups[a].id}" onclick="return confirm('Na pewno? Wszystkie kontakty z tej grupy zostaną usunięte!');">Usuń</a></td>
 
 {/section}
 </table>
 {/box}
-</td></tr>
-        <tr>
-                <td valign="top" width="100%">
 {if $groupaction}
 {assign var='title' value="Książka adresowa - Edytuj"}
 {else}
@@ -35,8 +29,5 @@
 <input type="submit" value="Zapisz">
 </form>
 {/box}
-</td>
-</tr>
-</table>
 {include file="footer.html"}
 

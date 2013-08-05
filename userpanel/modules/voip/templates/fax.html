@@ -1,13 +1,4 @@
 {include file="header.html"}
-<tr>
-		<td class="tabelka1_gora_p">
-</td>
-	</tr>
-	<tr>
-		<td class="tabelka1_srodek_p" valign="top">
-<table width="100%" cellspacing="0">
-	<tr>
-		<td valign="top" width="100%">
 {box title="Wyślij FAX"}
 <table cellpadding="3" align="center">
 <form action="?m=voip&f=fax" method="post" enctype="multipart/form-data" name="fax">
@@ -36,7 +27,7 @@ Do grupy <select name="dogr"><option value="0" selected="selected">-wybierz-</op
 <form action="?m=voip&f=fax" method="post" name="fin">
 <table cellpadding="3" align="center" width="100%">
 <tr class="darkest">
-<td>Data otrzymania</td><td>Z numeru</td><td>Na numer</td><td>Pobierz</td><td><a href="#" onclick="CheckAll(document.forms['fin']);return false;">Zaznacz</a></td>
+<td>Data otrzymania</td><td>Z numeru</td><td>Na numer</td><td>Pobierz</td><td><label><input type="checkbox" onchange="CheckAll(document.forms['fin'], this);return false;"> Zaznacz</label></td>
 </tr>
 {section name=f loop=$fin}
 <tr class="dark">
@@ -56,7 +47,7 @@ Do grupy <select name="dogr"><option value="0" selected="selected">-wybierz-</op
 <form action="?m=voip&f=fax" method="post" name="fout">
 <table cellpadding="3" align="center" width="100%">
 <tr class="darkest">
-<td>Data nadania</td><td>Z numeru</td><td>Na numer</td><td>Nazwa pliku</td><td>Status</td><td>Pobierz</td><td><a href="#" onclick="CheckAll(document.forms['fout']);return false;">Zaznacz</a></td><td>Wyślij ponownie</td>
+<td>Data nadania</td><td>Z numeru</td><td>Na numer</td><td>Nazwa pliku</td><td>Status</td><td>Pobierz</td><td><label><input type="checkbox" onchange="CheckAll(document.forms['fout'], this);return false;"> Zaznacz</label></td><td>Wyślij ponownie</td>
 </tr>
 {section name=fo loop=$fout}
 <tr class="dark">
@@ -71,25 +62,19 @@ Do grupy <select name="dogr"><option value="0" selected="selected">-wybierz-</op
 {/section}
 </table>
 {/box}
-</td>
-</tr>
-</table>
-</td>
-</tr>
-<tr>
-	<td class="tabelka2_dol_p"></td>
-</tr>
-</table>
 {literal}
 <SCRIPT language=JavaScript>
 	<!--
-	function CheckAll(forma)
+	function CheckAll(forma, el)
 	{
 		for (var i=0; i<forma.elements.length; i++)
 		{
 			var e = forma.elements[i];
 			if (e.type == 'checkbox')
-			e.checked=true;
+				if(el.checked)
+					e.checked = true;
+				else
+					e.checked = false;
 		}
 	}
 	-->
