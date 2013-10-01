@@ -236,7 +236,8 @@ $DEFAULTS = array(
 		'ivrdir' => '/var/spool/asterisk/ivr/',
 		'wsdlurl' => 'https://soap.nettelekom.pl/voip.wsdl',
 		'wsdllogin' => '',
-		'wsdlpassword' => ''
+		'wsdlpassword' => '',
+		'cdrperpage' => '20'
 	),
 );
 

@@ -615,11 +615,11 @@ foreach($wh as $w)
 $d['monitor'] = $jest;
 }
 
-public function GetCdrList($from, $to, $c, $order, $fnr = '', $tnr = '', $dir = null, $rategroup = null, $stat = null)
+public function GetCdrList($from, $to, $c, $order, $fnr = '', $tnr = '', $dir = null, $rategroup = null, $stat = null, $start=null, $limit=null)
 {
-$res = $this->wsdl->GetCdrList($from, $to, $c, $order, $fnr, $tnr, $dir, $rategroup, $stat);
-foreach($res as $k => $v) $this->check_monitor($res[$k]);
-return $res;
+	$res = $this->wsdl->GetCdrList($from, $to, $c, $order, $fnr, $tnr, $dir, $rategroup, $stat, $start, $limit);
+	foreach($res as $k => $v) $this->check_monitor($res[$k]);
+	return $res;
 }
 
 function uilisten($cid, $id)

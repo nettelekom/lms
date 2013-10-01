@@ -1,6 +1,13 @@
 <?php
 global $LMS, $SMARTY, $SESSION, $DB, $voip;
 
+$taxes = $LMS->GetTaxes();
+$tax = 0;
+if(is_array($taxes))
+	foreach($taxes as $val)
+		if($val['id'] == $voip->config['taxid'])
+			$tax = $val['value'];
+
 if($_POST['new'])
 	$SMARTY->assign('serv_err', $voip->uiAddService($SESSION->id, $_POST['new']));
 if($_POST['uinvoicec'] == 1)
@@ -9,6 +16,8 @@ elseif($_POST['notuinvoicec'] == 1)
 	$voip->ui_setinvoice($SESSION->id, false);
 $userinfo = $LMS->GetCustomer($SESSION->id);
 $assignments = $voip->wsdl->uiGetCustomerNodes($SESSION->id);
+foreach($assignments as $key => $val)
+	$assignments[$key]['value'] = $val['value'] * ($tax / 100) + $val['value'];
 $userinfo = $voip->wsdl->GetCustomer($userinfo, $SESSION->id);
 $SMARTY->assign('userinfo', $userinfo);
 $SMARTY->assign('assignments', $assignments);
@@ -26,9 +35,9 @@ else
 $c = $SESSION->id;
 if($_POST['rategroups'])
 	$_POST['dir'] = 2;
-$cdr = $voip->GetCdrList($from, $to, $c, '', $_POST['fnr'], $_POST['tnr'], $_POST['dir'], $_POST['rategroups'], $_POST['stat']);
 if($_POST['csv'])
 {
+	$cdr = $voip->GetCdrList($from, $to, $c, '', $_POST['fnr'], $_POST['tnr'], $_POST['dir'], $_POST['rategroups'], $_POST['stat']);
 	$fname = tempnam("/tmp", "CSV");
 	$f = fopen($fname,'w');
 	fwrite($f, "Data;Z numeru;Na numer;Sekund;Klient;Strefa\n");
@@ -49,8 +58,9 @@ if($_POST['csv'])
 	readfile($fname);
 	unlink($fname);
 	exit();
-
 }
+
+$cdr = $voip->GetCdrList($from, $to, $c, '', $_POST['fnr'], $_POST['tnr'], $_POST['dir'], $_POST['rategroups'], $_POST['stat'], $voip->config['cdrperpage'] * $_POST['page'], $voip->config['cdrperpage']);
 $listdata = array('from' => $from, 'to' => $to, 'fnr' => $_POST['fnr'], 'tnr' => $_POST['tnr']);
 $listdata['dir'] = $_POST['dir'];
 $listdata['stat'] = $_POST['stat'];
@@ -64,12 +74,16 @@ unset($cdr['sum_tmp_cost']);
 unset($cdr['zysk']);
 unset($cdr['order']);
 unset($cdr['direction']);
-$taxes = $LMS->GetTaxes();
-$tax = 0;
-if(is_array($taxes))
-	foreach($taxes as $val)
-		if($val['id'] == $voip->config['taxid'])
-			$tax = $val['value'];
+
+$pageopts = array();
+for($i = 0; $i < $cdr['pages'];)
+{
+	$pageopts[$i++] = $i;
+}
+$listdata['pageopts'] = $pageopts;
+unset($cdr['pages']);
+$listdata['page'] = $_POST['page'];
+
 foreach($cdr as $key => $val)
 	if(is_array($val))
 	{

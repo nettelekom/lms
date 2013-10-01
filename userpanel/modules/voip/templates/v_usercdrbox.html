@@ -28,6 +28,8 @@ Status: &nbsp;
 <option value="1"{if $listdata.stat eq 1} selected="selected"{/if}>odebrane</option>
 <option value="2"{if $listdata.stat eq 2} selected="selected"{/if}>nieodebrane</option>
 </select>&nbsp;
+Strona: {html_options name=page options=$listdata.pageopts selected=$listdata.page} 
+&nbsp;
 <LABEL>Do CSV: <INPUT type="checkbox" name="csv" value="1"></LABEL>
 &nbsp;
 <input type="submit" value="Szukaj"></td></tr>
