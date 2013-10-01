@@ -177,6 +177,11 @@ version ? (????-??-??):
   - assignment edit: autoselect tax value for tariffless assignments when assignment
     tax value is already defined [chilan]
   - userpanel: added credential reminder support [chilan]
+  - sms message can be sent to more than one phone for single customer [chilan]
+  - show only document templates which match chosen document type [chilan]
+  - add attachments support for new tickets [chilan]
+  - multi attachments for new tickets and new ticket messages [chilan]
+  - helpdesk messages: image attachment preview in popup [chilan]
 
 version 1.11.13 Dira (2011-04-07)
 

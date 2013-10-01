@@ -557,7 +557,10 @@ function docnumber($number=NULL, $template=NULL, $time=NULL, $ext_num='')
 	$result = str_replace('%I', $ext_num, $template);
 
 	// main document number
-	$result = preg_replace('/%(\\d*)N/e', "sprintf('%0\\1d', $number)", $result);
+	$result = preg_replace_callback(
+		'/%(\\d*)N/',
+		create_function('$m', "return sprintf(\"%0\$m[1]d\", $number);"),
+		$result);
 	
 	// time conversion specifiers
 	return strftime($result, $time);
@@ -615,17 +618,20 @@ function fetch_url($url)
 }
 
 // quoted-printable encoding
-function qp_encode($string)
-{
-        // ASCII only - don't encode
-        if(!preg_match('#[\x80-\xFF]{1}#', $string))
-        	return $string;
+function qp_encode($string) {
+	// ASCII only - don't encode
+	if (!preg_match('#[\x80-\xFF]{1}#', $string))
+		return $string;
 
-        $encoded = preg_replace('/([\x2C\x3F\x80-\xFF])/e', "'='.sprintf('%02X', ord('\\1'))", $string);
-        // replace spaces with _
-        $encoded = str_replace(' ', '_', $encoded);
+	$encoded = preg_replace_callback(
+		'/([\x2C\x3F\x80-\xFF])/',
+		create_function('$m', 'return "=".sprintf("%02X", ord($m[1]));'),
+		$string);
 
-        return '=?UTF-8?Q?'.$encoded.'?=';
+	// replace spaces with _
+	$encoded = str_replace(' ', '_', $encoded);
+
+	return '=?UTF-8?Q?'.$encoded.'?=';
 }
 
 // escape quotes and backslashes, newlines, etc.
