@@ -60,7 +60,6 @@ if (!check_conf('privileges.hide_summaries')) {
 	$SMARTY->assign('customerstats',$customerstats);
 	$SMARTY->assign('nodestats', $LMS->NodeStats());
 }
-
 $SMARTY->display('welcome.html');
 
 ?>

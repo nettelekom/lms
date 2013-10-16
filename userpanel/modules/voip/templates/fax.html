@@ -1,107 +1,158 @@
 {include file="header.html"}
 
+<div class="box">
+
+	{box title="Wirtualny Fax"}
+
+		<h3>Wyślij Fax</h3>
+			
+			<form action="?m=voip&f=fax" method="post" enctype="multipart/form-data" name="fax">
+				
+				<table cellpadding="3" align="center">
+					{section name=err loop=$err}
+					<tr>
+						<td colspan="2" align="center" class="error">{$err[err]}</td>
+					</tr>
+					{/section}
+					<tr>
+						<td>Z numeru:</td>
+						<td><img src="modules/voip/img/sluchawka.png" alt="tel.">{html_options name=fromnr options=$nodes selected=$faxform.id_ast_sip}</td>
+					</tr>
+					<tr>
+						<td>Na numer:</td>
+						<td><img src="modules/voip/img/sluchawka.png" alt="tel."><input type="text" name="tonr" value="{$faxform.nr_to}">
+							<img src="modules/voip/img/sluchawka.png" alt="tel."><select name="void" onchange="document.forms['fax'].elements['tonr'].value=document.forms['fax'].elements['void'].options[document.forms['fax'].elements['void'].selectedIndex].value;"><option value="" selected="selected">Wybierz numer z książki telefonicznej</option>{html_options options=$addressbook}</select>
+							Do grupy: <img src="modules/voip/img/group.png" alt="grupa"><select name="dogr"><option value="0" selected="selected">Wybierz grupę</option>{html_options options=$addressbookgr}</select>
+						</td>
+					</tr>
+					<tr>
+						<td colspan="2" ><p style="font-size: 10px; text-align: center;"><strong>Uwaga:</strong> akceptowane są wyłącznie pliki w formacie <span class="error">PDF</span></p></td>
+					</tr>
+					<tr>
+						<td colspan="2" align="center"><img src="modules/voip/img/pdf.png" alt="pdf"> <strong>Załącz plik PDF do wysłania:</strong>
+						{if $faxform.uniqueid}
+						{$faxform.filename}
+						<input type="hidden" name="faxfile_uniqueid" value="{$faxform.uniqueid}">
+						{else}
+						<input type="file" name="faxfile">
+						{/if}
+						</td>
+					</tr>
+					<tr>
+						<td colspan="2" align="center"><input class="button" type="submit" value="Wyślij"></td>
+					</tr>
+				</table>
+			</form>
+	{/box}
+	<div class="back">
+		<a href="?m=voip"><img src="modules/voip/img/return.png" alt="powrót">Powrót</a>
+	</div>
+</div>
+
+<div class="box">
+
+	{box title="Wirtualny Fax - skrzynka odbiorcza"}
+
+	<h3>Lista odebranych faksów</h3>
+		<form action="?m=voip&f=fax" method="post" name="fin">
+			<table class="table-shadow" cellpadding="3" align="center" width="100%">
+				<tr class="darkest">
+					<td class="text-center"><strong>Data i godzina otrzymania</strong></td>
+					<td class="text-center"><strong>Z numeru</strong></td>
+					<td class="text-center"><strong>Na numer</strong></td>
+					<td class="text-center"><strong>Pobierz</strong></td>
+					<td class="text-right"><label class="check_all">Zaznacz<input type="checkbox" onchange="CheckAll(document.forms['fin'], this);return false;"></label></td>
+				</tr>
+			{section name=f loop=$fin}
+			<tr class="dark">
+				<td>{$fin[f].calldate}</td>
+				<td>{$fin[f].src}</td><td>{$fin[f].dst}</td>
+				<td class="text-center"><a href="?m=voip&f=faxprint&t=incoming&id={$fin[f].id}" target="_blank">{img src="print.png" alt="[ Print ]"}</a></td>
+				<td class="text-center"><input type="checkbox" name="fin[]" value="{$fin[f].id}"></td>
+			</tr>
+			{if $smarty.section.f.last}
+			<tr>
+				<td colspan="5" align="right"><input class="button" type="submit" value="Usuń zaznaczone"></td>
+			</tr>
+			{/if}
+			{sectionelse}
+			<tr class="dark">
+				<td colspan="5" align="center"><p><strong>Skrzynka odbiorcza jest pusta</strong></p></td>
+			</tr>
+			{/section}
+			</table>
+		</form>
+	{/box}
+	<div class="back">
+		<a href="?m=voip"><img src="modules/voip/img/return.png" alt="powrót">Powrót</a>
+	</div>
+</div>
+
+<div class="box">
+
+	{box title="Wirtualny Fax - skrzynka nadawcza"}
+	
+	<h3>Lista wysłanych faksów</h3>
+	
+		<form action="?m=voip&f=fax" method="post" name="fout">
 		
-<div style="padding: 10px;">	
-{box title="Wirtualny Fax"}
-<h3>Wyślij Fax</h3>
-<table cellpadding="3" align="center">
+			<table class="table-shadow" cellpadding="3" align="center" width="100%">
+			
+			<tr class="darkest">
+				<td class="text-center"><strong>Data i godzina nadania</strong></td>
+				<td class="text-center"><strong>Z numeru</strong></td>
+				<td class="text-center"><strong>Na numer</strong></td>
+				<td class="text-center"><strong>Nazwa pliku</strong></td>
+				<td class="text-center"><strong>Status</strong></td>
+				<td class="text-center"><strong>Pobierz</strong></td>
+				<td class="text-center"><strong>Wyślij ponownie</strong></td>
+				<td class="text-right"><label  class="check_all">Zaznacz<input type="checkbox" onchange="CheckAll(document.forms['fout'], this);return false;"></label></td>
+			</tr>
+			
+			{section name=fo loop=$fout}
+			<tr class="dark">
+				<td class="text-left">{$fout[fo].data|date_format:'%Y-%m-%d %H:%M:%S'}</td>
+				<td class="text-left">{$fout[fo].nr_from}</td><td>{$fout[fo].nr_to}</td>
+				<td class="text-left">{$fout[fo].filename}</td><td>{$fout[fo].status}</td>
+				<td class="text-center">{if $fout[fo].allowprint}<a href="?m=voip&f=faxprint&t=outgoing&id={$fout[fo].id}" target="_blank">{img src="print.png" alt="[ Print ]"}</a>{else}&nbsp;{/if}</td>
+				<td class="text-center">{if $fout[fo].allowprint}<a href="?m=voip&f=fax&sa={$fout[fo].id}"><img src="modules/voip/img/send.png" alt="wyślij">Wyślij</a>{else}&nbsp;{/if}</td>
+				<td class="text-center"><input type="checkbox" name="fout[]" value="{$fout[fo].id}"></td>
+			</tr>
+			{if $smarty.section.fo.last}
+			<tr><td colspan="8" align="right"><input class="button" type="submit" value="Usuń zaznaczone"></td></tr>
+			{/if}
+			{sectionelse}
+				<tr class="dark">
+					<td colspan="8" align="center"><p><strong>Skrzynka nadawcza jest pusta</strong></p></td>
+				</tr>
+			{/section}
+			</table>
+		</form>
+	{/box}
 
-<form action="?m=voip&f=fax" method="post" enctype="multipart/form-data" name="fax">
-{section name=err loop=$err}
-<tr>
-	<td colspan="2" align="center" style="color:#FF0000; font-weight: bold;">{$err[err]}</td></tr>
-{/section}
-<tr><td>Z numeru:</td><td><img src="modules/voip/img/sluchawka.png" alt="tel.">{html_options name=fromnr options=$nodes selected=$faxform.id_ast_sip}</td></tr>
-<tr><td>Na numer:</td><td><img src="modules/voip/img/sluchawka.png" alt="tel."><input type="text" name="tonr" value="0{$faxform.nr_to}">&nbsp;
-<select name="void" onchange="document.forms['fax'].elements['tonr'].value=document.forms['fax'].elements['void'].options[document.forms['fax'].elements['void'].selectedIndex].value;"><option value="" selected="selected">-wybierz-</option>{html_options options=$addressbook}</select>&nbsp;&nbsp;
-Do grupy: <select name="dogr"><option value="0" selected="selected">-wybierz-</option>{html_options options=$addressbookgr}</select>
-</td></tr>
-
-<tr><td colspan="2" ><p style="font-size: 10px; text-align: center;"><strong>Uwaga:</strong> akceptowane są wyłącznie pliki w formacie <span style="color:#FF0000; font-weight: bold;">PDF</span></p></td></tr>
-
-<tr>
-<td colspan="2" align="center"><img src="modules/voip/img/pdf.png" alt="pdf"> <strong>Załacz plik PDF do wysłania:</strong>
-{if $faxform.uniqueid}
-{$faxform.filename}
-<input type="hidden" name="faxfile_uniqueid" value="{$faxform.uniqueid}">
-{else}
-<input type="file" name="faxfile">
-{/if}
-</td>
-
-</tr>
-<tr><td colspan="2" align="center"><input id="button" type="submit" value="Zapisz"></td></tr>
-</form>
-</table>
-{/box}
-<div style="text-align: right; margin-right: 40px;">
-	<a href="?m=voip">Powrót</a>
-</div>
-</div>
-
-
-<div style="padding: 10px;">	
-{box title="Skrzynka odbiorcza"}
-<form action="?m=voip&f=fax" method="post" name="fin">
-<table cellpadding="3" align="center" width="100%">
-<tr class="darkest">
-<td>Data otrzymania</td><td>Z numeru</td><td>Na numer</td><td>Pobierz</td><td></td>
-</tr>
-{section name=f loop=$fin}
-<tr class="dark">
-<td>{$fin[f].calldate}</td><td>{$fin[f].src}</td><td>{$fin[f].dst}</td><td><a href="?m=voip&f=faxprint&t=incoming&id={$fin[f].id}" target="_blank">{img src="print.png" alt="[ Print ]"}</a></td><td><input type="checkbox" name="fin[]" value="{$fin[f].id}"></td>
-</tr>
-{if $smarty.section.f.last}
-<tr>
-
-<td colspan="5" align="right"><a href="#" onclick="CheckAll(document.forms['fin']);return false;">Zaznacz wszystkie</a><input type="submit" value="Usuń zaznaczone"></td></tr>
-{/if}
-{sectionelse}
-<tr class="dark"><td colspan="5" align="center">Skrzynka odbiorcza jest pusta</td></tr>
-{/section}
-</table>
-</form>
-{/box}
-</div>
-
-<div style="padding: 10px;">	
-{box title="Skrzynka nadawcza"}
-<form action="?m=voip&f=fax" method="post" name="fout">
-<table cellpadding="3" align="center" width="100%">
-<tr class="darkest">
-<td>Data nadania</td><td>Z numeru</td><td>Na numer</td><td>Nazwa pliku</td><td>Status</td><td>Pobierz</td><td></td><td>Wyślij ponownie</td>
-</tr>
-{section name=fo loop=$fout}
-<tr class="dark">
-<td>{$fout[fo].data|date_format:'%Y-%m-%d %H:%M:%S'}</td><td>{$fout[fo].nr_from}</td><td>{$fout[fo].nr_to}</td><td>{$fout[fo].filename}</td><td>{$fout[fo].status}</td><td>{if $fout[fo].allowprint}<a href="?m=voip&f=faxprint&t=outgoing&id={$fout[fo].id}" target="_blank">{img src="print.png" alt="[ Print ]"}</a>{else}&nbsp;{/if}</td><td><input type="checkbox" name="fout[]" value="{$fout[fo].id}"></td>
-<td>{if $fout[fo].allowprint}<a href="?m=voip&f=fax&sa={$fout[fo].id}">Wyślij</a>{else}&nbsp;{/if}</td>
-</tr>
-{if $smarty.section.fo.last}
-<tr><td colspan="8" align="right"><a href="#" onclick="CheckAll(document.forms['fout']);return false;">Zaznacz wszystkie</a><input style="cursor: pointer;" type="submit" value="Usuń zaznaczone"></td></tr>
-{/if}
-{sectionelse}
-<tr class="dark"><td colspan="8" align="center">Skrzynka nadawcza jest pusta</td></tr>
-{/section}
-</table>
-{/box}
-<div style="text-align: right; margin-right: 40px;">
-	<a href="?m=voip">Powrót</a>
-</div>
+	<div class="back">
+		<a href="?m=voip"><img src="modules/voip/img/return.png" alt="powrót">Powrót</a>
+	</div>
+	
 </div>
 
 {literal}
 <SCRIPT language=JavaScript>
 	<!--
-	function CheckAll(forma)
+	function CheckAll(forma, el)
 	{
 		for (var i=0; i<forma.elements.length; i++)
 		{
 			var e = forma.elements[i];
 			if (e.type == 'checkbox')
-			e.checked=true;
+				if(el.checked)
+					e.checked = true;
+				else
+					e.checked = false;
 		}
 	}
 	-->
 </SCRIPT>
 {/literal}
+
 {include file="footer.html"}

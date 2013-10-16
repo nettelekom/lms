@@ -162,7 +162,7 @@ function Traffic($from = 0, $to = 0, $owner = 0, $order = '')
 
 function module_main()
 {
-    global $SMARTY,$CONFIG,$SESSION;
+    global $SMARTY,$CONFIG,$SESSION, $LMS;
     $bars = 1;
 
     if(isset($_GET['bar']) && isset($_POST['order']))
@@ -200,7 +200,7 @@ function module_main()
 	$SMARTY->assign('download', $traffic['download']);
 	$SMARTY->assign('upload', $traffic['upload']);
     }
-
+	$SMARTY->assign('userinfo', $LMS->GetCustomer($SESSION->id));
     $layout['pagetitle'] = trans('Network Statistics');
 
     $SMARTY->assign('bar', $bar ? $bar : 'month');

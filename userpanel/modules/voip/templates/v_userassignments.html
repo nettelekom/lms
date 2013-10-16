@@ -1,53 +1,47 @@
-<div style="padding: 10px;">
-{box title="Konta SIP"}
-<table style="width: 100%;" cellpadding="3">
-	<tr class="darkest">
-		<td width="1%" class="nobr" align="center"><b>Numer</b></td>
-		<td width="1%" class="nobr" align="center">Wartość netto:</td>
-		<td width="1%" class="nobr" align="center">Abonament</td>
-		<td width="1%" class="nobr" align="center">{t}Accounting day:{/t}</td>
-		<!--<td width="1%" class="nobr" colspan="4" align="center">Ustawienia</td>-->
-	</tr>
+<div class="box">
 
+	{box title="Konta SIP"}
+		<table class="table-shadow" width="width: 100%" cellpadding="3">
+			<tr class="darkest">
+				<td width="1%" class="nobr text-center"><strong>Numer telefonu</strong></td>
+				<td width="1%" class="nobr text-center"><strong>Wartość netto</strong></td>
+				<td width="1%" class="nobr text-center"><strong>Abonament</strong></td>
+				<!--<td width="1%" class="nobr text-center"><strong>{t}Accounting day:{/t}</strong></td>-->
+				<!--<td width="1%" class="nobr text-center" colspan="4">Ustawienia</td>-->
+			</tr>
 
-	{foreach from=$assignments item=assignment}
-	<tr class="dark">
-		<td class="nobr" align="right">
-		<a title="Zmień ustawienia konta" href="?m=voip&f=settings&id={$assignment.id}">{$assignment.name}</a>
-		<a title="Zmień ustawienia konta" href="?m=voip&f=settings&id={$assignment.id}"><img src="modules/voip/img/edit.png" title="Zmień ustawienia konta" alt="ustawienia"></a>
-		</td>
-		<td class="nobr" align="right">{$assignment.value|money_format}</td>
-		<td class="nobr" align="right">{$assignment.subscription}</td>
-		<td class="nobr" align="right">{$assignment.period} ({$assignment.at} dzień)</td>
-	</tr>
-	{foreachelse}
-	<tr>
-		<td align="center" width="100%" colspan="8">
-			<p>&nbsp;</p>
-			<p><b>{t}You haven't got any assigned subscriptions.{/t}</b></p>
-			<p>&nbsp;</p>
-		</td>
-	</tr>
-	{/foreach}
-<tr class="darkest">
-		<td align="right"><b>{t}Total:{/t}</b></td>
-		<td class="nobr" align="right">{sum array=$assignments column="value" string_format=$LANGDEFS.$_language.money_format}</td>
-		<td class="nobr" align="right"></td>
-		<td>&nbsp;</td>
-	</tr>
-</table>
+			{foreach from=$assignments item=assignment}
+			<tr class="dark">
+				<td class="nobr text-right">
+					<a title="Zmień ustawienia konta" href="?m=voip&f=settings&id={$assignment.id}">{$assignment.name}<img src="modules/voip/img/edit.png" title="Zmień ustawienia konta" alt="ustawienia"></a>
+				</td>
+				<td class="nobr text-right">{$assignment.value|money_format}</td>
+				<td class="nobr text-right">{$assignment.subscription}</td>
+				<!--<td class="nobr text-right">{$assignment.period} ({$assignment.at})</td>-->
+			</tr>
+			{foreachelse}
+			<tr>
+				<td align="center" width="100%" colspan="8">
+					<p><strong>{t}You haven't got any assigned subscriptions.{/t}</strong></p>
+				</td>
+			</tr>
+			{/foreach}
+			
+			<tr class="dark" style="background: #cccccc;">
+				<td class="text-right"><strong>{t}Total:{/t}</strong></td>
+				<td class="nobr text-right"><strong>{sum array=$assignments column="value" string_format=$LANGDEFS.$_language.money_format}</strong></td>
+				<td class="nobr text-right"></td>
+				<!--<td>&nbsp;</td>-->
+			</tr>
+			
+		</table>
 
-<div style="text-align: center; padding: 10px; border-bottom: 1px solid #cccccc; margin-top: 20px; background: #ececec; 	border-top-left-radius:5px;
-	border-top-right-radius:5px;
-	-moz-box-shadow: 3px -3px 3px #888;
-	-webkit-box-shadow: 3px -3px 3px #888;
-	box-shadow: 3px -3px 3px #888;">
-{if $fax} 
-|<img src="modules/voip/img/fax.png"> <a href="?m=voip&f=fax">Wirtualny Fax</a> 
-{/if} |
-<img src="modules/voip/img/cennik.png"> <a href="?m=voip&f=cost&id={$assignment.id}">Sprawdź koszt połączenia</a> |
-<img src="modules/voip/img/phone_book.png"> <a href="?m=voip&f=addressbook">Książka telefoniczna</a> |
-</div>
-
-{/box}
+		<div id="panel">
+			{if $fax} 
+			| <a href="?m=voip&f=fax"><img src="modules/voip/img/fax.png">Wirtualny Fax</a>
+			{/if} |
+			<a href="?m=voip&f=cost&id={$assignment.id}"><img src="modules/voip/img/cennik.png">Sprawdź koszt połączenia</a> |
+			<a href="?m=voip&f=addressbook"><img src="modules/voip/img/phone_book.png">Książka telefoniczna</a> |
+		</div>
+	{/box}
 </div>

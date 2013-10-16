@@ -1,0 +1,112 @@
+{include file="header.html"}
+<!--// $Id: netinfo.html,v 1.59 2005/11/25 13:34:08 alec Exp $ //-->
+{if $unlockedit}<script language="javascript">
+	<!--
+		function getText(index)
+		{literal}{{/literal}
+			{section name=networks loop=$networks}
+			if(index=={$networks[networks].id}) return '{$networks[networks].name|upper} ({$networks[networks].address}/{$networks[networks].prefix})';
+			{/section}
+		{literal}}{/literal}	
+	//-->
+</script>{/if}
+<H1>{$layout.pagetitle}</H1>
+<TABLE CLASS="lmsbox">
+<THEAD>
+	{if $unlockedit}<FORM METHOD="POST" ACTION="?m=v_netedit&id={$network.id}" NAME="netedit"><INPUT type="submit" class="hiddenbtn">{/if}
+	<TR>
+		{if !$unlockedit}
+		<TD width="100%" class="fall" colspan="4">
+			<IMG SRC="img/network.gif" alt=""> <B>{$network.name|upper} ({$network.id|string_format:"%04d"})</B>
+		</TD>
+		{else}
+		<TD width="1%" class="fleftu" nowarp>
+			<IMG SRC="img/network.gif" alt=""> <B>{t}Name:{/t}</B>
+		</TD>
+		<TD width="49%" class="frightu" colspan="3">
+			 <INPUT TYPE="text" NAME="networkdata[name]" VALUE="{$network.name|upper}" {tip trigger="name" bold=1}> <B>({$network.id|string_format:"%04d"})</B>
+		</TD>
+		<TD width="49%">&nbsp;</TD><TD width="1%">&nbsp;</TD>
+		{/if}
+	</TR>
+</THEAD>
+<TBODY>
+	<TR>
+		<TD width="1%" class="fleft">
+			<nobr><IMG SRC="img/ip.gif" alt=""> <B>Początek/koniec</B></nobr>
+		</TD>
+		<TD width="49%">
+			<NOBR>{if $unlockedit}<INPUT TYPE="text" NAME="networkdata[start]" VALUE="{$network.start}" {tip text="Wpisz początkowy i końcowy numer w strefie" trigger="start"}> / <INPUT TYPE="text" name="networkdata[end]" value="{$network.end}" {tip trigger="end"}>{else}{$network.start}/{$network.end}{/if}</NOBR>
+		</TD>	<TD width="49%">&nbsp;</TD><TD width="1%" class="fright">&nbsp;</TD>
+
+	</TR>
+	<TR class="light">
+		<td width="1%" class="fleft">
+			<nobr><img src="img/cmp.gif" alt=""> <B>{t}Network size:{/t}</B>
+		</TD>
+		<TD width="49%">
+			{t a=$network.size}$a addresses{/t}
+		</TD>	<TD width="49%">&nbsp;</TD><TD width="1%" class="fright">&nbsp;</TD>
+
+	</TR>
+{if $unlockedit}</form>{/if}
+	<TR class="light">
+		<TD width="100%" class="fbottomu" colspan="4" align="right">
+			{if $unlockedit}
+			<form name="remap" action="" method="get">
+				<A href="javascript:document.netedit.submit()" ACCESSKEY="S">{t}Submit{/t} <IMG src="img/save.gif" ALT="[ {t}Submit{/t} ]"></a>
+				<A href="?m=v_netdel&id={$network.id}" onClick="return confirmLink(this,'{t a=$network.name|upper}Are you sure, you want to remove network \'$a\'?{/t}')">{t}Remove{/t} <img src="img/delete.gif" ALT="[ {t}Remove{/t} ]"></A>
+				<A href="?m=v_netinfo&id={$network.id}">{t}Cancel{/t} <img src="img/cancel.gif" ALT="[ {t}Cancel{/t} ]"></A></TD></form>
+			{else}
+			<A href="?m=v_netedit&id={$network.id}" ACCESSKEY="E">{t}Edit{/t} <img src="img/edit.gif" ALT="[ {t}Edit{/t} ]"></A>
+			<A href="?m=v_netdel&id={$network.id}" onClick="return confirmLink(this,'{t a=$network.name|upper}Are you sure, you want to remove network \'$a\'?{/t}')">{t}Remove{/t} <img src="img/delete.gif" ALT="[ {t}Remove{/t} ]"></A>
+		</TD>
+			{/if}
+	</TR>
+	{if $network.page}
+	<TR class="dark">
+		<TD width="50%" class="fleftu" colspan="2">
+			<img src="img/ip.gif" ALT=""> <B>Wykorzystanie numerów</B>
+		</TD>
+		<TD WIDTH="50%" CLASS="frightu" COLSPAN="2" ALIGN="RIGHT">
+		</TD>		
+	</TR>
+	<TR>
+		<TD width="100%" class="fall" colspan="4">
+			<table width="100%" cellpadding="3">
+				{cycle values="light,lucid" print=false}
+				{section name=network loop=$network.nodes.id max=$network.rows}
+				<TR class="{cycle}">
+					{section name=subnetwork loop=$network.nodes.address start=$smarty.section.network.index step=$network.rows}
+					<TD align="center" width="25%" onmouseover="addClass(this, 'highlight')" onmouseout="removeClass(this, 'highlight')" {if !$network.nodes.ownerid[subnetwork] && $network.nodes.netdev[subnetwork]} onclick="return self.location.href='?m=netdevinfo&id={$network.nodes.netdev[subnetwork]}'"}{else}{if $network.nodes.id[subnetwork]} onclick="return self.location.href='?m=customerinfo&id={$network.nodes.ownerid[subnetwork]}#{$network.nodes.id[subnetwork]}'"{else}{if !$network.nodes.name[subnetwork]} onclick="return self.location.href='?m=nodeadd&preip={$network.nodes.address[subnetwork]}'"{/if}{/if}{/if}>
+					<img src="img/{if !$network.nodes.ownerid[subnetwork] && $network.nodes.name[subnetwork]}netdev{else}node{/if}.gif" align="left" ALT="">
+					{if !$network.nodes.ownerid[subnetwork] && $network.nodes.netdev[subnetwork]}
+						<a href="?m=netdevinfo&id={$network.nodes.netdev[subnetwork]}"><font class="blend">{$network.nodes.name[subnetwork]}</font></A>
+					{else}
+						{if $network.nodes.id[subnetwork]}
+							<a href="?m=v_nodeinfo&id={$network.nodes.id[subnetwork]}"{if $network.nodes.name[subnetwork]} {tip text=$network.nodes.address[subnetwork]}{/if}><font class="blend">{$network.nodes.name[subnetwork]}</font></A>
+						{else}
+							{if $network.nodes.name[subnetwork]}<FONT CLASS="blend">{$network.nodes.name[subnetwork]}</FONT>
+							{else}
+								<a href="?m=v_nodeadd&preip={$network.nodes.address[subnetwork]}">{$network.nodes.address[subnetwork]}</A>
+							{/if}
+						{/if}
+					{/if}
+					</TD>
+					{/section}
+				</TR>
+				{/section}
+				<TR class="light">
+					<TD CLASS="fleftu" COLSPAN="2">
+					</TD>
+					<TD ALIGN="RIGHT" CLASS="frightu" COLSPAN="2">
+						<B>{t a=$network.assigned}Total: $a{/t}</B>
+					</TD>
+				</TR>
+			</table>
+		</TD>
+	</TR>
+	{/if}
+</TBODY>
+</TABLE>
+{include file="footer.html"}

@@ -1,0 +1,29 @@
+{include file="header.html"}
+<H1>{$layout.pagetitle}</H1>
+<FORM NAME="numberadd" METHOD="POST" ACTION="?m=v_numbersdetadd&id_rates={$n.id_rates}">
+<INPUT type="submit" class="hiddenbtn">
+<input type="hidden" name="n[id]" value="{$n.id}">
+<input type="hidden" name="n[id_rates]" value="{$n.id_rates}">
+<TABLE CLASS="lmsbox">
+<THEAD>
+	<TR>
+		<TD WIDTH="1%" CLASS="FLEFTU">
+			<IMG SRC="img/node.gif" ALT="">
+		</TD>
+		<TD WIDTH="1%" CLASS="FBT">
+			<B>Wzorzec</B>
+		<TD WIDTH="98%" CLASS="FRIGHTU">
+			<INPUT TYPE="TEXT" NAME="n[pattern]" VALUE="{$n.pattern}" {tip trigger="name" bold=1}>
+		</TD>
+	</TR>
+</THEAD>
+<TBODY>
+	<TR CLASS="LIGHT">
+		<TD WIDTH="100%" CLASS="FBOTTOMU" COLSPAN="3" ALIGN="RIGHT">
+			<A HREF="javascript:document.numberadd.submit();" ACCESSKEY="s">{t}Submit{/t} <IMG SRC="img/save.gif" alt=""></A>
+			<A HREF="?m=v_numbersdet&id={$n.id_rates}">{t}Cancel{/t} <IMG SRC="img/cancel.gif" alt=""></A>
+		</TD>
+	</TR>	
+</TBODY>
+</TABLE></FORM>
+{include file="footer.html"}

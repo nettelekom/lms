@@ -25,7 +25,7 @@
  */
 
 // REPLACE THIS WITH PATH TO YOU CONFIG FILE
-$CONFIG_FILE = (is_readable('lms.ini')) ? 'lms.ini' : '/etc/lms/lms.ini';
+$CONFIG_FILE = (is_readable('lms2.ini')) ? 'lms2.ini' : '/etc/lms/lms2.ini';
 
 ini_set('error_reporting', E_ALL&~E_NOTICE);
 
@@ -70,10 +70,9 @@ require_once(LIB_DIR.'/language.php');
 require_once(LIB_DIR.'/definitions.php');
 require_once(LIB_DIR.'/common.php');
 require_once(LIB_DIR.'/LMS.class.php');
-require_once(LIB_DIR . '/SYSLOG.class.php');
-// Voip nettelekom
-if($CONFIG['voip']['enabled'] == 1)
+if(check_conf('voip.enabled'))
 	require_once(LIB_DIR.'/LMSVOIP.class.php');
+require_once(LIB_DIR . '/SYSLOG.class.php');
 
 if (check_conf('phpui.logging') && class_exists('SYSLOG'))
 	$SYSLOG = new SYSLOG($DB);

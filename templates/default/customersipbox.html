@@ -1,0 +1,81 @@
+<!--// $Id: customersipbox.html,v 1.3 2006/01/31 08:41:24 alec Exp $ //-->
+<TABLE class="lmsbox">
+	<THEAD>
+		<TR>
+			<TD width="99%" class="hand bold" onclick="showOrHide('sippanel-{$layout.module}');">
+				<IMG SRC="img/node.gif" alt="">
+				<B>Konta SIP klienta ({$customersip.total|default:"0"}):</B>
+			</TD>
+			<TD width="1%" class="frightu" align="right" nowrap>
+			</TD>
+		</TR>
+	</THEAD>
+	<TBODY>
+		<TR id="sippanel-{$layout.module}" style="display:none;">
+			<TD WIDTH="100%" colspan="2" class="fall">
+				<TABLE CLASS="lmsbox-inner">
+				<TBODY>
+				{cycle values="light,lucid" print=false}
+				{if $customersip.total > 0}
+				{section name=customersip loop=$customersip}
+				{if $customersip[customersip].id}
+				<TR class="{cycle}{if $customersip[customersip].access=='f'} blend{/if}" onmouseover="addClass(this, 'highlight')" onmouseout="removeClass(this, 'highlight')">
+					<TD WIDTH="1%" CLASS="FLEFT">
+						<a href="?m=v_nodeset&id={$customersip[customersip].id}"><IMG src="img/{if $customersip[customersip].access=='f'}no{/if}access.gif" ALT="[ {if $customersip[customersip].access=='f'}{t}Connect{/t}{else}{t}Disconnect{/t}{/if} ]"></A>
+						
+					</TD>
+					<TD WIDTH="97%" onClick="return self.location.href='?m=v_nodeinfo&id={$customersip[customersip].id}';">
+						<B>{$customersip[customersip].name}</B><BR>
+						<NOBR>{$customersip[customersip].ipaddr}</NOBR><BR>
+						<NOBR><b>Abonament:</b> {$customersip[customersip].subscription|default:'Brak'}</NOBR><BR>
+						<NOBR><b>Taryfa:</b> {$customersip[customersip].tariff}</NOBR><BR>
+						
+					</TD>
+					<TD WIDTH="1%" ALIGN="RIGHT" VALIGN="TOP" onClick="return self.location.href='?m=v_nodeinfo&id={$customersip[customersip].id}';">
+						({$customersip[customersip].id|string_format:"%04d"})
+					</TD>
+					<TD WIDTH="1%" CLASS="FRIGHT" NOWRAP>
+						<A HREF="?m=v_nodedel&id={$customersip[customersip].id}" onClick="return confirmLink(this, '{t a=$customersip[customersip].name|upper}Are you sure, you want to remove node \'$a\' from database?{/t}')"><IMG SRC="img/delete.gif" ALT="[ {t}Delete{/t} ]"></A>
+						<A HREF="?m=v_nodeedit&id={$customersip[customersip].id}"><IMG SRC="img/edit.gif" ALT="[ {t}Edit{/t} ]"></A>
+						<A HREF="?m=v_nodeinfo&id={$customersip[customersip].id}"><IMG SRC="img/info.gif" ALT="[ {t}Info{/t} ]"></A>
+					</TD>
+				</TR>
+				{/if}
+				{/section}
+				{else}
+				<TR>
+					<TD WIDTH="100%" COLSPAN="4" CLASS="FALL" align="center">
+						<P>&nbsp;</P>
+						<P><B>{if $customerinfo.deleted}<FONT class="red">{t}That customer has been deleted.{/t}</FONT>{else}Ten klient nie posiada żadnego konta SIP.{/if}</B></P>
+						<P>&nbsp;</P>
+					</TD>
+				</TR>
+				{/if}
+				<TR>
+					<TD COLSPAN="2" class="ftop text-left">
+						<A HREF="?m=v_nodeset&ownerid={$customersip.ownerid}&access=1"><IMG SRC="img/access.gif"> {t}Connect All{/t}</A><BR>
+						<A HREF="?m=v_nodeset&ownerid={$customersip.ownerid}"><IMG SRC="img/noaccess.gif"> {t}Disconnect All{/t}</A><BR>
+					</TD>
+					<TD COLSPAN="2" class="ftop text-right">
+						{if $customerinfo.status eq "3" and ! $customerinfo.deleted}<A HREF="?m=v_nodeadd&ownerid={$customerinfo.id}">{t}New Account{/t} <IMG SRC="img/edit.gif" alt=""></A>{else}<FONT CLASS="BLEND">{t}New Account{/t} <IMG SRC="img/edit.gif" alt="">{/if}
+					</TD>
+				</TR>
+				<TR CLASS="LIGHT">
+					<TD WIDTH="99%" COLSPAN="3" CLASS="FLEFTU">
+						Zmień abonament dla wszystkich kont na: 
+						<FORM ACTION="?m=v_masschange&ownerid={$customerinfo.id}" METHOD="POST" NAME="chsubs">
+							{html_options name=id_subscriptions options=$id_subscriptions onchange="if(confirm('Na pewno zmienić?')) document.forms['chsubs'].submit();"}
+						</FORM>
+						&nbsp;&nbsp;Zmień cennik dla wszystkich kont na: 
+						<FORM ACTION="?m=v_masschange&ownerid={$customerinfo.id}" METHOD="POST" NAME="chtars">
+							{html_options name=id_tariffs options=$id_tariffs onchange="if(confirm('Na pewno zmienić?')) document.forms['chtars'].submit();"}
+						</FORM>
+					</TD>
+					<TD WIDTH="1%" CLASS="FRIGHTU" NOWRAP VALIGN="BOTTOM" ALIGN="RIGHT">
+					</TD>
+				</TR></TBODY>
+			</TABLE>
+		</TD>
+	</TR>
+	</TBODY>
+</TABLE>

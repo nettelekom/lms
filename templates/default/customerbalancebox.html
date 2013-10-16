@@ -140,6 +140,7 @@
 					<TD style="width: 1%;" class="text-right nobr">
 						{if $balancelist.docid[balancelist]}
 							{if $balancelist.doctype[balancelist] == $smarty.const.DOC_INVOICE}
+								{if $balancelist.details[balancelist]}<a href="?m=v_attachment&docid={$balancelist.docid[balancelist]}" TARGET="_blank" onclick="confirmLink(this,'Drukować szczegółowy biling ?');">Zał.</a>{/if}
 								<A href="?m=invoice&amp;id={$balancelist.docid[balancelist]}" rel="external"><IMG src="img/print.gif" alt="[ {trans("Invoice")} ]" {tip a=$balancelist.docid[balancelist] dynpopup='?m=number&amp;id=$a'}></A>
 							{elseif $balancelist.doctype[balancelist] == $smarty.const.DOC_CNOTE}
 								<A href="?m=invoice&amp;id={$balancelist.docid[balancelist]}" rel="external"><IMG src="img/printn.gif" alt="[ {trans("Credit note")} ]" {tip a=$balancelist.docid[balancelist] dynpopup='?m=number&amp;id=$a'}></A>

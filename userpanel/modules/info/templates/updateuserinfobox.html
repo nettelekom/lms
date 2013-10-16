@@ -1,5 +1,5 @@
 <!--// $Id$ //-->
-{box title="Informations about you"}
+{box title="Dane konta Abonenta ({$userinfo.id|string_format:"%04d"})"}
 <FORM NAME="useredit" METHOD="POST" ACTION="?m=info&f=updateusersave">
 <table width="100%" CELLPADDING="3" class="light">
 {if $error}
@@ -98,7 +98,7 @@
 {/if}
 		</td>
 	</tr>
-{if $rights.info.edit_contact || $rights.info.edit_contact_ack || $userinfo.im}
+<!--{if $rights.info.edit_contact || $rights.info.edit_contact_ack || $userinfo.im}
 	<tr class="dark">
 		<td width="1%" align="center">
 			{img src="gg.png" alt=""}
@@ -139,7 +139,7 @@
 {/if}
 		</td>
 	</tr>
-{/if}
+{/if}-->
 	<tr class="dark">
 		<td width="1%" align="center">
 			<b>{trans("TEN")}</b>
@@ -171,7 +171,7 @@
 }
 	<tr>
 		<td width="99%" colspan="2" align="right">
-			<a href="javascript:document.useredit.submit()" accesskey="A">{trans("Save")} {img src="edit.gif" alt=""}</a>
+			<a href="javascript:document.useredit.submit()" accesskey="A">{trans("Save")}{img src="edit.gif" alt=""}</a>
 		</td>
 	</tr>
 {/if}

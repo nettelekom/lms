@@ -1,50 +1,50 @@
-<body style="background: url('style/default/wrapper_shadow.png') repeat-y center top; margin: 0 auto; width: 962px;">
-
+<body>
 	<div>
-		<div style="background:url('style/default/line_header.png') no-repeat center 67px; height:112px; padding:18px 0;">
+		<div id="menu-bar">
 			
-			<div style="margin-left: 70px; float:left;">
+			<div id="logo">
 				<a title="Internet Rumia, Telewizja Rumia, Telefon Rumia - Netarea" name="Logo Netarea" href="http://www.netarea24.pl"><img src="style/default/logo.png" alt="Najlepszy internet w Rumi - Netarea" /></a>
 			</div>
 			
-			<div style="float:right; margin-top:15px; margin-right:10px; color:#647883; font-size:24px;">
+			<div id="naglowek">
 				<span>{trans("Virtual Customer Service")}</span>
 			</div>
+			<p class="status"><strong>Zalogowany:</strong> {$userinfo.customername} <span class="error">(ID: {$userinfo.id|string_format:"%04d"})</span></p>		
 		</div>
 	</div>	
 
-<table id="menu" cellspacing="0" cellpadding="0">
-    <tr>
-	{foreach from=$modules item=menuitem name=menu}
-	{if $smarty.foreach.menu.first}
-	    <td style="vertical-align:">
-	</td>
-	{else}
-	    {if $menuitem.selected}
-	    <td style="vertical-align: top;">
-	    </td>
-	    {else}
-	    {if $display_spacer}
-	    <td style="vertical-align: top;">
-	    </td>
-	    {/if}
-	    {/if}
-	{/if}
-        <td style="vertical-align: top; width: 1px;">
-    	    <a href="?m={$menuitem.module}" {userpaneltip text=$menuitem.tip} class="{if $menuitem.selected}tabsel{else}tabnotsel{/if}">{$menuitem.name|replace:" ":"&nbsp;"}</a>
-        </td>
-	{if $smarty.foreach.menu.last}
-	    <td style="vertical-align: top;">
+	<table id="menu" cellspacing="0" cellpadding="0">
+		<tr>
+		{foreach from=$modules item=menuitem name=menu}
+		{if $smarty.foreach.menu.first}
+			<td style="vertical-align:">
+		</td>
+		{else}
+			{if $menuitem.selected}
+			<td style="vertical-align: top;">
+			</td>
+			{else}
+			{if $display_spacer}
+			<td style="vertical-align: top;">
+			</td>
+			{/if}
+			{/if}
+		{/if}
+			<td style="vertical-align: top; width: 1px;">
+				<a href="?m={$menuitem.module}" {userpaneltip text=$menuitem.tip} class="{if $menuitem.selected}tabsel{else}tabnotsel{/if}">{$menuitem.name|replace:" ":"&nbsp;"}</a>
+			</td>
+		{if $smarty.foreach.menu.last}
+			<td style="vertical-align: top;">
 
-    	    </td>
-	{else}
-	{if $menuitem.selected}
-	    <td style="vertical-align: top;">
-        </td>
-	{/if}
-	{/if}
-	{if $menuitem.selected}{assign var=display_spacer value=0}{else}{assign var=display_spacer value=1}{/if}
-	{/foreach}
-	<td>&nbsp;</td>
-    </tr>
-</table>
+				</td>
+		{else}
+		{if $menuitem.selected}
+			<td style="vertical-align: top;">
+			</td>
+		{/if}
+		{/if}
+		{if $menuitem.selected}{assign var=display_spacer value=0}{else}{assign var=display_spacer value=1}{/if}
+		{/foreach}
+		<td>&nbsp;</td>
+		</tr>
+	</table>

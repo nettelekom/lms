@@ -1,52 +1,56 @@
 {include file="header.html"}
 
+<div class="box">
 
+	{if $groupaction}
+	{assign var='title' value="Książka telefoniczna - edycja"}
+	{else}
+	{assign var='title' value="Książka telefoniczna - dodawanie nowej grupy"}
+	{/if}
+	
+	{box title=$title}
 
-<div style="padding: 10px;">
+		<h3>Dodaj nową grupę</h3>
+			
+		{if $error}<span class="error">{$error}</span>{/if}
+		<form action="?m=voip&f=addressbook" method="post">
+			Podaj nazwę nowej grupy: <img src="modules/voip/img/group.png" alt="grupa"><input type="text" name="group[name]" value="{$group.name}">
+			<label><input type="checkbox" name="group[block]" value="1"{if $group.dropcall eq 't'} checked="checked"{/if}>Blokuj połączenia przychodzące z tej grupy</label>
+			<input type="hidden" name="group[id]" value="{$group.id}">
+			<input class="button" type="submit" value="Zapisz">
+		</form>
+	{/box}
 
-{if $groupaction}
-{assign var='title' value="Książka telefoniczna - edycja"}
-{else}
-{assign var='title' value="Książka telefoniczna - dodawanie nowej grupy"}
-{/if}
-{box title=$title}
-
-<h3>Dodaj nową grupę</h3>
-{if $error}<span style="color:#FF0000;">{$error}</span>{/if}
-
-	<form action="?m=voip&f=addressbook" method="post">
-		Podaj nazwę nowej grupy: <input type="text" name="group[name]" value="{$group.name}">
-		<label><input type="checkbox" name="group[block]" value="1"{if $group.dropcall eq 't'} checked="checked"{/if}>Blokuj połączenia przychodzące z tej grupy</label>
-	<input type="hidden" name="group[id]" value="{$group.id}">
-	<input id="button" type="submit" value="Zapisz">
-	</form>
-{/box}
-
-			{box title="Książka telefoniczna - grupy"}
-			<h3>Lista zdefiniowanych grup</h3>
-			<table width="100%">
-				<tr class="darkest">
-					<th>Nazwa grupy</th>
-					<th>Liczba wpisów</th>
-					<th>Blokuj połączenia przychodzące<br/>z tej grupy</th>
-					<th>Dodawanie kontaktów<br/>do tej grupy</th>
-					<th colspan="2"></th>		
-				</tr>
+	{box title="Książka telefoniczna - grupy"}
+	
+		<h3>Lista zdefiniowanych grup</h3>
+		
+		<table class="table-shadow" width="100%">
+			<tr class="darkest">
+				<th>Nazwa grupy</th>
+				<th>Liczba kontaktów</th>
+				<th>Blokuj połączenia przychodzące<br/>z tej grupy</th>
+				<th>Dodawanie/usuwanie<br/>kontaktów tej grupie</th>
+				<th colspan="2"></th>
+			</tr>
+				
 			{section name=a loop=$groups}
-				<tr class="dark">
-					<td>{$groups[a].name}</td>
-					<td align="center">{$groups[a].count|default:0}</td>
-					<td align="center">{if $groups[a].dropcall eq 't'}Tak{else}Nie{/if}</td>
-					<td align="center"><img src="modules/voip/img/add.png" alt="add"> <a href="?m=voip&f=addressbookd&gr={$groups[a].id}">Dodaj kontakty</a></td>
-					<td align="center"><img src="modules/voip/img/edit.png" alt="edit"> <a href="?m=voip&f=addressbook&edit={$groups[a].id}">Edytuj grupę</a></td>
-					<td align="center"><img src="modules/voip/img/delete.png" alt="delete"> <a href="?m=voip&f=addressbook&del={$groups[a].id}" onclick="return confirm('Na pewno? Wszystkie kontakty z tej grupy zostaną usunięte!');">Usuń grupę</a></td>
-				</tr>
+			<tr class="dark">
+				<td><img src="modules/voip/img/group.png" alt="grupa"> <strong>{$groups[a].name}</strong></td>
+				<td class="text-center">{$groups[a].ccount|default:0}</td>
+				<td class="text-center">{if $groups[a].dropcall eq 't'}Tak{else}Nie{/if}</td>
+				<td class="text-center"><a href="?m=voip&f=addressbookd&gr={$groups[a].id}" title="Dodaj/usuń kontakty"><img src="modules/voip/img/plus_minus.png"  alt="dodaj/usuń">Dodaj/usuń kontakty</a></td>
+				<td class="text-center"><a href="?m=voip&f=addressbook&edit={$groups[a].id}" title="Edytuj grupę" ><img src="modules/voip/img/edit.png" alt="edytuj">Edytuj grupę</a></td>
+				<td class="text-center"><a href="?m=voip&f=addressbook&del={$groups[a].id}" onclick="return confirm('Na pewno? Wszystkie kontakty z tej grupy zostaną usunięte!');" title="Usuń grupę" ><img src="modules/voip/img/delete.png" alt="usuń">Usuń grupę</a></td>
+			</tr>
 			{/section}
-			</table>
-			{/box}
-<div style="text-align: right; margin-right: 40px;">
-	<a href="?m=voip">Powrót</a>
+		</table>
+	{/box}
+	
+	<div class="back">
+		<a href="?m=voip"><img src="modules/voip/img/return.png" alt="powrót">Powrót</a>
+	</div>
+	
 </div>
-</div>
-{include file="footer.html"}
 
+{include file="footer.html"}

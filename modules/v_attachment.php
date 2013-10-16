@@ -34,6 +34,7 @@ require_once(LIB_DIR . '/pdf.php');
 $pdf =& init_pdf('A4', 'portrait', trans('Invoices'));
 $inv = $LMS->GetInvoiceContent($docid);
 $numer = docnumber($inv['number'], $inv['template'], $inv['cdate']);
+$pdf->ezImage('/www/lms.jpg',$pad = 5,$width = 0,$resize = 'full',$just = 'center',$border = '');
 $pdf->ezText("Za³±cznik do faktury VAT\nNr $numer\n", 30, array('left' => 130));
 $pdf->ezTable($data);
 if($_GET['is_sure'] == 1)

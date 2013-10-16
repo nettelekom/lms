@@ -1,52 +1,60 @@
 {include file="header.html"}
- {foreach $groups as $grupa} 
-    {if $smarty.get.gr == $grupa.id} 
-        {assign "NazwaGrupy" $grupa.name} 
-	{/if} 
-{/foreach}
-<div style="padding: 10px;">
 
-{box title="Książka telefoniczna - kontakty w grupie &ldquo;{$NazwaGrupy}&ldquo;"}
+	{foreach $groups as $grupa} 
+		{if $smarty.get.gr == $grupa.id} 
+			{assign "NazwaGrupy" $grupa.name} 
+		{/if} 
+	{/foreach}
 
-<h3>Lista kontaktów grupy <span style="color: #ff0000;">&ldquo;{$NazwaGrupy}&ldquo;</span></h3>
+<div class="box">
 
-	<table width="100%">
-		<tr  class="darkest" align="center">
-			<th>Nazwa kontaktu</th>
-			<th>Numer telefonu</th>
-			<th colspan="2"></th>
-		</tr>
-		{section name=a loop=$nrl}
-		<tr class="dark">
-			<td>{$nrl[a].name}</td>
-			<td><img src="modules/voip/img/sluchawka.png" alt="tel."> {$nrl[a].number}</td>
-			<td align="center"><img src="modules/voip/img/edit.png" alt="edit"> <a href="?m=voip&f=addressbookd&gr={$smarty.get.gr}&edit={$nrl[a].id}">Edytuj kontakt</a></td>
-			<td align="center"><img src="modules/voip/img/delete.png" alt="delete"> <a href="?m=voip&f=addressbookd&gr={$smarty.get.gr}&del={$nrl[a].id}" onclick="return confirm('Na pewno?');">Usuń kontakt</a></td>
-		</tr>
-		{/section}
-	</table>
-{/box}
+	{if $groupaction}
+	{assign var='title' value="Książka telefoniczna - edytuj kontakt"}
+	{else}
+	{assign var='title' value="Książka telefoniczna - dodawanie nowego kontaktu"}
+	{/if}
+	
+	{box title=$title}
 
-{if $groupaction}
-{assign var='title' value="Książka telefoniczna - edytuj kontakt"}
-{else}
-{assign var='title' value="Książka telefoniczna - dodawanie nowego kontaktu"}
-{/if}
-{box title=$title}
-<h3>Dodaj nowy kontakt do grupy <span style="color: #ff0000;">&ldquo;{$NazwaGrupy}&ldquo;</span></h3>
-{if $error}<span style="color:#FF0000;">{$error}</span>{/if}
+		<h3>Dodaj nowy kontakt do grupy &#8220;{$NazwaGrupy}&#8221;</h3>
 
-	<form action="?m=voip&f=addressbookd&gr={$smarty.get.gr}" method="post">
-		Nazwa kontaktu: <input type="text" name="nr[name]" value="{$nr.name}">
-		Numer telefonu: <img src="modules/voip/img/sluchawka.png" alt="tel."><input type="text" name="nr[number]" value="{$nr.number}">
-	<input type="hidden" name="nr[id]" value="{$nr.id}">
-	<input id="button" type="submit" value="Zapisz">
-	</form>
-{/box}
-<div style="text-align: right; margin-right: 40px;">
-	<img src="modules/voip/img/phone_book.png"> <a href="?m=voip&f=addressbook">Powrót do książki telefonicznej</a>
-</div>
+		{if $error}<span class="error">{$error}</span>{/if}
+
+		<form action="?m=voip&f=addressbookd&gr={$smarty.get.gr}" method="post">
+			Nazwa kontaktu: <img src="modules/voip/img/phone_book.png" alt="książka tel."><input type="text" name="nr[name]" value="{$nr.name}">
+			Numer telefonu: <img src="modules/voip/img/sluchawka.png" alt="tel."><input type="text" name="nr[number]" value="{$nr.number}">
+			<input type="hidden" name="nr[id]" value="{$nr.id}">
+			<input class="button" type="submit" value="Zapisz"> 
+		</form>
+	
+	{/box}
+	
+	{box title="Książka telefoniczna - kontakty w grupie &#8220;{$NazwaGrupy}&#8221;"}
+
+		<h3>Lista kontaktów grupy &#8220;{$NazwaGrupy}&#8221;</h3>
+
+		<table class="table-shadow" width="100%">
+			<tr class="darkest">
+				<th class="text-center">Nazwa kontaktu</th>
+				<th class="text-center">Numer telefonu</th>
+				<th colspan="2"></th>
+			</tr>
+			{section name=a loop=$nrl}
+			<tr class="dark">
+				<td><img src="modules/voip/img/phone_book.png" alt="książka tel."> <strong>{$nrl[a].name}</strong></td>
+				<td class="text-center"><img src="modules/voip/img/sluchawka.png" alt="tel."> {$nrl[a].number}</td>
+				<td class="text-center"><a href="?m=voip&f=addressbookd&gr={$smarty.get.gr}&edit={$nrl[a].id}" title="Edytuj kontakt"><img src="modules/voip/img/edit.png" alt="edytuj">Edytuj kontakt</a></td>
+				<td class="text-center"><a href="?m=voip&f=addressbookd&gr={$smarty.get.gr}&del={$nrl[a].id}" onclick="return confirm('Na pewno? Kontakt zostanie usunięty!');" title="Usuń kontakt"><img src="modules/voip/img/delete.png" alt="usuń">Usuń kontakt</a></td>
+			</tr>
+			{/section}
+		</table>
+	
+	{/box}
+
+	<div class="back">
+		<a href="?m=voip&f=addressbook&id={$smarty.get.gr}"><img src="modules/voip/img/return.png" alt="powrót">Powrót</a>
+	</div>
+	
 </div>
 
 {include file="footer.html"}
-

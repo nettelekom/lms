@@ -35,7 +35,14 @@ require_once(LIB_DIR.'/pdf.php');
 
 $pdf =& init_pdf('A4', 'portrait', trans('Invoices'));
 $inv=$LMS->GetInvoiceContent($docid);
+$pdf->ezImage('https://netarea24.pl/lms-master/userpanel/style/default/logo.png',$pad = 5,$width = 200,$resize = 'full',$just = 'center',$border = '');
 $numer=docnumber($inv['number'],$inv['template'],$inv['cdate']);
+$pdf->ezText("Za³±cznik do faktury VAT\nNr $numer\n",30,array('left'=>100));
+
+
+
+
+
 $pdf->ezText("Za³±cznik do faktury VAT\nNr $numer\n",30,array('left'=>130));
 $pdf->ezTable($data);
 if($_GET['is_sure']==1)

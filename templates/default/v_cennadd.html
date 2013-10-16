@@ -1,0 +1,28 @@
+{include file="header.html"}
+<!--// $Id: tariffadd.html,v 1.45 2005/10/19 13:34:49 lukas Exp $ //-->
+<H1>{$layout.pagetitle}</H1>
+<P>
+<FORM METHOD="POST" ACTION="?m=v_cennadd" NAME="cennadd">
+<INPUT type="submit" class="hiddenbtn">
+<TABLE CLASS="lmsbox">
+<THEAD>
+	<TR>
+	    <TD WIDTH="1%" CLASS="fleftu">
+		<IMG SRC="img/money.gif" ALT="">
+	    </TD>
+	    <TD WIDTH="1%" CLASS="fbt"><B>{t}Name:{/t}</B></TD>
+	    <TD WIDTH="98%" CLASS="frightu">
+		<INPUT TYPE="TEXT" NAME="cennadd[name]" VALUE="{$cennadd.name}" {tip trigger="name" bold=1}>
+	    </TD>
+	</TR>
+</THEAD>
+<TBODY>
+	<TR CLASS="LIGHT">
+	    <TD WIDTH="100%" COLSPAN="3" CLASS="FBOTTOMU" ALIGN="RIGHT"> 
+	    	<A HREF="javascript:document.cennadd.submit();" accesskey="s">{t}Submit{/t} <IMG SRC="img/save.gif" alt=""></A>
+		<A HREF="?m=cennlist">{t}Cancel{/t} <IMG SRC="img/cancel.gif" alt=""></A>
+	    </TD>
+	</TR>
+</TBODY>
+</TABLE></FORM></P>
+{include file="footer.html"}

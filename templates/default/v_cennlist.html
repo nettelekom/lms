@@ -1,0 +1,73 @@
+{include file="header.html"}
+<!--// $Id: tarifflist.html,v 1.59 2005/06/12 11:27:22 alec Exp $ //-->
+<H1>{$layout.pagetitle}</H1>
+<TABLE CLASS="lmsbox">
+<THEAD>
+	<TR>
+		<TD WIDTH="93%" CLASS="fleftu">
+			<IMG SRC="img/money.gif" ALT="">&nbsp;<B>{t}Name:{/t}</B>
+		</TD>
+		<TD WIDTH="1%" VALIGN="top" CLASS="fbt" align="right">
+			{t}ID:{/t}
+		</TD>
+		<TD NOWRAP WIDTH="1%" VALIGN="top" CLASS="fbt" align="right">
+			Średnio za minutę:
+		</TD>	
+		<TD WIDTH="1%" VALIGN="top" CLASS="fbt" align="right">
+			{t}Assigned:{/t}
+		</TD>
+		<TD WIDTH="1%" CLASS="frightu" ALIGN="RIGHT">
+			<NOBR>
+			<B>{t a=$listdata.total}Total: $a{/t}</B>
+			</NOBR>
+		</TD>
+	</TR>
+</THEAD>
+<TBODY>
+	{cycle values="light,lucid" print=false}
+	{section name=tariffs loop=$tarifflist}
+	<TR class="{cycle}" onmouseover="addClass(this, 'highlight')" onmouseout="removeClass(this, 'highlight')">
+		<TD WIDTH="93%" CLASS="fleft" onClick="return self.location.href='?m=v_cenninfo&id={$tarifflist[tariffs].id}';" class="fleft">
+			<IMG SRC="img/money.gif" ALT="">&nbsp;<B>{$tarifflist[tariffs].name}</B>
+		</TD>
+		<TD WIDTH="1%" VALIGN="top" align="right" onClick="return self.location.href='?m=v_cenninfo&id={$tarifflist[tariffs].id}';">
+			({$tarifflist[tariffs].id|string_format:"%04d"})
+		</TD>
+		<TD WIDTH="1%" VALIGN="top" align="right" onClick="return self.location.href='?m=v_cenninfo&id={$tarifflist[tariffs].id}';">
+			<NOBR>
+			{$tarifflist[tariffs].amount|money_format} 
+			</NOBR>
+		</TD>
+		<TD WIDTH="1%" VALIGN="top" align="right" onClick="return self.location.href='?m=v_cenninfo&id={$tarifflist[tariffs].id}';">
+			{$tarifflist[tariffs].customerscount} 
+		</TD>
+		<TD WIDTH="1%" CLASS="fright" ALIGN="right">
+			<NOBR>
+{if $tarifflist[tariffs].customerscount}<A HREF="javascript:alert('{t}Subscription with assigned customers cannot be deleted!{/t}');">{else}<A HREF="?m=v_cenndelete&id={$tarifflist[tariffs].id}" onClick="return confirmLink(this,'{t}Are you sure, you want to delete that tariff?{/t}');">{/if}<IMG SRC="img/delete.gif" ALT="[ {t}Delete{/t} ]"></A>
+				<A HREF="?m=v_cennedit&id={$tarifflist[tariffs].id}"><IMG SRC="img/edit.gif" ALT="[ {t}Edit{/t} ]"></A>
+				<A HREF="?m=v_cenninfo&id={$tarifflist[tariffs].id}"><IMG SRC="img/info.gif" ALT="[ {t}Info{/t} ]"></A>
+				<A HREF="?m=v_cennexport&id={$tarifflist[tariffs].id}"><IMG SRC="img/print.gif" ALT="[ {t}Print{/t} ]"></A>
+				<A HREF="?m=v_cennexport&csv=1&id={$tarifflist[tariffs].id}"><IMG SRC="img/csv.png" ALT="[ CSV ]"></A>
+			</NOBR>
+		</TD>
+	</TR>
+	{sectionelse}
+	<TR>
+		<TD COLSPAN="6" ALIGN="center" CLASS="fall">
+			<p>&nbsp;</p>
+			<p><B>{t}No such subscriptions in database.{/t}</B></p>
+			<p>&nbsp;</p>
+		</TD>
+	</TR>
+	{/section}
+	<TR CLASS="light">
+		<TD CLASS="fleftu" COLSPAN="4" WIDTH="99%" ALIGN="right">
+			&nbsp;
+		</TD>
+		<TD CLASS="frightu" WIDTH="1%">
+			&nbsp;
+		</TD>
+	</TR>
+</TBODY>
+</TABLE>
+{include file="footer.html"}

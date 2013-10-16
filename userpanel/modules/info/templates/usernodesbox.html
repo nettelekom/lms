@@ -27,10 +27,8 @@
 					</td>
 				</tr>
 				<tr>
-					<td width="1%" style="white-space: nowrap;">
-						<strong>IP:</strong> {$usernodes[usernodes].ip}{if $usernodes[usernodes].ip_pub!="0.0.0.0"} ({$usernodes[usernodes].ip_pub}){/if} /
-					</td>
-					<td width="99%">
+					<td style="white-space: nowrap; font-size: 10px;">
+						<strong>IP:</strong> {$usernodes[usernodes].ip}{if $usernodes[usernodes].ip_pub!="0.0.0.0"} ({$usernodes[usernodes].ip_pub}){/if}<br/>
 						<strong>MAC:</strong> {$usernodes[usernodes].mac|replace:",":"<br/>"}
 					</td>
 				</tr>

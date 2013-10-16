@@ -114,11 +114,13 @@ $access['table'][26]['privilege']	= 'hide_finances';
 $access['table'][27]['name']		= trans('reports');
 $access['table'][27]['privilege']	= 'reports';
 
+
 // Nettelekom
- $access['table'][24]['name']		= 'VoiP';
- $access['table'][24]['allow_reg']	= '^(v_.*|customer(list|info))$';
- $access['table'][28]['name']		= trans('cash registry administration');
- $access['table'][28]['allow_reg']	= '^cashreg(add|edit|del)$';
+$access['table'][24]['name']		= 'VoiP';
+$access['table'][24]['allow_reg']	= '^(v_.*|customer(list|info))$';
+
+$access['table'][28]['name']		= trans('cash registry administration');
+$access['table'][28]['allow_reg']	= '^cashreg(add|edit|del)$';
 
 $access['table'][29]['name']		= trans('transaction logs');
 $access['table'][29]['allow_reg']	= '^archive(info|view)$';

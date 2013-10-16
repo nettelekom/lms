@@ -1,0 +1,50 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<!--// $Id$ //-->
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="pl"> 
+  <meta content="text/html; charset=UTF-8" http-equiv="content-type" />
+  <meta http-equiv="refresh" content="605">
+  <title>iBOK - internetowe Biuro Obsługi Klienta</title>
+<link type="text/css" rel="stylesheet" href="userpanel/style/netarea/style.css" />
+<body>
+	<div>
+		<div id="menu-bar">
+			
+			<div id="logo">
+				<a title="Internet Rumia, Telewizja Rumia, Telefon Rumia - Netarea" name="Logo Netarea" href="http://www.netarea24.pl"><img src="userpanel/style/default/logo.png" alt="Najlepszy internet w Rumi - Netarea" /></a>
+			</div>
+			
+			<div id="naglowek">
+				<span></span>
+			</div>	
+		</div>
+	</div>	
+
+<PRE>
+<h1 id="login_beam">Dane konta Abonenta - telefonia</h1>
+<div class="box" style="margin 0 auto;">
+<h2 class="vprint-h">Abonent: {$db.name}</h2>
+<h3 class="vprint-h">Dane dostępowe:</h3>
+<label class="form-dane"><strong>Adres serwera SIP:</strong></label><INPUT name="from" value="{$db.sip.addr}" size="15" readonly="readonly">
+<label class="form-dane"><strong>Login SIP:</strong></label><INPUT name="from" value="{$db.sip.login}" size="15" readonly="readonly">
+<label class="form-dane"><strong>Hasło SIP:</strong></label><INPUT name="from" value="{$db.sip.passwd}" size="15" readonly="readonly">
+<h3 class="vprint-h">Poczta głosowa</h3>
+<label class="form-dane"><strong>Numer poczty głosowej:</strong></label><INPUT name="from" value="{$db.voicemail.no}" size="15" readonly="readonly">
+<label class="form-dane"><strong>Login poczty głosowej:</strong></label><INPUT name="from" value="{$db.voicemail.login}" size="15" readonly="readonly">
+<label class="form-dane"><strong>PIN poczty głosowej:</strong></label><INPUT name="from" value="{$db.voicemail.passwd}" size="15" readonly="readonly">
+<h3 class="vprint-h">iBOK</h3>
+<label class="form-dane"><strong>Adres iBOK:</strong></label><INPUT name="from" value="{$db.ibok.addr}" size="15" readonly="readonly">
+<label class="form-dane"><strong>ID iBOK:</strong></label><INPUT name="from" value="{$db.ibok.login}" size="15" readonly="readonly">
+<label class="form-dane"><strong>PIN iBOK:</strong></label><INPUT name="from" value="{$db.ibok.passwd}" size="15" readonly="readonly">
+<button class="button" onclick="window.print()">Wydrukuj stronę</button>
+</div>
+</PRE>
+
+
+			<hr id="footer-line" width="90%" />
+				<div id="footer">
+					Copyright © 2009-2013 <a name="Netarea" href="http://www.netarea24.pl" title="Netarea" alt="Netarea">Netarea</a>
+				</div>
+</body>
+</html>
+
+

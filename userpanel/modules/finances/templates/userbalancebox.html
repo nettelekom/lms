@@ -19,41 +19,51 @@ function confirmLink(theLink, message)
 <form name="invoices" action="?m=finances&f=invoice" method="POST" target="_blank">
 <table style="width: 100%;" cellpadding="3">
 	<tr class="darkest">
-		<td width="1%">{trans("Date:")}</td>
-		<td width="1%" align="right">{trans("Value:")}</td>
-		<td width="1%" align="center">&raquo;</td>
-		<td width="1%" align="right">{trans("After:")}</td>
-		<td width="95%">{trans("Description:")}</td>
+		<td class="text-center"><strong>Data i godzina</strong></td>
+		<td class="text-center"><strong>{trans("Value:")}</strong></td>
+		<td class="text-center"><strong>&raquo;</strong></td>
+		<td class="text-center"><strong>{trans("After:")}</strong></td>
+		<td class="text-center"><strong>{trans("Description:")}</strong></td>
 		{if !$disable_invoices}
-		<td width="1%" align="right"></td>
-		<td width="1%" align="right"></td>
+		<td class="text-center"><strong>Pobierz e-fakturę</strong></td>
+		<td class="text-center"><strong>Pobierz załacznik</strong></td>
+		<td class="text-center"><label class="check_all" for="allbox">{trans("Check all")}</label><input style="vertical-align: middle;" type="checkbox" name="allbox" id="allbox" onchange="CheckAll('invoices', this)" value="1" /></td>
 		{/if}
 	</tr>
 	{section name=balancelist loop=$balancelist.id step=-1}
 	<tr class="dark">
-		<td width="1%" class="nobr">{$balancelist.date[balancelist]}</td>
-		<td width="1%" align="right" class="nobr">{if $balancelist.value[balancelist] > 0 && $balancelist.type[balancelist] != 4}+{/if}{if $balancelist.type[balancelist] == 4}-{/if}{$balancelist.value[balancelist]|money_format}</td>
-		<td width="1%" align="center">&raquo;</td>
-		<td width="1%" align="right" class="nobr">{if $balancelist.after[balancelist] < 0}<font color="red">{/if}{$balancelist.after[balancelist]|money_format}{if $balancelist.after[balancelist] < 0}</font>{/if}</td>
-		<td width="95%">{$balancelist.comment[balancelist]}</td>
+		<td class="nobr">{$balancelist.date[balancelist]}</td>
+		<td align="right" class="nobr">{if $balancelist.value[balancelist] > 0 && $balancelist.type[balancelist] != 4}+{/if}{if $balancelist.type[balancelist] == 4}-{/if}{$balancelist.value[balancelist]|money_format}</td>
+		<td align="center">&raquo;</td>
+		<td align="right" class="nobr">{if $balancelist.after[balancelist] < 0}<font color="red">{/if}{$balancelist.after[balancelist]|money_format}{if $balancelist.after[balancelist] < 0}</font>{/if}</td>
+		<td>{$balancelist.comment[balancelist]}</td>
 		{if !$disable_invoices}
-		<td width="1%" class="nobr">
+		<td class="nobr text-center">
 			{if $balancelist.doctype[balancelist]==1 || $balancelist.doctype[balancelist]==3}
-			<a href="?m=finances&amp;f=invoice&amp;id={$balancelist.docid[balancelist]}" target="_blank">{img src="print.gif" alt="[ Print ]" text=$balancelist.number[balancelist]}</a><input style="vertical-align: middle" type="checkbox" name="inv[{$balancelist.docid[balancelist]}]" value="1" />
+			<a href="?m=finances&amp;f=invoice&amp;id={$balancelist.docid[balancelist]}" title="Pobierz e-fakturę" target="_blank">{img src="printer.png" alt="[ Print ]" text=$balancelist.number[balancelist]}Pobierz</a>
 			{else}
-			&nbsp;
+			-
 			{/if}
 		</td>
-                <td width="1%">
-                        {if $balancelist.details[balancelist]}<a href="?m=finances&amp;f=v_attachment&amp;docid={$balancelist.docid[balancelist]}" target="_blank" onclick="confirmLink(this,'Drukować szczegółowy biling ?');">Zał.</a>
+						<td class="text-center">
+				        {if $balancelist.details[balancelist]}<a href="?m=finances&amp;f=v_attachment&amp;docid={$balancelist.docid[balancelist]}" target="_blank" title="Pobierz załacznik do e-faktury" onclick="confirmLink(this,'Wydrukować szczegółowy biling?'); ">{img src="attachment.png" alt="[Załącznik]"}Pobierz</a>
                         {else}&nbsp;
                         {/if}
+				</td>
+		
+                <td class="text-center">
+				{if $balancelist.doctype[balancelist]==1 || $balancelist.doctype[balancelist]==3}
+						<input style="vertical-align: middle" type="checkbox" name="inv[{$balancelist.docid[balancelist]}]" value="1" />
+								{else}
+			-
+			{/if}	
                 </td>
+
 		{/if}
 	</tr>
 	{sectionelse}
 	<tr>
-		<td align="center" width="100%" colspan="7">
+		<td align="center" width="100%" colspan="8">
 			<p>&nbsp;</p>
 			<p><b>{trans("No such transactions on your account.")}</b></p>
 			<p>&nbsp;</p>
@@ -61,15 +71,12 @@ function confirmLink(theLink, message)
 	</tr>
 	{/section}
 	{if !$disable_invoices}
-	<tr class="darkest">
-		<td colspan="7" width="100%">
+	<tr class="dark" style="background: #cccccc;">
+		<td colspan="8" width="100%">
 			<table width="100%" cellpadding="0" cellspacing="0">
 			    <tr>
-				<td width="50%">
-				{img src="printer.png" alt="[ Print ]"} <a style="color: #ffffff;" href="javascript:document.invoices.submit()">{trans("Print selected")}</a>
-				</td>
-				<td width="50%" align="right">
-				<label id="check_all" for="allbox">{trans("Check all")}</label><input style="vertical-align: middle;" type="checkbox" name="allbox" id="allbox" onchange="CheckAll('invoices', this)" value="1" />
+				<td width="100%" class="text-right">
+				<a href="javascript:document.invoices.submit()">{img src="printer.png" alt="[ Print ]"}{trans("Print selected")}</a>
 				</td>
 			    </tr>
 			</table>

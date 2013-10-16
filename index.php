@@ -139,7 +139,7 @@ require_once(LIB_DIR.'/LMS.class.php');
 require_once(LIB_DIR.'/Auth.class.php');
 require_once(LIB_DIR.'/accesstable.php');
 require_once(LIB_DIR.'/Session.class.php');
-if($CONFIG['voip']['enabled'] == 1)
+if(check_conf('voip.enabled'))
 {
 	require_once(LIB_DIR.'/LMSVOIP.class.php');
 	require_once(LIB_DIR.'/floAPI.php');
@@ -160,7 +160,7 @@ if ($SYSLOG)
 $LMS = new LMS($DB, $AUTH, $CONFIG, $SYSLOG);
 $LMS->ui_lang = $_ui_language;
 $LMS->lang = $_language;
-if($CONFIG['voip']['enabled'] == 1)
+if(check_conf('voip.enabled'))
 {
 	$voip = new LMSVOIP($DB, $CONFIG['voip']);
 	$layout['v_errors'] =& $voip->errors;

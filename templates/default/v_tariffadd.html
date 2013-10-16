@@ -1,0 +1,72 @@
+{include file="header.html"}
+<!--// $Id: tariffadd.html,v 1.45 2005/10/19 13:34:49 lukas Exp $ //-->
+<H1>{$layout.pagetitle}</H1>
+<FORM METHOD="POST" NAME="tariffadd" ACTION="?m=v_tariffadd">
+<INPUT type="submit" class="hiddenbtn">
+<TABLE CLASS="lmsbox">
+<THEAD>
+	<TR>
+	    <TD WIDTH="1%" CLASS="fleftu">
+		<IMG SRC="img/money.gif" ALT="">
+	    </TD>
+	    <TD WIDTH="1%" CLASS="fbt"><B>{t}Name:{/t}</B></TD>
+	    <TD WIDTH="98%" CLASS="frightu">
+		<INPUT TYPE="TEXT" NAME="tariffadd[name]" VALUE="{$tariffadd.name}" {tip trigger="name" bold=1}>
+	    </TD>
+	</TR>
+</THEAD>
+<TBODY>
+	<TR>
+	    <TD WIDTH="100%" COLSPAN="3" CLASS="flr">
+		<TABLE WIDTH="100%" CELLPADDING="0">
+		    <TR CLASS="LIGHT">
+			<TD WIDTH="50%" VALIGN="top">
+			    <TABLE WIDTH="100%" CELLPADDING="3">
+				<TR CLASS="LIGHT">
+				    <TD WIDTH="1%">
+					<IMG SRC="img/value.gif" ALT="">
+				    </TD>
+				    <TD WIDTH="1%" NOWRAP><B>{t}Value:{/t}</B></TD>
+				    <TD WIDTH="98%">
+					    <INPUT TYPE="TEXT" SIZE="8" NAME="tariffadd[amount]" VALUE="{$tariffadd.amount}" {tip text="Enter value" trigger="amount"}>
+				    </TD>
+				</TR>
+				<TR CLASS="LIGHT">
+				    <TD WIDTH="1%">
+					<IMG SRC="img/tax.gif" ALT="">
+				    </TD>
+				    <TD WIDTH="1%" NOWRAP><B>{t}Tax:{/t}</B></TD>
+				    <TD WIDTH="98%">
+					<INPUT TYPE="TEXT" SIZE="8" NAME="tariffadd[tax]" VALUE="{$tariffadd.tax|default:'23'}" {tip text="Enter value" trigger="tax"}>
+				    </TD>
+				</TR>												
+				<TR CLASS="LIGHT">
+				    <TD WIDTH="1%">
+					<IMG SRC="img/class.gif" ALT="">
+				    </TD>
+				    <TD WIDTH="1%" NOWRAP><B>Darmowych minut:</B></TD>
+				    <TD WIDTH="98%">
+					<INPUT TYPE="TEXT" SIZE="8" NAME="tariffadd[free]" VALUE="{$tariffadd.free|default:'0'}" {tip text="Wprowadź ilość darmowych minut" trigger="free"}>
+				    </TD>
+				</TR>
+
+			</TABLE>
+		    </TD>
+		    </TR>
+		</TABLE>
+	    </TD>
+	</TR>
+	<TR CLASS="LIGHT">
+	    <TD WIDTH="100%" COLSPAN="3" CLASS="FBOTTOMU" ALIGN="RIGHT"> 
+	    	<A HREF="javascript:document.tariffadd.submit();" accesskey="s">{t}Submit{/t} <IMG SRC="img/save.gif" alt=""></A>
+		<A HREF="?m=v_tarifflist">{t}Cancel{/t} <IMG SRC="img/cancel.gif" alt=""></A>
+	    </TD>
+	</TR>
+</TBODY>
+</TABLE></FORM>
+<SCRIPT language="javaScript">
+<!--
+document.forms['tariffadd'].elements['tariffadd[name]'].focus();
+//-->
+</SCRIPT>
+{include file="footer.html"}

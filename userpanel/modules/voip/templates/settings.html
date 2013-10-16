@@ -14,87 +14,124 @@ else document.getElementById(id).innerText='';
 }
 {/literal}
 </script>
-<tr>
-		<td class="tabelka1_gora_p">
-</td>
-	</tr>
-	<tr>
-		<td class="tabelka1_srodek_p" valign="top">
-<table width="100%" cellspacing="0">
-	<tr>
-		<td valign="top" width="100%">
+
+<div class="box">
+
 {box title="Edytuj ustawienia"}
-<table cellpadding="3" align="center">
-<form action="?m=voip&f=settings&id={$smarty.get.id}" method="post" onsubmit="if (this.elements['sip[freeseckom]'].checked==true) return confirm('Napewno chcesz włączyć darmowe minuty dla komórek ? Pamiętaj, że w tym przypadku darmowe minuty liczone są dziesięciokrotnie.')">
-{section name=err loop=$err}
-<tr><td colspan="2" align="center" style="color:#FF0000;">{$err[err]}</td></tr>
-{/section}
-<tr><td>SIP Server:</td><td>{$sip.sipserver}</td></tr>
-<tr><td>SIP Login:</td><td>{$sip.name}</td></tr>
-<tr><td>Numer poczty głosowej:</td><td>{$sip.mailboxnumber}</td></tr>
-<tr><td>Pin poczty głosowej:</td><td><input type="password" name="sip[mailboxpin]"></td></tr>
-<tr><td>Prezentacja numeru:</td><td><input type="checkbox" name="sip[number_presentation]" class="check" value="t"{if $sip.number_presentation == 't'} checked="checked"{/if}>
-{if $addserv.number_presentation}<span style="color:#FF0000;">Wyłączenie/włączenie - koszt {$addserv.number_presentation} zł</span>{/if}
-</td></tr>
-<tr><td>Blokuj nieidentyfikowane połączenia przychodzące:</td><td><input type="checkbox" name="sip[blockanon]" class="check" value="t"{if $sip.blockanon == 't'} checked="checked"{/if}>
-{if $addserv.blockanon}<span style="color:#FF0000;">Włączenia/wyłączenia - koszt {$addserv.blockanon} zł</span>{/if}
-</td></tr>
-<tr><td>W przypadku zajętości:</td><td>{html_options name="sip[busy_action]" options=$busy_action selected=$sip.busy_action onchange="change_price(this.selectedIndex,'s1');"} 
-<span id="s1" style="color:#FF0000;"></span>
-</td></tr>
-<tr><td>Numer przekierowania (gdy zajęty):</td><td><input type="text" name="sip[busy_forward_number]" value="{$sip.busy_forward_number}"></td></tr>
-<tr><td>W przypadku niedostępności:</td><td>{html_options name="sip[unavail_action]" options=$unavail_action selected=$sip.unavail_action onchange="change_price(this.selectedIndex,'s2');"}
-<span id="s2" style="color:#FF0000;"></span>
 
-</td></tr>
-<tr><td>Numer przekierowania (gdy niedostępny):</td><td><input type="text" name="sip[unavail_forward_number]" value="{$sip.unavail_forward_number}"></td></tr>
+	<form action="?m=voip&f=settings&id={$smarty.get.id}" method="post" onsubmit="if (this.elements['sip[freeseckom]'].checked==true) return confirm('Napewno chcesz włączyć darmowe minuty dla komórek? Pamiętaj, że w tym przypadku darmowe minuty liczone są dziesięciokrotnie.')">
+		<table class="table-shadow" cellpadding="3" align="center">
+		
+		{section name=err loop=$err}
+			<tr>
+				<td colspan="2" align="center" class="error">{$err[err]}</td>
+			</tr>
+		{/section}
+			<tr class="dark">
+				<td>SIP server:</td>
+				<td>{$sip.sipserver}</td>
+			</tr>
+			<tr class="dark">
+				<td>SIP login:</td>
+				<td>{$sip.name}</td>
+			</tr>
+			<tr class="dark">
+				<td>Numer poczty głosowej:</td>
+				<td>{$sip.mailboxnumber}</td>
+			</tr>
+			<tr class="dark">
+				<td>PIN poczty głosowej:<br/><span class="add">(podaj nowy PIN)</span></td>
+				<td><input type="password" name="sip[mailboxpin]"></td>
+			</tr>
+			<tr class="dark">
+				<td>Prezentacja numeru:</td>
+				<td><input type="checkbox" name="sip[number_presentation]" class="check" value="t"{if $sip.number_presentation == 't'} checked="checked"{/if}>
+				{if $addserv.number_presentation}<span style="color:#FF0000;">(Wyłączenie/włączenie - koszt {$addserv.number_presentation} zł)</span>{/if}</td>
+			</tr>
+			<tr class="dark">
+				<td>Blokuj nieidentyfikowane połączenia przychodzące:<br/><span class="add">(numery zastrzeżone)</span></td>
+				<td><input type="checkbox" name="sip[blockanon]" class="check" value="t"{if $sip.blockanon == 't'} checked="checked"{/if}>
+				{if $addserv.blockanon}<span style="color:#FF0000;">(Włączenie/wyłączenie - koszt {$addserv.blockanon} zł)</span>{/if}</td>
+			</tr>
+			<tr class="dark">
+				<td>W przypadku zajętości:</td>
+				<td>{html_options name="sip[busy_action]" options=$busy_action selected=$sip.busy_action onchange="change_price(this.selectedIndex,'s1');"} <span id="s1" style="color:#FF0000;"></span></td>
+			</tr>
+			<tr class="dark">
+				<td>Numer przekierowania:<br/><span class="add">(gdy numer jest zajęty)</span></td><td><input type="text" name="sip[busy_forward_number]" value="{$sip.busy_forward_number}"></td>
+			</tr>
+			<tr class="dark">
+				<td>W przypadku niedostępności:</td>
+				<td>{html_options name="sip[unavail_action]" options=$unavail_action selected=$sip.unavail_action onchange="change_price(this.selectedIndex,'s2');"}<span id="s2" style="color:#FF0000;"></span></td>
+			</tr>
+			<tr class="dark">
+				<td>Numer przekierowania:<br/><span class="add">(gdy numer jest niedostępny)</span></td>
+				<td><input type="text" name="sip[unavail_forward_number]" value="{$sip.unavail_forward_number}"></td>
+			</tr>
+			<tr class="dark">
+				<td>Nagrywanie połączeń:</td><td><input type="checkbox" name="sip[monitor]" class="check" value="t"{if $sip.monitor == 't'} checked="checked"{/if} disabled="disabled">
+				{if $addserv.monitor}<span style="color:#FF0000;">Koszt usługi {$addserv.monitor} zł</span>{/if}<br/>{if $sip.monitor == 'f'}<p class="add">Skontaktuj się z Netarea w celu uruchomienia</p>{/if}</td>
+			</tr>
+			<tr class="dark">
+				<td>Informuj o koszcie połączenia na nr zagraniczne:<br/><span class="add">(włącz zapowiedź)</span></td><td><input type="checkbox" name="sip[saycost]" class="check" value="t"{if $sip.saycost== 't'} checked="checked"{/if}></td>
+			</tr>
+			<tr class="dark">
+				<td colspan="2"><hr></td>
+			</tr>
+			<tr class="dark">
+				<td>Wirtualny Fax:</td>
+				<td><input type="checkbox" name="sip[faxonly]" class="check" value="t"{if $sip.faxonly == 't'} checked="checked"{/if} disabled="disabled">
+				{if $addserv.faxonly}<span style="color:#FF0000;">Koszt usługi {$addserv.faxonly} zł</span>{/if}{if $sip.faxonly == 'f'}<br/><p style="font-size: 10px;">Skontaktuj się z nami w celu uruchomienia</p>{/if}</td>
+			</tr>
+			
+			<tr class="dark">
+				<td>Wysyłaj odebrane faksy na adres email:</td>
+				<td><input type="checkbox" name="sip[fax2email]" class="check" value="t"{if $sip.fax2email == 't'} checked="checked"{/if}></td>
+			</tr>
+			
+			<tr class="dark">
+				<td>Adres email do wysyłania faksów:<br/><span class="add">(jeśli nie został podany, faksy będą wysyłane na główny adres)</span></td>
+				<td><input type="text" name="sip[faxmailaddr]" value="{$sip.faxmailaddr}"></td>
+			</tr>
 
-<tr><td>Nagrywanie połączeń:</td><td><input type="checkbox" name="sip[monitor]" class="check" value="t"{if $sip.monitor == 't'} checked="checked"{/if} disabled="disabled">
-{if $addserv.monitor}<span style="color:#FF0000;">Koszt usługi {$addserv.monitor} zł</span>{/if}<br/>{if $sip.monitor == 'f'}Skontaktuj się z Netarea w celu uruchomienia{/if}
-</td></tr>
+			<tr class="dark">
+				<td>Wysyłaj faksy również na główny adres email</td>
+				<td><input type="checkbox" name="sip[faxtomainaddr]" class="check" value="t"{if $sip.faxtomainaddr == 't'} checked="checked"{/if}></td>
+			</tr>
 
-<tr><td>Informuj o koszcie połączenia na nr zagraniczne</td><td><input type="checkbox" name="sip[saycost]" class="check" value="t"{if $sip.saycost== 't'} checked="checked"{/if}></td></tr>
+			<tr class="dark">
+				<td colspan="2"><hr></td>
+			</tr>
 
-<tr><td colspan="2"><hr></td></tr>
-<tr><td>Wirtualny Fax</td><td><input type="checkbox" name="sip[faxonly]" class="check" value="t"{if $sip.faxonly == 't'} checked="checked"{/if} disabled="disabled"> {if $addserv.faxonly}<span style="color:#FF0000;">Koszt usługi {$addserv.faxonly} zł</span>{/if}{if $sip.faxonly == 'f'}<br/>Skontaktuj się z nami w celu uruchomienia{/if}
-</td></tr>
+			<tr class="dark">
+				<td>Wysyłaj wiadomości z poczty głosowej na email</td>
+				<td><input type="checkbox" name="sip[voice2email]" class="check" value="t"{if $sip.voice2email == 't'} checked="checked"{/if}></td>
+			</tr>
 
-<tr><td>Wysyłaj odebrane faxy na email</td><td><input type="checkbox" name="sip[fax2email]" class="check" value="t"{if $sip.fax2email == 't'} checked="checked"{/if}></td></tr>
+			<tr class="dark">
+				<td>Adres email do wysyłania poczty głosowej:<br/><span class="add">(jeśli nie został podany, będzie wysyłana na główny adres)</span></td>
+				<td><input type="text" name="sip[voicemailaddr]" value="{$sip.voicemailaddr}"></td>
+			</tr>
 
-<tr><td>Adres email do wysyłania faxów<br>(jeśli nie podany, będą wysyłane na główny)</td><td><input type="text" name="sip[faxmailaddr]" value="{$sip.faxmailaddr}"></td></tr>
+			<tr class="dark">
+				<td>Wysyłaj pocztę również na główny adres email:</td><td><input type="checkbox" name="sip[voicetomainaddr]" class="check" value="t"{if $sip.voicetomainaddr == 't'} checked="checked"{/if}></td>
+			</tr>
 
-<tr><td>Wysyłaj Fax również na główny adres email</td><td><input type="checkbox" name="sip[faxtomainaddr]" class="check" value="t"{if $sip.faxtomainaddr == 't'} checked="checked"{/if}></td></tr>
-
-<tr><td colspan="2"><hr></td></tr>
-
-<tr><td>Wysyłaj wiadomości z poczty głosowej na email</td><td><input type="checkbox" name="sip[voice2email]" class="check" value="t"{if $sip.voice2email == 't'} checked="checked"{/if}></td></tr>
-
-<tr><td>Adres email do wysyłania poczty<br>(jeśli nie podany, będzie wysyłana na główny)</td><td><input type="text" name="sip[voicemailaddr]" value="{$sip.voicemailaddr}"></td></tr>
-
-<tr><td>Wysyłaj pocztę również na główny</td><td><input type="checkbox" name="sip[voicetomainaddr]" class="check" value="t"{if $sip.voicetomainaddr == 't'} checked="checked"{/if}></td></tr>
-
-<tr><td colspan="2"><hr></td></tr>
-
-</td></tr>
-{if $user.virtualpbx eq 't'}
-
-<tr><td>Uruchom wirtualną centralę PBX na tym numerze</td><td><input type="checkbox" name="sip[virtualpbx]" class="check" value="t"{if $sip.virtualpbx== 't'} checked="checked"{/if}>
-{if $addserv.virtualpbx}<span style="color:#FF0000;">Koszt {$addserv.virtualpbx} PLN</span>{/if}
-</td></tr>
-{/if}
-
-<tr><td colspan="2" align="center"><input id="button" type="submit" value="Zapisz"></td></tr>
-<input type="hidden" name="sip[id]" value="{$smarty.get.id}">
-</form>
-</table>
+			{if $user.virtualpbx eq 't'}
+			<tr class="dark">
+				<td>Uruchom wirtualną centralę PBX na tym numerze</td><td><input type="checkbox" name="sip[virtualpbx]" class="check" value="t"{if $sip.virtualpbx== 't'} checked="checked"{/if}>
+				{if $addserv.virtualpbx}<span style="color:#FF0000;">Koszt {$addserv.virtualpbx} PLN</span>{/if}</td>
+			</tr>
+			{/if}
+			
+			<input type="hidden" name="sip[id]" value="{$smarty.get.id}">
+			<input type="hidden" name="sip[finlimit]" value="0">
+		</table>
+		<center><input class="button" type="submit" value="Zapisz"></center>
+	</form>
+</div>
 {/box}
-</td>
-</tr>
-</table>
-</td>
-</tr>
-<tr>
-	<td class="tabelka2_dol_p"></td>
-</tr>
-</table>
+	<div class="back">
+		<a href="?m=voip"><img src="modules/voip/img/return.png" alt="powrót">Powrót</a>
+	</div>
 {include file="footer.html"}

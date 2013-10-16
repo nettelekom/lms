@@ -1,0 +1,53 @@
+{include file="header.html"}
+<!--// $Id: netlist.html,v 1.43 2005/12/21 19:57:29 alec Exp $ //-->
+<H1>{$layout.pagetitle}</H1>
+<TABLE CLASS="lmsbox">
+<THEAD>
+	<TR>
+		<TD class="fleftu" width="96%">
+			<NOBR><IMG src="img/network.gif" ALT=""> <B>{t}Name:{/t}</B><BR><IMG src="img/ip.gif" ALT=""> Początek/Koniec</NOBR>
+		</TD>
+		<TD class="fbt" valign="top" align="right" width="1%">
+			<NOBR><IMG src="img/empty.gif" width="1" height="16" ALT="">{t}ID:{/t}</NOBR><BR>
+			<NOBR><IMG src="img/empty.gif" width="1" height="16" ALT="">Numery (wszystkie/zajęte):</NOBR>
+		</TD>
+		<TD class="frightu" width="1%" align="right">
+			<NOBR><B>{t a=$listdata.total}Total: $a{/t} </B></NOBR>
+		</TD>
+	</TR>
+</THEAD>
+<TBODY>
+	{cycle values="light,lucid" print=false}
+	{section name=netlist loop=$netlist}
+	<TR class="{cycle}" onmouseover="addClass(this, 'highlight')" onmouseout="removeClass(this, 'highlight')">
+		<TD class="fleft" width="96%" onClick="return self.location.href='?m=v_netinfo&id={$netlist[netlist].id}';">
+			<nobr><IMG src="img/network.gif" ALT=""> <B>{$netlist[netlist].name}</B><BR><IMG src="img/ip.gif" ALT=""> {$netlist[netlist].start} / {$netlist[netlist].end} </nobr>
+		</TD>
+		<TD valign="top" align="right" onClick="return self.location.href='?m=v_netinfo&id={$netlist[netlist].id}';" width="1%">
+			<nobr><img src="img/empty.gif" width="1" height="16" ALT="">({$netlist[netlist].id|string_format:"%04d"})<BR><img src="img/empty.gif" width="1" height="16" ALT="">{$netlist[netlist].size}/{$netlist[netlist].assigned|string_format:"%01d"}</nobr>
+		</TD>
+		<TD class="fright">
+			<nobr>
+			<a href="?m=v_netdel&id={$netlist[netlist].id}" onClick="return confirmLink(this,'{t a=$netlist[netlist].name|upper}Are you sure, you want to remove network \'$a\'?{/t}')"><IMG src="img/delete.gif" ALT="[ {t}Remove{/t} ]"></A>
+			<a href="?m=v_netedit&id={$netlist[netlist].id}"><IMG src="img/edit.gif" ALT="[ {t}Edit{/t} ]"></A>
+			<a href="?m=v_netinfo&id={$netlist[netlist].id}"><IMG src="img/info.gif" ALT="[ {t}Info{/t} ]"></A></nobr>
+		</TD>
+	</TR>
+	{sectionelse}
+	<TR>
+		<TD colspan="6" class="flr" align="center" width="1%">
+			<p>&nbsp;</p>
+			<p><B>{t}You have no address pools. Use menu to add new networks.{/t}</B></p>
+			<p>&nbsp;</p>
+		</TD>
+	</TR>
+	{/section}
+	<TR class="dark">
+		<TD width="99%" colspan="2" class="fleftu" align="right"> 
+			<B>{t}Total:{/t} {$listdata.size|default:"0"}/{$listdata.assigned|default:"0"}</B>
+		</TD>
+		<TD width="1%" colspan="4" class="frightu"></TD>
+	</TR>
+</TBODY>
+</TABLE>
+{include file="footer.html"}

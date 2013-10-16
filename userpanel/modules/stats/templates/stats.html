@@ -1,15 +1,18 @@
 {include file="header.html"}
+<div class="box"}
 <table width="100%" cellpadding="10" align="center">
     <tr>
         <td align="center">
 	    {box title="Filter"}
+		<h3>Wbierz filtr</h3>
 	    <p style="white-space: nowrap; text-align: center;">
-		<a href="?m=stats&amp;bar=hour">{if $bar=='hour'}<b>{/if}{trans("Last hour")}{if $bar=='hour'}</b>{/if}</a> /
-		<a href="?m=stats&amp;bar=day">{if $bar=='day'}<b>{/if}{trans("Last day")}{if $bar=='day'}</b>{/if}</a> /
-		<a href="?m=stats&amp;bar=month">{if $bar=='month'}<b>{/if}{trans("Last 30 days")}{if $bar=='month'}</b>{/if}</a> /
-		<a href="?m=stats&amp;bar=year">{if $bar=='year'}<b>{/if}{trans("Last year")}{if $bar=='year'}</b>{/if}</a> /
+		<a href="?m=stats&amp;bar=hour">{if $bar=='hour'}<b>{/if}{trans("Last hour")}{if $bar=='hour'}</b>{/if}</a> |
+		<a href="?m=stats&amp;bar=day">{if $bar=='day'}<b>{/if}{trans("Last day")}{if $bar=='day'}</b>{/if}</a> |
+		<a href="?m=stats&amp;bar=month">{if $bar=='month'}<b>{/if}{trans("Last 30 days")}{if $bar=='month'}</b>{/if}</a> |
+		<a href="?m=stats&amp;bar=year">{if $bar=='year'}<b>{/if}{trans("Last year")}{if $bar=='year'}</b>{/if}</a> |
 		<a href="?m=stats&amp;bar=all">{if $bar=='all'}<b>{/if}{trans("All")}{if $bar=='all'}</b>{/if}</a>
 	    </p>
+		<p class="add" style="text-align: center;"><span>Dane aktualizawane są co 24 godziny.</span></p>
 	    {/box}
 	</td>
     </tr>
@@ -73,4 +76,5 @@
         </td>
     </tr>
 </table>
+</div>
 {include file="footer.html"}

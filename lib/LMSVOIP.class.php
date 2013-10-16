@@ -186,6 +186,17 @@ if(is_array($res)) foreach($res as $key => $val)
 return $res;
 }
 
+function ui_deletefin($d,$user)
+{
+$uid = $this->wsdl->GetAstId($user);
+foreach($d as $val)
+{
+	$fname = $this->fax_incomingdir . $uid . '/' . $this->wsdl->_faxprint($user, $val, '') . '.tif';
+	if(is_file($fname))
+		@unlink($fname);
+}
+}
+
 function ui_deletefout($d, $user)
 {
 $uid = $this->wsdl->GetAstId($user);
@@ -215,6 +226,8 @@ $subdir = $this->wsdl->GetAstId($user);
 do
 	$filename = substr(md5(uniqid(rand(), true)), -10, 8);
 while(file_exists($this->fax_outgoingdir . $subdir . '/' . $filename . '.tif'));
+if(strlen($nrto) == 9 and $nrto[0] != '0')
+	$nrto = '0' . $nrto;
 $fname = $nrfrom . '-' . $nrto . '-' . $filename . '.tif';
 execute_program('gs', '-q -dNOPAUSE -dBATCH -r204x98 -dSAFER -sDEVICE=tiffg3 -sOutputFile=' . $this->fax_outgoingdir . $fname . ' -f ' . $f['tmp_name']);
 $this->lmsdb->Execute('INSERT INTO v_fax (nr_from, nr_to, data, customerid, uniqueid, filename) VALUES (?, ?, ?NOW?, ?, ?, ?)', array($nrfrom, $nrto, $user, $filename, $f['name']));
@@ -227,6 +240,8 @@ if(!file_exists($this->fax_outgoingdir . $subdir . '/' . $f . '.tif')) return fa
 do
 	$filename = substr(md5(uniqid(rand(), true)), -10, 8);
 while(file_exists($this->fax_outgoingdir . $subdir . '/' . $filename . '.tif'));
+if(strlen($nrto) == 9 and $nrto[0] != '0')
+	$nrto = '0' . $nrto;
 $fname = $nrfrom . '-' . $nrto . '-' . $filename . '.tif';
 copy($this->fax_outgoingdir . $subdir . '/' . $f . '.tif', $this->fax_outgoingdir . $fname);
 $forig = $this->lmsdb->GetOne('SELECT filename FROM v_fax WHERE uniqueid = ?', array($f));
@@ -300,11 +315,11 @@ if(is_array($customers)) foreach($customers as $val)
 		$docid = $this->lmsdb->GetOne('SELECT id FROM documents WHERE number = ? AND cdate = ? AND type = ? AND customerid = ?', array($number, $now, DOC_INVOICE, $val['lmsid']));
 		$itemid = 1;
 	}
-	$this->lmsdb->Execute('INSERT INTO invoicecontents (docid, value, taxid, prodid, content, count, description, tariffid, itemid, pdiscount, vdiscount) VALUES (?, ?, ?, \'\', \'szt\', 1, ?, 0, ?, 0, 0)', array($docid, round($tax*$netto,2), $taxid, 'Usługi telekomunikacyjne', $itemid));
+	$this->lmsdb->Execute('INSERT INTO invoicecontents (docid, value, taxid, prodid, content, count, description, tariffid, itemid, pdiscount, vdiscount) VALUES (?, ?, ?, \'\', \'szt\', 1, ?, 0, ?, 0, 0)', array($docid, round($tax*$netto,2), $taxid, 'Usługi telekomunikacyjne - telefonia', $itemid));
 	
-	$this->lmsdb->Execute('INSERT INTO cash (time, value, taxid, customerid, comment, docid, itemid) VALUES (?, ?, ?, ?, ?, ?, ?)', array($now, round($tax * $netto, 2) * -1, $taxid, $val['lmsid'], 'Usługi telekomunikacyjne', $docid, $itemid));
+	$this->lmsdb->Execute('INSERT INTO cash (time, value, taxid, customerid, comment, docid, itemid) VALUES (?, ?, ?, ?, ?, ?, ?)', array($now, round($tax * $netto, 2) * -1, $taxid, $val['lmsid'], 'Usługi telekomunikacyjne - telefonia', $docid, $itemid));
 	
-	echo "CID: {$val['lmsid']} VAL: " . round($tax * $netto, 2) . " DESC: Usługi telekomunikacyjne\n";
+	echo "CID: {$val['lmsid']} VAL: " . round($tax * $netto, 2) . " DESC: Usługi telekomunikacyjne - telefonia\n";
 	
 	$cachedrates = array();
 	$konta = $this->wsdl->_ImportInvoice_konta($val['id']);
@@ -483,7 +498,8 @@ return $array;
 
 function parse_dialplan()
 {
-$tmp = file($this->dialplan_file);
+$tmp = @file($this->dialplan_file);
+if($tmp and is_array($tmp))
 foreach($tmp as $val)
 {
 	$val = trim($val);

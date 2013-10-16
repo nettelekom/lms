@@ -1,13 +1,14 @@
-<div style="padding: 10px;">
-{box title="Minuty w abonamencie"}
-<center>
-Pozostało darmowych
-<h1>{if $userinfo.voipfreesec eq 0}
-	<div style="color: #ff0000; white-space: nowrap; text-decoration: blink;"><b>{$userinfo.voipfreesec} min</b></div>
-    {else}
-	<div style="white-space: nowrap;">{$userinfo.voipfreesec} min</div>
-    {/if}
-</h1>
-</center>
-{/box}
+<div class="box">
+	{box title="Minuty w abonamencie"}
+
+			<h2 class="text-center" style="background: #404040; color: #FFFFFF;;">Pozostało darmowych:</h2>
+			
+			<span class="text-center">
+				{if $userinfo.voipfreesec eq 0}
+				<div id="minuty0">{$userinfo.voipfreesec} min</div>
+				{else}
+				<div id="minuty">{$userinfo.voipfreesec} min</div>
+				{/if}
+			</span>
+	{/box}
 </div>

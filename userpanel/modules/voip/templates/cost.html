@@ -1,26 +1,42 @@
 {include file="header.html"}
-<div style="padding: 10px;">
-<table width="100%" cellspacing="0">
-	<tr>
-		<td valign="top" width="100%">
-{box title="Sprawdź koszt połączenia"}
-<h3>Sprawdź koszt połączenia...</h3>
-<table cellpadding="3" align="center">
-<form action="?m=voip&f=cost&id={$smarty.get.id}" method="post">
-{if $err}
-<tr><td colspan="2" align="center" style="color:#FF0000;">{$err}</td></tr>
-{/if}
-<tr><td>Na numer:</td><td><img src="modules/voip/img/sluchawka.png" alt="tel."><input type="text" name="tonr" value="{$tonr}">&nbsp;
-</td></tr>
-<tr><td colspan="2" align="center"><input id="button" type="submit" value="Sprawdź"></td></tr>
-</form>
-</table>
-{/box}
-</td>
-</tr>
-</table>
-<div style="text-align: right; margin-right: 40px;">
-	<a href="?m=voip">Powrót</a>
+
+<div class="box">
+
+	{box title="Koszty połączeń"}
+
+		<table width="100%" cellspacing="0">
+			<tr>
+				<td valign="top" width="100%">
+				
+				<h3>Sprawdź koszt połączenia...</h3>
+				
+					<form action="?m=voip&f=cost&id={$smarty.get.id}" method="post">
+					
+						<table cellpadding="3" align="center">
+						{if $err}
+							<tr>
+								<td colspan="2" align="center" class="error">{$err}</td>
+							</tr>
+						{/if}
+							<tr>
+								<td>Na numer:</td>
+								<td><img src="modules/voip/img/sluchawka.png" alt="tel."><input type="text" name="tonr" value="{$tonr}"></td>
+							</tr>
+						
+							<tr>
+								<td colspan="2" align="center"><input class="button" type="submit" value="Sprawdź"></td>
+							</tr>
+						</table>
+					</form>
+				</td>
+			</tr>
+		</table>
+	{/box}
+	
+	<div class="back">
+		<a href="?m=voip"><img src="modules/voip/img/return.png" alt="powrót">Powrót</a>
+	</div>
+	
 </div>
-</div>
+
 {include file="footer.html"}

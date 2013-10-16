@@ -1,5 +1,5 @@
 <!--// $Id$ //-->
-{box title="Informations about you"}
+{box title="Dane konta Abonenta (ID: {$userinfo.id|string_format:"%04d"})"}
 <table width="100%" CELLPADDING="3" class="light">
 {if $fields_changed}
 	<tr>
@@ -13,7 +13,7 @@
 			{img src="person.png" alt=""}
 		</td>
 		<td width="99%" colspan="2">
-			<b>{$userinfo.customername} (ID: {$userinfo.id|string_format:"%04d"})</b>
+			<b>{$userinfo.customername}</b>
 		</td>
 	</tr>
 {if $userinfo.email}
@@ -57,7 +57,7 @@
 		</td>
 	</tr>
 {/if}
-{foreach from=$userinfo.messengers item=item}
+<!--{foreach from=$userinfo.messengers item=item}
 	<tr>
 		<td width="1%">
 			{if $item.type == $smarty.const.IM_GG}
@@ -72,7 +72,7 @@
 			{$item.uid}
 		</td>
 	</tr>
-{/foreach}
+{/foreach}-->
 {if $userinfo.ten neq ""}
 	<tr>
 		<td width="1%" align="center">
@@ -125,7 +125,7 @@
 	}
 	<tr>
 		<td width="100%" colspan="3" align="right">
-			<a href="?m=info&amp;f=updateuserform" accesskey="A">{trans("Actualize data")} {img src="edit.gif" alt="[ Edit ]"}</a>
+			<a href="?m=info&amp;f=updateuserform" accesskey="A">{trans("Actualize data")}{img src="edit.gif" alt="[ Edit ]"}</a>
 		</td>
 	</tr>
 	{/if}
