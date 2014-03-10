@@ -125,7 +125,7 @@ elseif (isset($_POST['customerdata']))
 	        elseif($phone)
 	                $contacts[] = array('name' => $name, 'phone' => $phone, 'type' => $type);
 	}
-<<<<<<< HEAD
+
 	if($customerdata['isvoip'] == 1)
 	{
 		if($customerdata['voippoczatekum'] != '' and (!preg_match('/^\d{4}-\d{2}-\d{2}$/',$customerdata['voippoczatekum']) or !checkdate(substr($customerdata['voippoczatekum'],5,2),substr($customerdata['voippoczatekum'],-2),substr($customerdata['voippoczatekum'],0,4))))
