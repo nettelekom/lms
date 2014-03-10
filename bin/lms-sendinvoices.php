@@ -241,7 +241,7 @@ $query = "SELECT d.id, d.number, d.cdate, c.email, d.name, d.customerid, n.templ
 		FROM documents d 
 		LEFT JOIN customers c ON c.id = d.customerid 
 		LEFT JOIN numberplans n ON n.id = d.numberplanid 
-		WHERE c.deleted = 0 AND d.type = 1 AND c.email <> '' AND c.invoicenotice = 1 "
+		WHERE c.deleted = 0 AND d.type IN (1,3) AND c.email <> '' AND c.invoicenotice = 1 "
 			. (!empty($invoiceid) ? "AND d.id = " . $invoiceid : "AND d.cdate >= $daystart AND d.cdate <= $dayend")
 			. (!empty($groupnames) ? $customergroups : "")
 		. " ORDER BY d.number";
@@ -296,12 +296,12 @@ if (!empty($docs))
 			if (!$quiet || $test)
 				printf("Invoice No. $invoice_number for " . $doc['name'] . " <$custemail>\n");
 
-			if (!$test)
-			{
-				$res = $LMS->SendMail($custemail . ',' . $notify_email,
-					array('From' => $from, 'To' => $doc['name'] . ' <' . $custemail . '>',
-						'Cc' => $notify_email,
-						'Subject' => $subject), $body,
+			if (!$test) {
+				$headers = array('From' => $from, 'To' => qp_encode($doc['name']) . ' <' . $custemail . '>',
+					'Subject' => $subject);
+				if (!empty($notify_email))
+					$headers['Cc'] = $notify_email;
+				$res = $LMS->SendMail($custemail . ',' . $notify_email, $headers, $body,
 					array(0 => array('content_type' => $ftype, 'filename' => $filename . '.' . $fext,
 						'data' => $res)));
 

@@ -4,6 +4,7 @@
 
 {include file="module:calendar_js.html"}
 
+
 <div class="box">
 
 	{box title="Historia połączeń"}
@@ -42,16 +43,17 @@
 							<label><strong id="do_csv"><img src="modules/voip/img/icon_csv.gif" alt="csv">Importuj do CSV:</strong><INPUT type="checkbox" name="csv" value="1"></label>
 							
 							<input class="button" style="float: right;" type="submit" value="Szukaj">
+							
+							<strong>Pokaż stronę:</strong> {html_options name=page options=$listdata.pageopts selected=$listdata.page}
 					</td>
 				</tr>
-
 			</table>
 		</form>
 		<h4>Szczegóły połączeń</h4>
 
 			<table class="table-shadow" cellpadding="3" width="100%;">
 				<tr class="darkest">
-					<!--<td width="1%"><strong>ID</strong></td>-->
+					
 					<td width="1%" class="text-center"><strong>Data i godzina</strong></td>
 					<td width="1%" class="text-center"><strong>Z numeru</strong></td>
 					<td width="1%" class="text-center"><strong>Na numer</strong></td>
@@ -59,14 +61,12 @@
 					<td width="1%" class="text-center"><strong>Czas trwania</strong></td>
 					<td width="1%" class="text-center"><strong>Stawka</strong></td>
 					<td width="1%" class="text-center"><strong>Opłata netto</strong></td>
-					<td width="1%" class="text-right"><strong>Opłata brutto</strong></td>
-					<!--<td width="1%" class="text-center"><strong>Kierunek</strong></td>-->
+					<td width="1%" class="text-center"><strong>Opłata brutto</strong></td>
 					<td width="1%" class="text-center"><strong>Odsłuchaj</strong></td>
 				</tr>
 				{section name=c loop=$cdr}
 				{if $cdr[c].id}
 				<tr class="dark">
-					<!--<td width="1%" class="nobr">{$cdr[c].id}</td>-->
 					<td width="1%" class="text-left nobr">{$cdr[c].calldate}</td>
 					<td width="1%" class="text-left">{$cdr[c].src}</td>
 					<td width="1%" class="text-left nobr">{$cdr[c].dst}</td>
@@ -75,7 +75,6 @@
 					<td width="1%" class="text-right">{$cdr[c].tmp_cost} zł</td>
 					<td width="1%" class="text-right">{$cdr[c].cost} zł</td>
 					<td width="1%" class="text-right">{$cdr[c].cost_br} zł</td>
-					<!--<td width="1%" class="text-center">{$cdr[c].rate|default:'[Brak]'}</td>-->
 					<td width="1%" class="text-center">{if $cdr[c].monitor}<a href="?m=voip&f=listen&id={$cdr[c].id}" title="Odsłuchaj nagrania" alt="odsłuchaj">{img src="audio_icon.png" border="0"}</a> <a href="?m=voip&f=delcdr&id={$cdr[c].id}" title="Usuń nagranie">Usuń</a>{else}-{/if}</td>
 				</tr>
 				{/if}
@@ -88,7 +87,6 @@
 				{/section}
 				
 				<tr class="dark" style="background: #cccccc;">
-					<!--<td></td>-->
 					<td></td>
 					<td></td>
 					<td></td>
@@ -98,11 +96,11 @@
 					<td class="text-right"><strong>{$listdata.cost} zł</strong></td>
 					<td class="text-right"><strong>{$listdata.cost_br} zł</strong></td>
 					
-					<!--<td></td>-->
 					<td></td>
 				</tr>
+				
 			</table>
-
+			
 <SCRIPT>
 <!--
 var cal5 = new calendar(document.forms['page'].elements['from']);
@@ -110,5 +108,5 @@ var cal6 = new calendar(document.forms['page'].elements['to']);
 -->
 </SCRIPT>
 
-	{/box}
+{/box}	
 </div>

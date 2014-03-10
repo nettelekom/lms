@@ -1,13 +1,12 @@
+{* <<<<<<< HEAD *}
 <div class="box">
 
 	{box title="Konta SIP"}
 		<table class="table-shadow" width="width: 100%" cellpadding="3">
 			<tr class="darkest">
 				<td width="1%" class="nobr text-center"><strong>Numer telefonu</strong></td>
-				<td width="1%" class="nobr text-center"><strong>Wartość netto</strong></td>
+				<td width="1%" class="nobr text-center"><strong>Wartość brutto</strong></td>
 				<td width="1%" class="nobr text-center"><strong>Abonament</strong></td>
-				<!--<td width="1%" class="nobr text-center"><strong>{t}Accounting day:{/t}</strong></td>-->
-				<!--<td width="1%" class="nobr text-center" colspan="4">Ustawienia</td>-->
 			</tr>
 
 			{foreach from=$assignments item=assignment}
@@ -17,7 +16,6 @@
 				</td>
 				<td class="nobr text-right">{$assignment.value|money_format}</td>
 				<td class="nobr text-right">{$assignment.subscription}</td>
-				<!--<td class="nobr text-right">{$assignment.period} ({$assignment.at})</td>-->
 			</tr>
 			{foreachelse}
 			<tr>
@@ -31,7 +29,6 @@
 				<td class="text-right"><strong>{t}Total:{/t}</strong></td>
 				<td class="nobr text-right"><strong>{sum array=$assignments column="value" string_format=$LANGDEFS.$_language.money_format}</strong></td>
 				<td class="nobr text-right"></td>
-				<!--<td>&nbsp;</td>-->
 			</tr>
 			
 		</table>
