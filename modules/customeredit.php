@@ -125,6 +125,7 @@ elseif (isset($_POST['customerdata']))
 	        elseif($phone)
 	                $contacts[] = array('name' => $name, 'phone' => $phone, 'type' => $type);
 	}
+<<<<<<< HEAD
 	if($customerdata['isvoip'] == 1)
 	{
 		if($customerdata['voippoczatekum'] != '' and (!preg_match('/^\d{4}-\d{2}-\d{2}$/',$customerdata['voippoczatekum']) or !checkdate(substr($customerdata['voippoczatekum'],5,2),substr($customerdata['voippoczatekum'],-2),substr($customerdata['voippoczatekum'],0,4))))
@@ -134,18 +135,28 @@ elseif (isset($_POST['customerdata']))
 		if($customerdata['voippoczatekum'] != '' and $customerdata['voipkoniecum'] != '' and $customerdata['voipkoniecum'] < $customerdata['voippoczatekum'])
 			$error['voippoczatekum'] = trans('Incorrect date!');
 	}
-	if(!$error)
-	{
-		if($customerdata['cutoffstop'])
-			$customerdata['cutoffstop'] = mktime(23,59,59,date('m'), date('d') + $customerdata['cutoffstop']);
+	
+	if ($customerdata['cutoffstop'] == '')
+		$cutoffstop = 0;
+	elseif (check_date($customerdata['cutoffstop'])) {
+		list ($y, $m, $d) = explode('/', $customerdata['cutoffstop']);
+		if (checkdate($m, $d, $y))
+			$cutoffstop = mktime(23, 59, 59, $m, $d, $y);
+		else
+			$error['cutoffstop'] = trans('Incorrect date of cutoff suspending!');
+	} else
+		$error['cutoffstop'] = trans('Incorrect date of cutoff suspending!');
+
+	if(!$error) {
+		$customerdata['cutoffstop'] = $cutoffstop;
 
 		if(!isset($customerdata['consentdate']))
 			$customerdata['consentdate'] = 0;
 		else {
-    		$consent = $DB->GetOne('SELECT consentdate FROM customers WHERE id = ?', array($customerdata['id']));
-            if ($consent)
-			    $customerdata['consentdate'] = $consent;
-        }
+			$consent = $DB->GetOne('SELECT consentdate FROM customers WHERE id = ?', array($customerdata['id']));
+			if ($consent)
+				$customerdata['consentdate'] = $consent;
+		}
 
 		if(!isset($customerdata['divisionid']))
 			$customerdata['divisionid'] = 0;
@@ -242,8 +253,8 @@ else
 	$customerinfo = $LMS->GetCustomer($_GET['id']);
 	if($customerinfo['isvoip'] == 1) $customerinfo = $voip->wsdl->GetCustomer($customerinfo, $_GET['id']);
 
-	if($customerinfo['cutoffstop'] > mktime(0,0,0))
-		$customerinfo['cutoffstop'] = floor(($customerinfo['cutoffstop'] - mktime(23,59,59))/86400);
+	if ($customerinfo['cutoffstop'])
+		$customerinfo['cutoffstop'] = strftime('%Y/%m/%d', $customerinfo['cutoffstop']);
 	else
 		$customerinfo['cutoffstop'] = 0;
 
