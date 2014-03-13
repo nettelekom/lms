@@ -53,8 +53,16 @@ function invoice_body()
 
 global $pdf;
 
+<<<<<<< HEAD:userpanel/modules/!finances WY£¥CZONY/invoice_tcpdf.php
 require_once(LIB_DIR.'/tcpdf.php');
 require_once(MODULES_DIR.'/invoice_tcpdf.inc.php');
+=======
+$pdf_type = get_conf('invoices.pdf_type', 'tcpdf');
+if (!in_array($pdf_type, array('ezpdf', 'tcpdf')))
+	$pdf_type = 'tcpdf';
+require_once(LIB_DIR . '/' . $pdf_type . '.php');
+require_once(MODULES_DIR . '/invoice_' . $pdf_type . '.inc.php');
+>>>>>>> lmsgit/master:userpanel/modules/finances/invoice_pdf.php
 
 // handle multi-invoice print
 if(!empty($_POST['inv']))
