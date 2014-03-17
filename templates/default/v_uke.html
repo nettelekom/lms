@@ -1,0 +1,25 @@
+{include file="header.html"}
+<H1>{$layout.pagetitle}</H1>
+
+{if $error}
+	<H2><SPAN style="color: #FF0000;">{$error}</SPAN><BR></H2>
+{/if}
+{if $req}
+	<SPAN>Złożono wniosek o dane za rok {$req}. Dane będą dostępne następnego dnia. <A href="?m=v_uke&del=1">USUŃ</A></SPAN>
+{else if $res}
+	<SPAN><A href="?m=v_uke&del=1">USUŃ</A></SPAN><BR>
+	<TABLE cellspacing="0" cellpadding="5" border="1">
+	<TR><TD>Czas trwania połączeń krajowych na numery stacjonarne (minut):</TD><TD>{$res[1][0].minut|default:0}</TD></TR>
+	<TR><TD>Czas trwania połączeń krajowych na numery komórkowe (minut):</TD><TD>{$res[1][1].minut|default:0}</TD></TR>
+	<TR><TD>Czas trwania połączeń krajowych na numery zagraniczne (minut):</TD><TD>{$res[1][2].minut|default:0}</TD></TR>
+	<TR><TD>SUMA (minut):</TD><TD>{$res[1][0].minut+$res[1][1].minut+$res[1][2].minut}</TD></TR>
+	<TR><TD colspan="2">&nbsp;</TD></TR>
+	<TR><TD>Przychody z połączeń krajowych na numery stacjonarne:</TD><TD>{$res[1][0].zysk|money_format}</TD></TR>
+	<TR><TD>Przychody z połączeń krajowych na numery komórkowe:</TD><TD>{$res[1][1].zysk|money_format}</TD></TR>
+	<TR><TD>Przychody z połączeń krajowych na numery zagraniczne:</TD><TD>{$res[1][2].zysk|money_format}</TD></TR>
+	<TR><TD>SUMA:</TD><TD>{$res[1][0].zysk+$res[1][1].zysk+$res[1][2].zysk|money_format}</TD></TR>
+	</TABLE>
+{else}
+	<SPAN><FORM action="?m=v_uke" method="post">Wygeneruj dane za rok: <INPUT type="text" name="rok" size="4" maxlength="4"> <INPUT type="submit" value="Dalej"></FORM></SPAN>
+{/if}
+{include file="footer.html"}

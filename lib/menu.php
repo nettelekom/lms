@@ -778,7 +778,12 @@ TEMPORARY DISABLED			'name' => 'Bilans kosztów',
 					'name' => 'Użycie dysku',
 					'link' => '?m=v_diskusage',
 					'tip' => '',
-					'prio' => '200')	
+					'prio' => '200'),
+				array(
+					'name' => 'Sprawozdanie UKE',
+					'link' => '?m=v_uke',
+					'tip' => '',
+					'prio' => '210')	
 				)
 		);
 // menu item for EtherWerX STM channels management
