@@ -1023,6 +1023,14 @@ class LMS {
 							AND (dateto >= ?NOW? OR dateto = 0)
 							AND (tariffid IN (' . $value . ')))';
 							break;
+						case 'tarifftype':
+							$searchargs[] = 'EXISTS (SELECT 1 FROM assignments a 
+							JOIN tariffs t ON t.id = a.tariffid
+							WHERE a.customerid = c.id
+							AND (datefrom <= ?NOW? OR datefrom = 0) 
+							AND (dateto >= ?NOW? OR dateto = 0)
+							AND (t.type = ' . intval($value) . '))';
+							break;
 						default:
 							$searchargs[] = "$key ?LIKE? " . $this->DB->Escape("%$value%");
 					}
@@ -2244,7 +2252,7 @@ class LMS {
 			WHERE a.customerid=? '
 				. (!$show_expired ? 'AND (a.dateto > ' . $now . ' OR a.dateto = 0)
 			    AND (a.at >= ' . $now . ' OR a.at < 531)' : '')
-				. ' ORDER BY t.name, a.datefrom, value', array($id))) {
+				. ' ORDER BY a.datefrom, t.name, value', array($id))) {
 			foreach ($assignments as $idx => $row) {
 				switch ($row['period']) {
 					case DISPOSABLE:
@@ -2672,7 +2680,11 @@ class LMS {
 		$sdate = $invoice['invoice']['sdate'] ? $invoice['invoice']['sdate'] : $currtime;
 		$number = $invoice['invoice']['number'];
 		$type = $invoice['invoice']['type'];
-
+		
+		$division = $this->DB->GetRow('SELECT name, address, city, zip, countryid, ten, regon,
+				account, inv_header, inv_footer, inv_author, inv_cplace 
+				FROM divisions WHERE id = ? ;',array($invoice['customer']['divisionid']));
+		
 		$args = array(
 			'number' => $number,
 			$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NUMPLAN] => $invoice['invoice']['numberplanid'] ? $invoice['invoice']['numberplanid'] : 0,
@@ -2691,11 +2703,26 @@ class LMS {
 			'city' => $invoice['customer']['city'],
 			$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_COUNTRY] => $invoice['customer']['countryid'],
 			$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_DIV] => $invoice['customer']['divisionid'],
+			'div_name' => ($division['name'] ? $division['name'] : ''),
+			'div_address' => ($division['address'] ? $division['address'] : ''), 
+			'div_city' => ($division['city'] ? $division['city'] : ''), 
+			'div_zip' => ($division['zip'] ? $division['zip'] : ''),
+			'div_' . $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_COUNTRY] => ($division['countryid'] ? $division['countryid'] : 0),
+			'div_ten'=> ($division['ten'] ? $division['ten'] : ''), 
+			'div_regon' => ($division['regon'] ? $division['regon'] : ''), 
+			'div_account' => ($division['account'] ? $division['account'] : ''),
+			'div_inv_header' => ($division['inv_header'] ? $division['inv_header'] : ''), 
+			'div_inv_footer' => ($division['inv_footer'] ? $division['inv_footer'] : ''), 
+			'div_inv_author' => ($division['inv_author'] ? $division['inv_author'] : ''), 
+			'div_inv_cplace' => ($division['inv_cplace'] ? $division['inv_cplace'] : ''),
 		);
+		
 		$this->DB->Execute('INSERT INTO documents (number, numberplanid, type,
 			cdate, sdate, paytime, paytype, userid, customerid, name, address, 
-			ten, ssn, zip, city, countryid, divisionid)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', array_values($args));
+			ten, ssn, zip, city, countryid, divisionid,
+			div_name, div_address, div_city, div_zip, div_countryid, div_ten, div_regon,
+			div_account, div_inv_header, div_inv_footer, div_inv_author, div_inv_cplace)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', array_values($args));
 		$iid = $this->DB->GetLastInsertID('documents');
 		if ($this->SYSLOG) {
 			unset($args[$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_USER]]);
@@ -2703,7 +2730,7 @@ class LMS {
 			$this->SYSLOG->AddMessage(SYSLOG_RES_DOC, SYSLOG_OPER_ADD, $args,
 				array($SYSLOG_RESOURCE_KEYS[SYSLOG_RES_DOC], $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NUMPLAN],
 					$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_CUST], $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_COUNTRY],
-					$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_DIV]));
+					$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_DIV], 'div_' . $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_COUNTRY]));
 		}
 
 		$itemid = 0;
@@ -2845,18 +2872,17 @@ class LMS {
 				d.ten, d.ssn, d.cdate, d.sdate, d.paytime, d.paytype, d.numberplanid,
 				d.closed, d.reference, d.reason, d.divisionid,
 				(SELECT name FROM users WHERE id = d.userid) AS user, n.template,
-				ds.name AS division_name, ds.shortname AS division_shortname,
-				ds.address AS division_address, ds.zip AS division_zip,
-				ds.city AS division_city, ds.countryid AS division_countryid, 
-				ds.ten AS division_ten, ds.regon AS division_regon, ds.account AS account,
-				ds.inv_header AS division_header, ds.inv_footer AS division_footer,
-				ds.inv_author AS division_author, ds.inv_cplace AS division_cplace,
+				d.div_name AS division_name, d.div_name AS division_shortname,
+				d.div_address AS division_address, d.div_zip AS division_zip,
+				d.div_city AS division_city, d.div_countryid AS division_countryid, 
+				d.div_ten AS division_ten, d.div_regon AS division_regon, d.div_account AS account,
+				d.div_inv_header AS division_header, d.div_inv_footer AS division_footer,
+				d.div_inv_author AS division_author, d.div_inv_cplace AS division_cplace,
 				c.pin AS customerpin, c.divisionid AS current_divisionid,
 				c.post_name, c.post_address, c.post_zip, c.post_city, c.post_countryid
 				FROM documents d
 				JOIN customers c ON (c.id = d.customerid)
 				LEFT JOIN countries cn ON (cn.id = d.countryid)
-				LEFT JOIN divisions ds ON (ds.id = d.divisionid)
 				LEFT JOIN numberplans n ON (d.numberplanid = n.id)
 				WHERE d.id = ? AND (d.type = ? OR d.type = ?)', array($invoiceid, DOC_INVOICE, DOC_CNOTE))) {
 			$result['pdiscount'] = 0;
@@ -2965,18 +2991,17 @@ class LMS {
 				d.userid, d.address, d.zip, d.city, d.countryid, cn.name AS country,
 				d.ten, d.ssn, d.cdate, d.numberplanid, d.closed, d.divisionid, d.paytime, 
 				(SELECT name FROM users WHERE id = d.userid) AS user, n.template,
-				ds.name AS division_name, ds.shortname AS division_shortname,
-				ds.address AS division_address, ds.zip AS division_zip,
-				ds.city AS division_city, ds.countryid AS division_countryid, 
-				ds.ten AS division_ten, ds.regon AS division_regon, ds.account AS account,
-				ds.inv_header AS division_header, ds.inv_footer AS division_footer,
-				ds.inv_author AS division_author, ds.inv_cplace AS division_cplace,
+				d.div_name AS division_name, d.div_name AS division_shortname,
+				d.div_address AS division_address, d.div_zip AS division_zip,
+				d.div_city AS division_city, d.div_countryid AS division_countryid, 
+				d.div_ten AS division_ten, d.div_regon AS division_regon, d.div_account AS account,
+				d.div_inv_header AS division_header, d.div_inv_footer AS division_footer,
+				d.div_inv_author AS division_author, d.div_inv_cplace AS division_cplace,
 				c.pin AS customerpin, c.divisionid AS current_divisionid,
 				c.post_name, c.post_address, c.post_zip, c.post_city, c.post_countryid
 				FROM documents d
 				JOIN customers c ON (c.id = d.customerid)
 				LEFT JOIN countries cn ON (cn.id = d.countryid)
-				LEFT JOIN divisions ds ON (ds.id = d.divisionid)
 				LEFT JOIN numberplans n ON (d.numberplanid = n.id)
 				WHERE d.id = ? AND d.type = ?', array($id, DOC_DNOTE))) {
 			$result['value'] = 0;
@@ -3994,7 +4019,7 @@ class LMS {
 			while (in_array($i, (array) $destnodes))
 				$i++;
 
-			if ($this->DB->Execute('UPDATE nodes SET ipaddr=? WHERE netid=? AND ipaddr=?', array($i, $dst, $ip))) {
+			if ($this->DB->Execute('UPDATE nodes SET ipaddr=?, netid=? WHERE netid=? AND ipaddr=?', array($i, $dst, $src, $ip))) {
 				if ($this->SYSLOG) {
 					$node = $this->DB->GetRow('SELECT id, ownerid FROM nodes WHERE netid = ? AND ipaddr = ?',
 						array($dst, $ip));
@@ -4009,20 +4034,18 @@ class LMS {
 							$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_CUST],
 							$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETWORK]));
 				}
-			} elseif ($this->DB->Execute('UPDATE nodes SET ipaddr_pub=? WHERE netid=? AND ipaddr_pub=?', array($i, $dst, $ip))) {
+			} elseif ($this->DB->Execute('UPDATE nodes SET ipaddr_pub=? WHERE ipaddr_pub=?', array($i, $ip))) {
 				if ($this->SYSLOG) {
 					$node = $this->DB->GetRow('SELECT id, ownerid FROM nodes WHERE netid = ? AND ipaddr_pub = ?',
 						array($dst, $ip));
 					$args = array(
 						$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NODE] => $node['id'],
 						$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_CUST] => $node['ownerid'],
-						$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETWORK] => $dst,
 						'ipaddr' => $i,
 					);
 					$this->SYSLOG->AddMessage(SYSLOG_RES_NODE, SYSLOG_OPER_UPDATE, $args,
 						array($SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NODE],
-							$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_CUST],
-							$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETWORK]));
+							$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_CUST]));
 				}
 			}
 
@@ -5155,21 +5178,22 @@ class LMS {
 		if (empty($headers['Date']))
 			$headers['Date'] = date('r');
 
-		if ($files) {
+		if ($files || $headers['X-LMS-Format'] == 'html') {
 			$boundary = '-LMS-' . str_replace(' ', '.', microtime());
 			$headers['Content-Type'] = "multipart/mixed;\n  boundary=\"" . $boundary . '"';
 			$buf = "\nThis is a multi-part message in MIME format.\n\n";
 			$buf .= '--' . $boundary . "\n";
-			$buf .= "Content-Type: text/plain; charset=UTF-8\n\n";
+			$buf .= "Content-Type: text/" . ($headers['X-LMS-Format'] == 'html' ? "html" : "plain") . "; charset=UTF-8\n\n";
 			$buf .= $body . "\n";
-			while (list(, $chunk) = each($files)) {
-				$buf .= '--' . $boundary . "\n";
-				$buf .= "Content-Transfer-Encoding: base64\n";
-				$buf .= "Content-Type: " . $chunk['content_type'] . "; name=\"" . $chunk['filename'] . "\"\n";
-				$buf .= "Content-Description:\n";
-				$buf .= "Content-Disposition: attachment; filename=\"" . $chunk['filename'] . "\"\n\n";
-				$buf .= chunk_split(base64_encode($chunk['data']), 60, "\n");
-			}
+			if ($files)
+				while (list(, $chunk) = each($files)) {
+					$buf .= '--' . $boundary . "\n";
+					$buf .= "Content-Transfer-Encoding: base64\n";
+					$buf .= "Content-Type: " . $chunk['content_type'] . "; name=\"" . $chunk['filename'] . "\"\n";
+					$buf .= "Content-Description:\n";
+					$buf .= "Content-Disposition: attachment; filename=\"" . $chunk['filename'] . "\"\n\n";
+					$buf .= chunk_split(base64_encode($chunk['data']), 60, "\n");
+				}
 			$buf .= '--' . $boundary . '--';
 		} else {
 			$headers['Content-Type'] = 'text/plain; charset=UTF-8';
@@ -5241,28 +5265,30 @@ class LMS {
 		else
 			$service = $this->CONFIG['sms']['service'];
 
+		if (in_array($service, array('smscenter', 'serwersms', 'smsapi'))) {
+			if (!function_exists('curl_init'))
+				return trans('Curl extension not loaded!');
+			if (empty($this->CONFIG['sms']['username']))
+				return trans('SMSCenter username not set!');
+			if (empty($this->CONFIG['sms']['password']))
+				return trans('SMSCenter username not set!');
+			if (empty($this->CONFIG['sms']['from']))
+				return trans('SMS "from" not set!');
+			else
+				$from = $this->CONFIG['sms']['from'];
+
+			if (strlen($number) > 16 || strlen($number) < 4)
+				return trans('Wrong phone number format!');
+		}
+
 		switch ($service) {
 			case 'smscenter':
-				if (!function_exists('curl_init'))
-					return trans('Curl extension not loaded!');
-				if (empty($this->CONFIG['sms']['username']))
-					return trans('SMSCenter username not set!');
-				if (empty($this->CONFIG['sms']['password']))
-					return trans('SMSCenter username not set!');
-				if (empty($this->CONFIG['sms']['from']))
-					return trans('SMS "from" not set!');
-				else
-					$from = $this->CONFIG['sms']['from'];
-
 				if ($msg_len < 160)
 					$type_sms = 'sms';
 				else if ($msg_len <= 459)
 					$type_sms = 'concat';
 				else
 					return trans('SMS Message too long!');
-
-				if (strlen($number) > 16 || strlen($number) < 4)
-					return trans('Wrong phone number format!');
 
 				$type = !empty($this->CONFIG['sms']['smscenter_type']) ? $this->CONFIG['sms']['smscenter_type'] : 'dynamic';
 				$message .= ($type == 'static') ? "\n\n" . $from : '';
@@ -5356,6 +5382,91 @@ class LMS {
 					return trans('Unable to create file $a!', $filename);
 
 				return MSG_NEW;
+				break;
+			case 'serwersms':
+				$args = array(
+					'akcja' => 'wyslij_sms',
+					'login' => $this->CONFIG['sms']['username'],
+					'haslo' => $this->CONFIG['sms']['password'],
+					'numer' => $number,
+					'wiadomosc' => $message,
+					'nadawca' => $from,
+				);
+				if ($messageid)
+					$args['usmsid'] = $messageid;
+				if (!empty($this->CONFIG['sms']['fast']))
+					$args['speed'] = 1;
+
+				$encodedargs = http_build_query($args);
+
+				$curl = curl_init();
+				curl_setopt($curl, CURLOPT_URL, 'https://api1.serwersms.pl/zdalnie/index.php');
+				curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+				curl_setopt($curl, CURLOPT_POST, 1);
+				curl_setopt($curl, CURLOPT_POSTFIELDS, $encodedargs);
+				curl_setopt($curl, CURLOPT_TIMEOUT, 10);
+
+				$page = curl_exec($curl);
+				if (curl_error($curl))
+					return 'SMS communication error. ' . curl_error($curl);
+
+				$info = curl_getinfo($curl);
+				if ($info['http_code'] != '200')
+					return 'SMS communication error. Http code: ' . $info['http_code'];
+
+				curl_close($curl);
+
+				$lines = explode("\n", $page);
+				foreach ($lines as $lineidx => $line)
+					$lines[$lineidx] = trim($line);
+				$page = implode('', $lines);
+
+				if (preg_match('/<Blad>([^<]*)<\/Blad>/i', $page, $matches))
+					return 'Serwersms error: ' . $matches[1];
+
+				if (!preg_match('/<Skolejkowane><SMS id="[^"]+" numer="[^"]+" godzina_skolejkowania="[^"]+"\/><\/Skolejkowane>/', $page))
+					return 'Serwersms error: message has not been sent!';
+
+				return MSG_SENT;
+				break;
+			case 'smsapi':
+				$args = array(
+					'username' => $this->CONFIG['sms']['username'],
+					'password' => md5($this->CONFIG['sms']['password']),
+					'to' => $number,
+					'message' => $message,
+					'from' => !empty($from) ? $from : 'ECO',
+				);
+				if (!empty($this->CONFIG['sms']['fast']))
+					$args['fast'] = 1;
+				if ($messageid)
+					$args['idx'] = $messageid;
+
+				$encodedargs = http_build_query($args);
+
+				$curl = curl_init();
+				curl_setopt($curl, CURLOPT_URL, 'https://ssl.smsapi.pl/sms.do');
+				curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+				curl_setopt($curl, CURLOPT_POST, 1);
+				curl_setopt($curl, CURLOPT_POSTFIELDS, $encodedargs);
+				curl_setopt($curl, CURLOPT_TIMEOUT, 10);
+
+				$page = curl_exec($curl);
+				if (curl_error($curl))
+					return 'SMS communication error. ' . curl_error($curl);
+
+				$info = curl_getinfo($curl);
+				if ($info['http_code'] != '200')
+					return 'SMS communication error. Http code: ' . $info['http_code'];
+
+				curl_close($curl);
+
+				if (preg_match('/^OK:/', $page))
+					return MSG_SENT;
+				if (preg_match('/^ERROR:([0-9]+)/', $page, $matches))
+					return 'Smsapi error: ' . $matches[1];
+
+				return 'Smsapi error: message has not been sent!';
 				break;
 			default:
 				return trans('Unknown SMS service!');

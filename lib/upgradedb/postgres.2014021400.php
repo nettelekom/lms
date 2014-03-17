@@ -1,11 +1,9 @@
 <?php
 
 /*
- *  LMS version 1.11-git
+ * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2013 LMS Developers
- *
- *  Please, see the doc/AUTHORS for more information about authors!
+ *  (C) Copyright 2001-2014 LMS Developers
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License Version 2 as
@@ -21,14 +19,15 @@
  *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307,
  *  USA.
  *
- *  $Id$
  */
 
-$_LANG['I confirm reading of message'] = 'Patvirtinu, jog žinutę perskaičiau';
-$_LANG['Message to you'] = 'Žinutės Tau';
-$_LANG['Messages'] = 'Žinutės';
-$_LANG['Shows administrative messages'] = 'Rodo administracines žinutes';
-$_LANG['This module is for showing administrative informations for your customer'] = 'Šis modulis rodo administracines žinutes skirtas Tavo klientui';
-$_LANG['We don\'t have any messages to you.'] = 'Neturi žinučių.';
+$DB->BeginTrans();
+
+$DB->Execute("INSERT INTO uiconfig (section, var, value) VALUES(?, ?, ?)",
+	array('userpanel', 'tickets_from_selected_queues', '0'));
+
+$DB->Execute("UPDATE dbinfo SET keyvalue = ? WHERE keytype = ?", array('2014021400', 'dbversion'));
+
+$DB->CommitTrans();
 
 ?>

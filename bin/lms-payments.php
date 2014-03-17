@@ -4,7 +4,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2013 LMS Developers
+ *  (C) Copyright 2001-2014 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -58,7 +58,7 @@ if (array_key_exists('version', $options))
 {
 	print <<<EOF
 lms-payments.php
-(C) 2001-2013 LMS Developers
+(C) 2001-2014 LMS Developers
 
 EOF;
 	exit(0);
@@ -68,7 +68,7 @@ if (array_key_exists('help', $options))
 {
 	print <<<EOF
 lms-payments.php
-(C) 2001-2013 LMS Developers
+(C) 2001-2014 LMS Developers
 
 -C, --config-file=/etc/lms/lms.ini      alternate config file (default: /etc/lms/lms.ini);
 -h, --help                      print this help and exit;
@@ -85,7 +85,7 @@ if (!$quiet)
 {
 	print <<<EOF
 lms-payments.php
-(C) 2001-2013 LMS Developers
+(C) 2001-2014 LMS Developers
 
 EOF;
 }
@@ -141,6 +141,7 @@ if($cfg = $DB->GetAll('SELECT section, var, value FROM uiconfig WHERE disabled=0
 
 //require_once(LIB_DIR.'/definitions.php');
 require_once(LIB_DIR.'/common.php');
+require_once(LIB_DIR.'/language.php');
 
 if (empty($CONFIG['payments']['deadline']))
 	$CONFIG['payments']['deadline'] = 14;
@@ -250,9 +251,9 @@ if ($y_month > 12)
 $txts[DAY] = strftime("%Y/%m/%d", mktime(12, 0, 0, $month, $dom, $year));
 $txts[WEEK] = strftime("%Y/%m/%d", mktime(12, 0, 0, $month, $dom, $year))." - ".strftime("%Y/%m/%d", mktime(12, 0, 0, $month, $dom + 6, $year));
 $txts[MONTH] = strftime("%Y/%m/%d", mktime(12, 0, 0, $month, $dom, $year))." - ".strftime("%Y/%m/%d", mktime(12, 0, 0, $month + 1, $dom - 1, $year));
-$txts[QUARTER] = strftime("%Y/%m/%d", mktime(12, 0, 0, $month, $dom, $year))." - ".strftime("%Y/%m/%d", mktime(12, 0, 0, $q_month, $dom - 1, $q_year));
-$txts[HALFYEAR] = strftime("%Y/%m/%d", mktime(12, 0, 0, $month, $dom, $year))." - ".strftime("%Y/%m/%d", mktime(12, 0, 0, $y_month, $dom - 1, $y_year));
-$txts[YEAR] = strftime("%Y/%m/%d", mktime(12, 0, 0, $month, $dom, $year))." - ".strftime("%Y/%m/%d", mktime(12, 0, 0, $month - 1, $dom - 1, $year + 1));
+$txts[QUARTER] = strftime("%Y/%m/%d", mktime(12, 0, 0, $month, $dom, $year))." - ".strftime("%Y/%m/%d", mktime(12, 0, 0, $q_month + 1, $dom - 1, $q_year));
+$txts[HALFYEAR] = strftime("%Y/%m/%d", mktime(12, 0, 0, $month, $dom, $year))." - ".strftime("%Y/%m/%d", mktime(12, 0, 0, $y_month + 1, $dom - 1, $y_year));
+$txts[YEAR] = strftime("%Y/%m/%d", mktime(12, 0, 0, $month, $dom, $year))." - ".strftime("%Y/%m/%d", mktime(12, 0, 0, $month, $dom - 1, $year + 1));
 $txts[DISPOSABLE] = strftime("%Y/%m/%d", mktime(12, 0, 0, $month, $dom, $year));
 
 // Special case, ie. you have 01.01.2005-01.31.2005 on invoice, but invoice/
@@ -451,7 +452,7 @@ foreach($assigns as $assign)
 				$val = $val / 30.0;
 		}
 
-		$val = sprintf("%.2f", $val);
+		$val = str_replace(',', '.', sprintf("%.2f", $val));
 
 		if ($assign['invoice'])
 		{
@@ -484,15 +485,35 @@ foreach($assigns as $assign)
 
 				$customer = $DB->GetRow("SELECT lastname, name, address, city, zip, ssn, ten, countryid, divisionid, paytime 
 						FROM customers WHERE id = $cid");
+				
+				$division = $DB->GetRow('SELECT name, address, city, zip, countryid, ten, regon,
+						account, inv_header, inv_footer, inv_author, inv_cplace 
+						FROM divisions WHERE id = ? ;',array($customer['divisionid']));
+				
 				$paytime = $customer['paytime'];
 				if ($paytime == -1) $paytime = $deadline;
 
 				$DB->Execute("INSERT INTO documents (number, numberplanid, type, countryid, divisionid, 
-					customerid, name, address, zip, city, ten, ssn, cdate, sdate, paytime, paytype) 
-					VALUES(?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+					customerid, name, address, zip, city, ten, ssn, cdate, sdate, paytime, paytype,
+					div_name, div_address, div_city, div_zip, div_countryid, div_ten, div_regon,
+					div_account, div_inv_header, div_inv_footer, div_inv_author, div_inv_cplace) 
+					VALUES(?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 					array($numbers[$plan], $plan, $customer['countryid'], $customer['divisionid'], $cid,
 					$customer['lastname']." ".$customer['name'], $customer['address'], $customer['zip'],
-					$customer['city'], $customer['ten'], $customer['ssn'], $currtime, $saledate, $paytime, $inv_paytype));
+					$customer['city'], $customer['ten'], $customer['ssn'], $currtime, $saledate, $paytime, $inv_paytype,
+					($division['name'] ? $division['name'] : ''),
+					($division['address'] ? $division['address'] : ''), 
+					($division['city'] ? $division['city'] : ''), 
+					($division['zip'] ? $division['zip'] : ''),
+					($division['countryid'] ? $division['countryid'] : 0),
+					($division['ten'] ? $division['ten'] : ''), 
+					($division['regon'] ? $division['regon'] : ''), 
+					($division['account'] ? $division['account'] : ''),
+					($division['inv_header'] ? $division['inv_header'] : ''), 
+					($division['inv_footer'] ? $division['inv_footer'] : ''), 
+					($division['inv_author'] ? $division['inv_author'] : ''), 
+					($division['inv_cplace'] ? $division['inv_cplace'] : ''),
+					));
 
 				$invoices[$cid] = $DB->GetLastInsertID("documents");
 				$paytypes[$cid] = $inv_paytype;
@@ -532,17 +553,37 @@ foreach($assigns as $assign)
 		if ($assign['settlement'] && $assign['datefrom'])
 		{
 			$alldays = 1;
-			$diffdays = sprintf("%d", ($today - $assign['datefrom']) / 86400);
-			$period = strftime("%Y/%m/%d", mktime(0, 0, 0, $month, $dom - $diffdays, $year))." - "
-				.strftime("%Y/%m/%d", mktime(0, 0, 0, $month, $dom - 1, $year));
 
-			switch ($assign['period'])
-			{
-				// there are no disposable Or daily liabilities with settlement
+			$diffdays = sprintf("%d", ($today - $assign['datefrom']) / 86400);
+			$period_start = mktime(0, 0, 0, $month, $dom - $diffdays, $year);
+			$period_end = mktime(0, 0, 0, $month, $dom - 1, $year);
+			$period = strftime("%Y/%m/%d", $period_start) . " - " . strftime("%Y/%m/%d", $period_end);
+
+			switch ($assign['period']) {
 				case WEEK:
 					$alldays = 7; break;
 				case MONTH:
-					$alldays = 30; break;
+					$alldays = 30;
+					$d = $dom;
+					$m = $month;
+					$y = $year;
+					$value = 0;
+					$month_days = strftime("%d", mktime(0, 0, 0, $m + 1, 0, $y));
+					while ($diffdays) {
+						if ($d - $diffdays <= 0) {
+							$value += ($d - 1) * $val / $month_days;
+							$diffdays -= ($d - 1);
+						} else {
+							$value += $diffdays * $val / $month_days;
+							$diffdays = 0;
+						}
+						$date = mktime(0, 0, 0, $m, 0, $y);
+						$month_days = strftime("%d", $date);
+						$d = $month_days + 1;
+						$m = strftime("%m", $date);
+						$y = strftime("%Y", $date);
+					}
+					break;
 				case QUARTER:
 					$alldays = 90; break;
 				case HALFYEAR:
@@ -551,7 +592,7 @@ foreach($assigns as $assign)
 					$alldays = 365; break;
 			}
 
-			$value = sprintf("%.2f", $diffdays * $val / $alldays);
+			$value = str_replace(',', '.', sprintf("%.2f", $alldays != 30 ? $diffdays * $val / $alldays : $value));
 
 			//print "value: $val diffdays: $diffdays alldays: $alldays settl_value: $value\n";
 
