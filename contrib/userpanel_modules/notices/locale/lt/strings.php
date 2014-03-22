@@ -24,11 +24,11 @@
  *  $Id$
  */
 
-$_LANG['I confirm reading of message'] = 'Patvirtinu, jog žinutę perskaičiau';
-$_LANG['Message to you'] = 'Žinutės Tau';
-$_LANG['Messages'] = 'Žinutės';
-$_LANG['Shows administrative messages'] = 'Rodo administracines žinutes';
-$_LANG['This module is for showing administrative informations for your customer'] = 'Šis modulis rodo administracines žinutes skirtas Tavo klientui';
-$_LANG['We don\'t have any messages to you.'] = 'Neturi žinučių.';
+$_LANG['I confirm reading of notice'] = 'Patvirtinu, jog žinutę perskaičiau';
+$_LANG['Notice to you'] = 'Žinutės Tau';
+$_LANG['Notices'] = 'Žinutės';
+$_LANG['Shows administrative notices'] = 'Rodo administracines žinutes';
+$_LANG['This module is for showing notices for your customer'] = 'Šis modulis rodo administracines žinutes skirtas Tavo klientui';
+$_LANG['We don\'t have any notices to you.'] = 'Neturi žinučių.';
 
 ?>

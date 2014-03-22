@@ -33,11 +33,11 @@ function module_main()
     }
     elseif($DB->GetOne('SELECT MAX(warning) FROM nodes WHERE ownerid = ?', array($SESSION->id)))
     {
-	$message = $LMS->GetCustomerMessage($SESSION->id);
-	$SMARTY->assign('message', $message);
+	$notice = $LMS->GetCustomerMessage($SESSION->id);
+	$SMARTY->assign('notice', $notice);
     }
 
-    $SMARTY->display('module:messages.html');
+    $SMARTY->display('module:notices.html');
 }
 
 ?>
