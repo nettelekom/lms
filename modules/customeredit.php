@@ -134,8 +134,8 @@ elseif (isset($_POST['customerdata']))
 			$error['voipkoniecum'] = trans('Incorrect date!');
 		if($customerdata['voippoczatekum'] != '' and $customerdata['voipkoniecum'] != '' and $customerdata['voipkoniecum'] < $customerdata['voippoczatekum'])
 			$error['voippoczatekum'] = trans('Incorrect date!');
-	}
-	
+}
+
 	if ($customerdata['cutoffstop'] == '')
 		$cutoffstop = 0;
 	elseif (check_date($customerdata['cutoffstop'])) {

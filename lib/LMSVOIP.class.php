@@ -310,9 +310,25 @@ if(is_array($customers)) foreach($customers as $val)
 		$numberplan = $this->lmsdb->GetOne('SELECT id FROM numberplans WHERE doctype = ? AND isdefault = 1', array(DOC_INVOICE));
 		if(!$numberplan) $numberplan = 0;
 		$number = $LMS->GetNewDocumentNumber(DOC_INVOICE, $numberplan, $now);
-		$urow = $this->lmsdb->GetRow('SELECT lastname, name, address, city, zip, ssn, ten FROM customers WHERE id = ?', array($val['lmsid']));
-		$this->lmsdb->Execute('INSERT INTO documents (number, numberplanid, type, customerid, name, address, zip, city, ten, ssn, cdate, sdate, paytime, paytype, divisionid) VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 2, 1)', array($number, $numberplan, $val['lmsid'], $urow['lastname'].' '.$urow['name'], $urow['address'], $urow['zip'], $urow['city'], $urow['ten'], $urow['ssn'], $now, $now, 7));
-		$docid = $this->lmsdb->GetOne('SELECT id FROM documents WHERE number = ? AND cdate = ? AND type = ? AND customerid = ?', array($number, $now, DOC_INVOICE, $val['lmsid']));
+		$urow = $this->lmsdb->GetRow('SELECT lastname, name, address, city, zip, ssn, ten, divisionid FROM customers WHERE id = ?', array($val['lmsid']));
+		$division = $this->lmsdb->GetRow('SELECT name, address, city, zip, countryid, ten, regon,
+				account, inv_header, inv_footer, inv_author, inv_cplace 
+				FROM divisions WHERE id = ? ;',array($urow['divisionid']));
+		$this->lmsdb->Execute('INSERT INTO documents (number, numberplanid, type, customerid, name, address, zip, city, ten, ssn, cdate, sdate, paytime, paytype, divisionid, div_name, div_address, div_city, div_zip, div_countryid, div_ten, div_regon, div_account, div_inv_header, div_inv_footer, div_inv_author, div_inv_cplace) VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 2, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', array($number, $numberplan, $val['lmsid'], $urow['lastname'].' '.$urow['name'], $urow['address'], $urow['zip'], $urow['city'], $urow['ten'], $urow['ssn'], $now, $now, 7, $urow['divisionid'],
+			($division['name'] ? $division['name'] : ''),
+			($division['address'] ? $division['address'] : ''), 
+			($division['city'] ? $division['city'] : ''), 
+			($division['zip'] ? $division['zip'] : ''),
+			($division['countryid'] ? $division['countryid'] : 0),
+			($division['ten'] ? $division['ten'] : ''), 
+			($division['regon'] ? $division['regon'] : ''), 
+			($division['account'] ? $division['account'] : ''),
+			($division['inv_header'] ? $division['inv_header'] : ''), 
+			($division['inv_footer'] ? $division['inv_footer'] : ''), 
+			($division['inv_author'] ? $division['inv_author'] : ''), 
+			($division['inv_cplace'] ? $division['inv_cplace'] : ''),
+			));
+		$docid = $this->lmsdb->GetLastInsertID("documents");
 		$itemid = 1;
 	}
 	$this->lmsdb->Execute('INSERT INTO invoicecontents (docid, value, taxid, prodid, content, count, description, tariffid, itemid, pdiscount, vdiscount) VALUES (?, ?, ?, \'\', \'szt\', 1, ?, 0, ?, 0, 0)', array($docid, round($tax*$netto,2), $taxid, 'Usługi telekomunikacyjne - telefonia', $itemid));
