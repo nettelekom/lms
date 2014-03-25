@@ -24,7 +24,7 @@
  *  $Id: configuration.php,v 1.10.2.1 2006/01/16 09:49:58 lexx Exp $
  */
 
-$USERPANEL->AddModule('Telefonia',	// Display name
+$USERPANEL->AddModule('Telefon',	// Display name
 		    'voip', 		// Module name - must be the same as directory name
 		    trans('VOIP'), // Tip 
 		    21,			// Priority

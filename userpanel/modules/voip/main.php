@@ -1,12 +1,15 @@
 <?php
 global $LMS, $SMARTY, $SESSION, $DB, $voip;
 
+
+
 $taxes = $LMS->GetTaxes();
 $tax = 0;
 if(is_array($taxes))
 	foreach($taxes as $val)
 		if($val['id'] == $voip->config['taxid'])
 			$tax = $val['value'];
+
 
 if($_POST['new'])
 	$SMARTY->assign('serv_err', $voip->uiAddService($SESSION->id, $_POST['new']));
@@ -21,7 +24,11 @@ foreach($assignments as $key => $val)
 $userinfo = $voip->wsdl->GetCustomer($userinfo, $SESSION->id);
 $SMARTY->assign('userinfo', $userinfo);
 $SMARTY->assign('assignments', $assignments);
-
+$SMARTY->assign('fax', $fax);
+foreach($assignments as $zm){
+	$sip=$voip->wsdl->ui_getsip($zm[id]);
+	if ($sip[faxonly] == "t") $fax = true;
+}
 /* CDR */
 if(isset($_POST['from']))
 	$from = $_POST['from'];
@@ -94,5 +101,6 @@ $listdata['cost_br'] = number_format(round($listdata['cost'] * ($tax/100) + $lis
 $SMARTY->assign('listdata', $listdata);
 $SMARTY->assign('rategroups', $voip->rategroups);
 $SMARTY->assign('cdr', $cdr);
+$SMARTY->assign('fax', $fax);
 $SMARTY->display('module:voip.html');
 ?>

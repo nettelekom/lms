@@ -160,7 +160,6 @@ window.open('?m=invoice&id={$invoice.invoice}&original={$invoice.original}&copy=
 			    <A onClick="return confirmLink(this, '{t a=$number}Are you sure, you want to remove credit note \'$a\' from database?{/t}')" HREF="?m=invoicedel&id={$invoice.id}"><IMG src="img/delete.gif" alt="[ {trans("Delete")} ]" title="[ {trans("Delete")} ]"></A>
 			{/if}
 			{if $invoice.type == $smarty.const.DOC_INVOICE}
-				{if $invoice.details}<a href="?m=v_attachment&docid={$invoice.id}" TARGET="_blank" onclick="confirmLink(this,'Drukować szczegółowy biling ?');">Zał.</a>{/if}
 			<A HREF="?m=invoice&id={$invoice.id}" TARGET="_blank"><IMG src="img/print.gif" alt="[ {trans("Print")} ]" title="[ {trans("Print")} ]"></A>
 			{/if}
 			{if $invoice.type == $smarty.const.DOC_CNOTE}

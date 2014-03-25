@@ -3,13 +3,126 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="{$_ui_language}">
 <head>
   <meta content="text/html; charset={$LANGDEFS.$_ui_language.charset}" http-equiv="content-type" />
-  <title>{trans("Virtual Customer Service")}</title>
+  <title>iBOK - internetowe Biuro Obsługi Klienta Netarea</title>
 <link type="text/css" rel="stylesheet" href="{stylefile}" />
 </head>
+
 <body>
+
+	<div>
+		<div id="menu-bar">
+			
+			<div id="logo">
+				<a title="Internet Rumia, Telewizja Rumia, Telefon Rumia - Netarea" name="Logo Netarea" href="http://www.netarea24.pl"><img src="style/default/logo.png" alt="Najlepszy internet w Rumi - Netarea" /></a>
+			</div>
+			
+			<div id="naglowek">
+				<span>{trans("Virtual Customer Service")}</span>
+			</div>
+		</div>
+	</div>   
+<h2 id="login_beam">Logowanie do <strong>iBOK</strong></h2>
+
+			<div class="login">			
+				{if $error}<div class="error"><strong>{$error}</strong></div>{else}&nbsp;{/if}
+
+				<form id="login" method="post" action="{$target}">
+
+					<p style="font-size: 10px;" class="text-center"><strong>Wprowadź ID i PIN</strong><br/>Dane znajdują się na pierwszej stronie umowy</p>
+					
+
+					<label id="logowanie" style="color:#647883; font-size:30px; font-weight: bold;">{trans("Customer ID:")}</label><input type="text" name="loginform[login]" style="width: 50pt; padding: 9px;" />
+					
+					<label id="logowanie" style="color:#647883; font-size:30px; font-weight: bold;">{trans("PIN:")}</label><input type="password" name="loginform[pwd]" style="width: 50pt; padding: 9px;" />
+
+					<label id="logowanie">&nbsp; </label><input class="button" type="submit" name="loginform[submit]" value="{trans("Login")}"/>
+
+						
+					
+					
+					<!--<table border="0" width="100%" id="logindata">
+						<tr>
+							<td style="text-align: right;">
+								
+							</td>
+							<td>
+								
+							</td>
+							<td rowspan="2" style="text-align: right;">
+							</td>
+						</tr>
+						
+						<tr>
+							<td style="text-align: right;">
+
+							</td>
+						</tr>
+						<tr>
+							<td style="text-align: center; padding: 20px;" colspan="2">
+								
+
+							</td>
+						</tr>
+
+					</table>-->
+				</form>
+									<!--	<tr>
+							<td colspan="2" class="text-center bold nobr">
+								<br /><a href="javascript:switch_form('remind');">{trans("Remind credentials")}</a>
+							</td>
+						</tr>
+				<form id="remind" method="post" action="{$target}">
+					<table id="reminddata" style="height: 100%; width: 100%; display: none;">
+						<tr>
+							<td colspan="2" class="text-center bold nobr">
+								<input type="radio" id="emailradio" name="remindform[type]" value="1" onclick="javascript:show_email_phone('email');" checked /><label for="emailradio">{trans("E-mail")}</label>
+								<input type="radio" id="smsradio" name="remindform[type]" value="2" onclick="javascript:show_email_phone('phone');" /><label for="smsradio">{trans("SMS")}</label>
+								<br />&nbsp;
+							</td>
+						</tr>
+						<tr id="email">
+							<td class="text-right bold nobr">
+								{trans("E-Mail:")}
+							</td>
+							<td class="text-left">
+								<input type="text" name="remindform[email]" style="width: 120pt;" />
+							</td>
+						</tr>
+						<tr id="phone" style="display: none;">
+							<td class="text-right bold nobr">
+								{trans("Phone:")}
+							</td>
+							<td class="text-left">
+								<input type="text" name="remindform[phone]" style="width: 120pt;" />
+							</td>
+						</tr>
+						<tr>
+							<td class="text-right bold nobr">
+								{trans("SSN or TEN:")}
+							</td>
+							<td class="text-left">
+								<input type="text" name="remindform[ten]" style="width: 120pt;" />
+							</td>
+						</tr>
+						
+						<tr>
+							<td colspan="2" class="text-center bold nobr">
+								<br /><a href="javascript:switch_form('login');">{trans("Login form")}</a>
+							</td>
+						</tr>
+					</table>
+				</form>-->
+			</div> 
+			
+<div class="text-right" style="margin-right: 45px;">
+	<div id="none"><script type="text/javascript">Seal("https://www.netarea24.pl/ibok/style/old/website_seal_small.gif", "GSSL", "none");</script><a href="javascript:if(window.open('https://seal.globessl.com/?domain=www.netarea24.pl','tl_wnd_credentials'+(new Date()).getTime(),'toolbar=0,scrollbars=1,location=1,status=1,menubar=1,resizable=1,width=360,height=580,left=60,top=120')){};tLlB(tLTB);" onmouseover="tLeB(event,'https://seal.globessl.com/?domain=www.netarea24.pl','tl_popupGSSL')" onmousemove="tLXB(event)" onmouseout="tLTC('tl_popupGSSL')" ondragstart="return false;"><img src="https://www.netarea24.pl/ibok/style/old/website_seal_small.gif" onmousedown="return tLKB(event,'https://seal.globessl.com/?domain=www.netarea24.pl');" oncontextmenu="return tLLB(event);" border="0"></a><!----><div id="tl_popupGSSL" name="tl_popupGSSL" style="position:absolute;z-index:0;visibility: hidden;background-color: transparent;overflow:hidden;" onmouseover="tLoB('tl_popupGSSL')" onmousemove="tLpC('tl_popupGSSL')" onmouseout="tLpB('tl_popupGSSL')"></div></div>
+</div>
+
 <script type="text/javascript">
 <!--
-	function switch_form(type) {
+document.forms['login'].elements['loginform[login]'].focus();
+
+function switch_form(type) {
 		if (type == 'login') {
 			document.getElementById('logindata').style.display = '';
 			document.getElementById('reminddata').style.display = 'none';
@@ -19,7 +132,7 @@
 		}
 	}
 
-	function show_email_phone(type) {
+function show_email_phone(type) {
 		if (type == 'email') {
 			document.getElementById('email').style.display = '';
 			document.getElementById('phone').style.display = 'none';
@@ -30,112 +143,5 @@
 	}
 //-->
 </script>
-<div class="login">
-<table style="vertical-align: middle; width:100%; height: 100%; margin:auto">
-    <tr>
-	<td align="center">
-	    <table>
-		<tr>
-		    <td>
-			{img src="logo.jpg" alt=""}
-		    </td>
-		    <td>&nbsp;</td>
-		    <td align="center">
-			{box title="VCS"}
-			<div class="text-center bold nobr">{trans("Virtual Customer Service")}</div><br />
-			{if $error}<div style="color: red;" class="text-center bold">{$error}</div>{else}&nbsp;{/if}
-			<br /><br />
-			<form id="login" method="post" action="{$target}">
-			<table id="logindata" style="height: 100%; width: 100%;">
-				<tr>
-					<td class="text-right bold nobr">
-						{trans("Customer ID:")}
-					</td>
-					<td class="text-left">
-						<input type="text" name="loginform[login]" style="width: 50pt;" />
-					</td>
-				</tr>
-				<tr>
-					<td class="text-right bold nobr">
-						{trans("PIN:")}
-					</td>
-					<td class="text-left">
-						<input type="password" name="loginform[pwd]" style="width: 50pt;" />
-					</td>
-				</tr>
-				<tr>
-					<td colspan="2" class="text-center">
-						<br /><input type="submit" name="loginform[submit]" class="bold" value="{trans("Login")}" />
-					</td>
-				</tr>
-				<tr>
-					<td colspan="2" class="text-center bold nobr">
-						<br /><a href="javascript:switch_form('remind');">{trans("Remind credentials")}</a>
-					</td>
-				</tr>
-			</table>
-			</form>
-			<form id="remind" method="post" action="{$target}">
-			<table id="reminddata" style="height: 100%; width: 100%; display: none;">
-				<tr>
-					<td colspan="2" class="text-center bold nobr">
-						<input type="radio" id="emailradio" name="remindform[type]" value="1" onclick="javascript:show_email_phone('email');" checked /><label for="emailradio">{trans("E-mail")}</label>
-						<input type="radio" id="smsradio" name="remindform[type]" value="2" onclick="javascript:show_email_phone('phone');" /><label for="smsradio">{trans("SMS")}</label>
-						<br />&nbsp;
-					</td>
-				</tr>
-				<tr id="email">
-					<td class="text-right bold nobr">
-						{trans("E-Mail:")}
-					</td>
-					<td class="text-left">
-						<input type="text" name="remindform[email]" style="width: 120pt;" />
-					</td>
-				</tr>
-				<tr id="phone" style="display: none;">
-					<td class="text-right bold nobr">
-						{trans("Phone:")}
-					</td>
-					<td class="text-left">
-						<input type="text" name="remindform[phone]" style="width: 120pt;" />
-					</td>
-				</tr>
-				<tr>
-					<td class="text-right bold nobr">
-						{trans("SSN or TEN:")}
-					</td>
-					<td class="text-left">
-						<input type="text" name="remindform[ten]" style="width: 120pt;" />
-					</td>
-				</tr>
-				<tr>
-					<td colspan="2" class="text-center">
-						<br /><input type="submit" name="remindform[submit]" class="bold" value="{trans("Remind")}" />
-					</td>
-				</tr>
-				<tr>
-					<td colspan="2" class="text-center bold nobr">
-						<br /><a href="javascript:switch_form('login');">{trans("Login form")}</a>
-					</td>
-				</tr>
-			</table>
-			</form>
-			{/box}
-		    </td>
-    		</tr>
-	    </table>
-	    <div class="copyrights"><b>LMS Userpanel {$layout.upv}</b><br/>
-	    {trans("This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License version 2.")}<br/>
-	    {trans("For more information see")} <a href="doc/COPYING">doc/COPYING</a> {trans("and")} <a href="doc/AUTHORS">doc/AUTHORS</a>
-	    </div>
-	</td>
-    </tr>
-</table>
-<script type="text/javascript">
-<!--
-document.forms['login'].elements['loginform[login]'].focus();
-//-->
-</script>
-</div>
-</body>
-</html>
+{include file="footer.html"}
+

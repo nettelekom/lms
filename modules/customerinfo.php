@@ -35,7 +35,6 @@ include(MODULES_DIR.'/customer.voip.inc.php');
 $SESSION->save('backto', $_SERVER['QUERY_STRING']);
 
 $layout['pagetitle'] = trans('Customer Info: $a',$customerinfo['customername']);
-
 $SMARTY->display('customerinfo.html');
 
 ?>

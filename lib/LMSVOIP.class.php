@@ -331,11 +331,11 @@ if(is_array($customers)) foreach($customers as $val)
 		$docid = $this->lmsdb->GetLastInsertID("documents");
 		$itemid = 1;
 	}
-	$this->lmsdb->Execute('INSERT INTO invoicecontents (docid, value, taxid, prodid, content, count, description, tariffid, itemid, pdiscount, vdiscount) VALUES (?, ?, ?, \'\', \'szt\', 1, ?, 0, ?, 0, 0)', array($docid, round($tax*$netto,2), $taxid, 'Usługi telekomunikacyjne', $itemid));
+	$this->lmsdb->Execute('INSERT INTO invoicecontents (docid, value, taxid, prodid, content, count, description, tariffid, itemid, pdiscount, vdiscount) VALUES (?, ?, ?, \'\', \'szt\', 1, ?, 0, ?, 0, 0)', array($docid, round($tax*$netto,2), $taxid, 'Usługi telekomunikacyjne - telefonia', $itemid));
 	
-	$this->lmsdb->Execute('INSERT INTO cash (time, value, taxid, customerid, comment, docid, itemid) VALUES (?, ?, ?, ?, ?, ?, ?)', array($now, round($tax * $netto, 2) * -1, $taxid, $val['lmsid'], 'Usługi telekomunikacyjne', $docid, $itemid));
+	$this->lmsdb->Execute('INSERT INTO cash (time, value, taxid, customerid, comment, docid, itemid) VALUES (?, ?, ?, ?, ?, ?, ?)', array($now, round($tax * $netto, 2) * -1, $taxid, $val['lmsid'], 'Usługi telekomunikacyjne - telefonia', $docid, $itemid));
 	
-	echo "CID: {$val['lmsid']} VAL: " . round($tax * $netto, 2) . " DESC: Usługi telekomunikacyjne\n";
+	echo "CID: {$val['lmsid']} VAL: " . round($tax * $netto, 2) . " DESC: Usługi telekomunikacyjne - telefonia\n";
 	
 	$cachedrates = array();
 	$konta = $this->wsdl->_ImportInvoice_konta($val['id']);

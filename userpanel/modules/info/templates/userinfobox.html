@@ -1,5 +1,5 @@
 <!--// $Id$ //-->
-{box title="Informations about you"}
+{box title="Dane konta Abonenta (ID: {$userinfo.id|string_format:"%04d"})"}
 <table width="100%" CELLPADDING="3" class="light">
 {if $fields_changed}
 	<tr>
@@ -10,39 +10,39 @@
 {/if}
 	<tr class="dark">
 		<td width="1%">
-			{img src="person.gif" alt=""}
+			{img src="person.png" alt=""}
 		</td>
 		<td width="99%" colspan="2">
-			<b>{$userinfo.customername} ({$userinfo.id|string_format:"%04d"})</b>
+			<b>{$userinfo.customername}</b>
 		</td>
 	</tr>
 {if $userinfo.email}
 	<tr>
 		<td width="1%">
-			{img src="mail.gif" alt=""}
+			{img src="mail.png" alt=""}
 		</td>
 		<td width="99%" colspan="2">
-			{$userinfo.email}
+			<strong>email:</strong> {$userinfo.email}
 		</td>
 	</tr>
 {/if}
 	<tr>
 		<td width="1%">
-			{img src="address.gif" alt=""}
+			{img src="address.png" alt=""}
 		</td>
 		<td width="99%" colspan="2">
-			{$userinfo.address}<br/>
+			ul. {$userinfo.address}<br/>
 			{$userinfo.zip} {$userinfo.city}
 		</td>
 	</tr>
 {if $userinfo.contacts}
 	<tr>
 		<td width="1%">
-			{img src="phone.gif" alt=""}
+			{img src="phone.png" alt=""}
 		</td>
 		<td width="99%" colspan="2">
 			{foreach from=$userinfo.contacts item=item}
-        			{if $item.phone}{$item.phone}<BR />{/if}
+        			tel. {if $item.phone}{$item.phone}<BR />{/if}
 	        	{/foreach}
 		</td>
 	</tr>
@@ -50,29 +50,29 @@
 {if $userinfo.im neq "" && $userinfo.im neq 0}
 	<tr>
 		<td width="1%">
-			{img src="gg.gif" alt=""}
+			{img src="gg.png" alt=""}
 		</td>
 		<td width="99%" colspan="2">
 			{$userinfo.im}
 		</td>
 	</tr>
 {/if}
-{foreach from=$userinfo.messengers item=item}
+<!--{foreach from=$userinfo.messengers item=item}
 	<tr>
 		<td width="1%">
 			{if $item.type == $smarty.const.IM_GG}
-			{img src="gg.gif" alt=""}
+			{img src="gg.png" alt=""}
 			{elseif $item.type == $smarty.const.IM_YAHOO}
-			{img src="yahoo.gif" alt=""}
+			{img src="yahoo.png" alt=""}
 			{elseif $item.type == $smarty.const.IM_SKYPE}
-			{img src="skype.gif" alt=""}
+			{img src="skype.png" alt=""}
 			{/if}
 		</td>
 		<td width="99%" colspan="2">
 			{$item.uid}
 		</td>
 	</tr>
-{/foreach}
+{/foreach}-->
 {if $userinfo.ten neq ""}
 	<tr>
 		<td width="1%" align="center">
@@ -95,25 +95,25 @@
 {/if}
 	<tr>
 		<td width="1%">
-			{img src="cash.gif" alt=""}
+			{img src="cash.png" alt=""}
 		</td>
-		<td width="1%">
+		<td width="33%">
 			<b>{trans("Balance:")}</b>
 		</td>
-		<td width="98%">
-			{if $userinfo.balance < 0}<font color="red"><b>{$userinfo.balance|money_format}</b></font>{else}{$userinfo.balance|money_format}{/if}
+		<td width="66%">
+			{if $userinfo.balance < 0}<span style="color: #ff0000; text-decoration: blink; font-weight: bold; font-size: 16px;"><b>{$userinfo.balance|money_format}</b></span>{else}{$userinfo.balance|money_format}{/if}
 		</td>
 	</tr>
 {$bankaccount = bankaccount($userinfo.id, $userinfo.account)}
 {if $bankaccount}
 	<tr>
 		<td width="1%">
-			{img src="cash.gif" alt=""}
+			{img src="bank.png" alt=""}
 		</td>
-	    <td width="1%">
+	    <td width="33%">
 			<b>{trans("Bank account:")}</b>
 		</td>
-		<td width="98%">
+		<td width="66%">
 			{format_bankaccount($bankaccount)}
 		</td>
 	</tr>
@@ -125,7 +125,7 @@
 	}
 	<tr>
 		<td width="100%" colspan="3" align="right">
-			<a href="?m=info&amp;f=updateuserform" accesskey="A">{trans("Actualize data")} {img src="edit.gif" alt="[ Edit ]"}</a>
+			<a href="?m=info&amp;f=updateuserform" accesskey="A">{trans("Actualize data")}{img src="edit.gif" alt="[ Edit ]"}</a>
 		</td>
 	</tr>
 	{/if}

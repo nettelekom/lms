@@ -1,44 +1,44 @@
-{box title="Konta SIP"}
-<table style="width: 100%;" cellpadding="3">
-	<tr class="darkest">
-		<td width="1%" class="nobr" align="center"><b>Numer</b></td>
-		<td width="1%" class="nobr" align="center">Wartość brutto:</td>
-		<td width="1%" class="nobr" align="center">Abonament</td>
-		<td width="1%" class="nobr" align="center">{t}Accounting day:{/t}</td>
-		<td width="1%" class="nobr" colspan="4" align="center">Ustawienia</td>
-	</tr>
-	{foreach from=$assignments item=assignment}
-	<tr class="dark">
-		<td class="nobr" align="right"><b>
-		{$assignment.name}
-		</b></td>
-		<td class="nobr" align="right">{$assignment.value|money_format}</td>
-		<td class="nobr" align="right">{$assignment.subscription}</td>
-		<td class="nobr" align="right">{$assignment.period} ({$assignment.at})</td>
-		<td class="nobr"><a href="?m=voip&f=settings&id={$assignment.id}">Edytuj</a></td>
-		<td><a href="?m=voip&f=allowedrates&id={$assignment.id}">Dozwolone strefy</a></td>
-		<td><a href="?m=voip&f=cost&id={$assignment.id}">Sprawdź koszt połączenia</a></td>
-		<td><a href="?m=voip&f=tariff&id={$assignment.id}" target="_blank">Wydrukuj cennik</a><br>
-		<a href="?m=voip&f=tariff&csv=1&id={$assignment.id}">Pobierz jako CSV</a></td>
-	</tr>
-	{foreachelse}
-	<tr>
-		<td align="center" width="100%" colspan="8">
-			<p>&nbsp;</p>
-			<p><b>{t}You haven't got any assigned subscriptions.{/t}</b></p>
-			<p>&nbsp;</p>
-		</td>
-	</tr>
-	{/foreach}
-	<tr class="darkest">
-		<td align="right"><b>{t}Total:{/t}</b></td>
-		<td class="nobr" align="right">{sum array=$assignments column="value" string_format=$LANGDEFS.$_language.money_format}</td>
-		<td class="nobr" align="right"></td>
-		<td>&nbsp;</td>
-<td colspan="4">&nbsp;</td>
-	</tr>
-	<tr class="dark">
-<td align="center" colspan="8"><b><a href="?m=voip&f=fax">Skrzynka FAX</a></b>&nbsp;&nbsp;<b><a href="?m=voip&f=addressbook">Książka telefoniczna</a></b>&nbsp;&nbsp;<b><a href="?m=voip&f=ivr">IVR</a></b></td>
-</tr>
-</table>
-{/box}
+{* <<<<<<< HEAD *}
+<div class="box">
+
+	{box title="Konta SIP"}
+		<table class="table-shadow" width="width: 100%" cellpadding="3">
+			<tr class="darkest">
+				<td width="1%" class="nobr text-center"><strong>Numer telefonu</strong></td>
+				<td width="1%" class="nobr text-center"><strong>Wartość brutto</strong></td>
+				<td width="1%" class="nobr text-center"><strong>Abonament</strong></td>
+			</tr>
+
+			{foreach from=$assignments item=assignment}
+			<tr class="dark">
+				<td class="nobr text-right">
+					<a title="Zmień ustawienia konta" href="?m=voip&f=settings&id={$assignment.id}">{$assignment.name}<img src="modules/voip/img/edit.png" title="Zmień ustawienia konta" alt="ustawienia"></a>
+				</td>
+				<td class="nobr text-right">{$assignment.value|money_format}</td>
+				<td class="nobr text-right">{$assignment.subscription}</td>
+			</tr>
+			{foreachelse}
+			<tr>
+				<td align="center" width="100%" colspan="8">
+					<p><strong>{t}You haven't got any assigned subscriptions.{/t}</strong></p>
+				</td>
+			</tr>
+			{/foreach}
+			
+			<tr class="dark" style="background: #cccccc;">
+				<td class="text-right"><strong>{t}Total:{/t}</strong></td>
+				<td class="nobr text-right"><strong>{sum array=$assignments column="value" string_format=$LANGDEFS.$_language.money_format}</strong></td>
+				<td class="nobr text-right"></td>
+			</tr>
+			
+		</table>
+
+		<div id="panel">
+			{if $fax} 
+			| <a href="?m=voip&f=fax"><img src="modules/voip/img/fax.png">Wirtualny Fax</a>
+			{/if} |
+			<a href="?m=voip&f=cost&id={$assignment.id}"><img src="modules/voip/img/cennik.png">Sprawdź koszt połączenia</a> |
+			<a href="?m=voip&f=addressbook"><img src="modules/voip/img/phone_book.png">Książka telefoniczna</a> |
+		</div>
+	{/box}
+</div>

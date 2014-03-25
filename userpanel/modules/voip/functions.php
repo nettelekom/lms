@@ -217,8 +217,8 @@ function module_settings()
 			$err[] = 'Błędny numer przekierowania';
 		if($sip['mailboxpin'] && !preg_match('/^[0-9]{4,8}$/', $sip['mailboxpin']))
 			$err[] = 'Błędny pin poczty (4-8 znaków)';
-		if(!preg_match('/^[0-9.]+$/', $sip['finlimit']))
-			$err[] = 'Niedozwolone znaki w polu kwota !';
+	//	if(!preg_match('/^[0-9.]+$/', $sip['finlimit']))
+	//		$err[] = 'Niedozwolone znaki w polu kwota !';
 		if($sip['voicemailaddr'] && !check_email($sip['voicemailaddr']))
 			$err[] = 'Błędny adres email!';
 		if($sip['faxmailaddr'] && !check_email($sip['faxmailaddr']))
@@ -368,8 +368,10 @@ elseif($_GET['edit'])
         $SMARTY->assign('nr',$voip->wsdl->nr_gettoedit($_GET['edit']));
         $SMARTY->assign('groupaction',true);
 }
-elseif($_GET['del'])
+elseif($_GET['del']){
         $voip->wsdl->del_nr($_GET['del']);
+}
+$SMARTY->assign('groups',$voip->wsdl->gr_list($SESSION->id));
 $SMARTY->assign('nrl',$voip->wsdl->nr_list($_GET['gr']));
 $SMARTY->display('module:addressbookd.html');
 }

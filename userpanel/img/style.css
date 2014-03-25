@@ -54,8 +54,9 @@ INPUT[type="submit"],
 INPUT[type="button"],
 INPUT[type="file"] {
 	border: solid 1px black;
-	background-color: #EBE4D6;
+	background-color: #ffffff;
 }
+
 INPUT { /* IE */
 	font-size:  8pt;
 	font-family: Tahoma, Verdana, Arial, Helvetica;
@@ -154,12 +155,12 @@ div.multiselectlayer ul li input { border: none; }
 .click-menu .section .active:hover { color: yellow; }
 .tip		{ width: 162px; }
 
-.dark		{ background-color: #CEBD9B; }
-.light		{ background-color: #DFD5BD; }
+.dark		{ background-color: #cccccc; }
+.light		{ background-color: #8b8b8b; }
 .lucid		{ background-color: #EBE4D6; }
-.superlight	{ background-color: #F4F0EC; }
+.superlight	{ background-color: #ffffff; }
 .highlight	{ background-color: #CCFFCC; }
-.blendbg	{ background-color: #888888; }
+.blendbg	{ background-color: #404040; }
 .blend		{ color: #888888; }
 .red		{ color: #FF0000; }
 .brown		{ color: #A52A2A; }
@@ -193,3 +194,16 @@ div.multiselectlayer ul li input { border: none; }
     -webkit-box-shadow: #333 1px 1px 12px;
     behavior: url(img/pie.htc);
 }
+
+input:hover, textarea:hover, select:hover {
+	border-color: #9f9f9f;
+}
+input:focus, textarea:focus, select:focus { 
+	border-color: #4d90fe; 
+	-webkit-box-shadow: rgba(0, 0, 0, 0.15) 0px 0px 8px;
+}
+
+
+input, textarea { 
+padding: 2px;
+	}

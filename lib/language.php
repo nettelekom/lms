@@ -138,7 +138,7 @@ else
 
 // Use system lang for UI if any of browser langs isn't supported
 // or browser langs aren't set
-if (empty($_ui_language))
+#if (empty($_ui_language))
 	$_ui_language = $_language;
 $_LANG = array();
 

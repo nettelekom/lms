@@ -1,90 +1,112 @@
 <script type="text/javascript" language="JavaScript" src="img/autoiframe.js"></script>
 <script type="text/javascript" language="JavaScript" src="img/overlib.js"></script>
 <script type="text/javascript" language="JavaScript" src="img/common.js"></script>
+
 {include file="module:calendar_js.html"}
-{box title="Lista połączeń"}
-<table style="width: 100%;" cellpadding="3">
-<FORM METHOD="POST" NAME="page" action="?m=voip">
-	<TR class="DARK">
-		<TD class="fall">
-				<B>{t}Filter:{/t} </B> 
-				Od: <INPUT name="from" value="{$listdata.from}" onClick="cal5.popup();">&nbsp;
-				Do: <INPUT name="to" value="{$listdata.to}" onClick="cal6.popup();">&nbsp;
-				Z numeru: <INPUT name="fnr" size="10" value="{$listdata.fnr}">&nbsp;
-				Na numer: <INPUT name="tnr" size="10" value="{$listdata.tnr}">&nbsp;
-<select name="dir">
-<option value="0">wszystkie</option>
-<option value="1"{if $listdata.dir eq 1} selected="selected"{/if}>przychoodzące</option>
-<option value="2"{if $listdata.dir eq 2} selected="selected"{/if}>wychodzące</option>
-</select>&nbsp;
-Kierunek: &nbsp;
-<select name="rategroups">
-<option value="0">Wszystkie</option>
-{html_options options=$rategroups selected=$listdata.rategroups}
-</select>&nbsp;
-Status: &nbsp;
-<select name="stat">
-<option value="0">wszystkie</option>
-<option value="1"{if $listdata.stat eq 1} selected="selected"{/if}>odebrane</option>
-<option value="2"{if $listdata.stat eq 2} selected="selected"{/if}>nieodebrane</option>
-</select>&nbsp;
-Strona: {html_options name=page options=$listdata.pageopts selected=$listdata.page} 
-&nbsp;
-<LABEL>Do CSV: <INPUT type="checkbox" name="csv" value="1"></LABEL>
-&nbsp;
-<input type="submit" value="Szukaj"></td></tr>
-</form>
-</table>
-<table style="width: 100%;" cellpadding="3">
-	<tr class="darkest">
-	<td width="1%">ID</td>
-		<td width="1%" align="right">Data</td>
-		<td width="1%" align="right">Z numeru</td>
-		<td width="1%" align="right">Na numer</td>
-		<td width="1%" align="right">Czas połączenia</td>
-		<td width="1%" align="right">Koszt</td>
-		<td width="1%" align="right">Opłata</td>
-		<td width="1%" align="right">Opłata brutto</td>
-		<td width="1%" align="right">Status</td>
-		<td width="1%" align="right">Kierunek</td>
-		<td width="1%" align="right">Odsłuchaj</td>
-	</tr>
-	{section name=c loop=$cdr}
-	{if $cdr[c].id}
-	<tr class="dark">
-		<td width="1%" class="nobr">{$cdr[c].id}</td>
-		<td width="1%" align="right" class="nobr">{$cdr[c].calldate}</td>
-		<td width="1%" align="right">{$cdr[c].src}</td>
-		<td width="1%" align="right" class="nobr">{$cdr[c].dst}</td>
-		<td width="1%" align="right">{$cdr[c].seconds}</td>
-		<td width="1%" align="right">{$cdr[c].tmp_cost}</td>
-		<td width="1%" align="right">{$cdr[c].cost}</td>
-		<td width="1%" align="right">{$cdr[c].cost_br}</td>
-		<td width="1%" align="right">{$cdr[c].disposition}</td>
-		<td width="1%" align="right">{$cdr[c].rate|default:'[BRAK]'}</td>
-		<td width="1%" align="right">{if $cdr[c].monitor}<a href="?m=voip&f=listen&id={$cdr[c].id}">{img src="audio_icon.gif" border="0"}</a><br><a href="?m=voip&f=delcdr&id={$cdr[c].id}">Usuń</a>{else}&nbsp;{/if}</td>
-	</tr>{/if}
-		{sectionelse}
-	<tr>
-		<td align="center" width="100%" colspan="11">
-			<p>&nbsp;</p>
-			<p><b>Brak połączeń w wybranym okresie</b></p>
-			<p>&nbsp;</p>
-		</td>
-	</tr>
-	{/section}
-<tr class="dark">
-<td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td align="right"><b>Razem:</b></td>
-<td align="right">{$listdata.seconds}</td>
-<td align="right">{$listdata.tmp_cost}</td>
-<td align="right">{$listdata.cost}</td>
-<td align="right">{$listdata.cost_br}</td>
-<td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
-</table>
+
+
+<div class="box">
+
+	{box title="Historia połączeń"}
+
+		<h3>Wyszukaj połączenia</h3>
+
+		<FORM METHOD="POST" NAME="page" action="?m=voip">
+			<table id="filtry" cellpadding="3">
+				<tr>
+					<td class="fall">
+							Od: <img src="modules/voip/img/kalendarz.png" alt="dzien"><INPUT name="from" value="{$listdata.from}" onClick="cal5.popup();" id="inputs-date">
+							Do: <img src="modules/voip/img/kalendarz.png" alt="dzien"><INPUT name="to" value="{$listdata.to}" onClick="cal6.popup();" id="inputs-date">
+							Z numeru: <img src="modules/voip/img/sluchawka.png" alt="tel."><INPUT name="fnr" value="{$listdata.fnr}" id="inputs-number">
+							Na numer: <img src="modules/voip/img/sluchawka.png" alt="tel."><INPUT name="tnr" value="{$listdata.tnr}" id="inputs-number"><br/>
+							
+							Kierunek: <img src="modules/voip/img/sluchawka-strzalki.png" alt="tel.">
+							<select name="dir">
+								<option value="0">wszystkie</option>
+								<option value="1"{if $listdata.dir eq 1} selected="selected"{/if}>przychoodzące</option>
+								<option value="2"{if $listdata.dir eq 2} selected="selected"{/if}>wychodzące</option>
+							</select>
+
+							<select name="rategroups">
+								<option value="0">Wszystkie</option>
+								{html_options options=$rategroups selected=$listdata.rategroups}
+							</select>
+							
+							Status: 
+							<img src="modules/voip/img/sluchawki.png" alt="tel.">
+							<select name="stat">
+								<option value="0">wszystkie</option>
+								<option value="1"{if $listdata.stat eq 1} selected="selected"{/if}>odebrane</option>
+								<option value="2"{if $listdata.stat eq 2} selected="selected"{/if}>nieodebrane</option>
+							</select>
+							
+							<label><strong id="do_csv"><img src="modules/voip/img/icon_csv.gif" alt="csv">Importuj do CSV:</strong><INPUT type="checkbox" name="csv" value="1"></label>
+							
+							<input class="button" style="float: right;" type="submit" value="Szukaj">
+							
+							<strong>Pokaż stronę:</strong> {html_options name=page options=$listdata.pageopts selected=$listdata.page}
+					</td>
+				</tr>
+			</table>
+		</form>
+		<h4>Szczegóły połączeń</h4>
+
+			<table class="table-shadow" cellpadding="3" width="100%;">
+				<tr class="darkest">
+					
+					<td width="1%" class="text-center"><strong>Data i godzina</strong></td>
+					<td width="1%" class="text-center"><strong>Z numeru</strong></td>
+					<td width="1%" class="text-center"><strong>Na numer</strong></td>
+					<td width="1%" class="text-center"><strong>Status</strong></td>
+					<td width="1%" class="text-center"><strong>Czas trwania</strong></td>
+					<td width="1%" class="text-center"><strong>Stawka</strong></td>
+					<td width="1%" class="text-center"><strong>Opłata netto</strong></td>
+					<td width="1%" class="text-center"><strong>Opłata brutto</strong></td>
+					<td width="1%" class="text-center"><strong>Odsłuchaj</strong></td>
+				</tr>
+				{section name=c loop=$cdr}
+				{if $cdr[c].id}
+				<tr class="dark">
+					<td width="1%" class="text-left nobr">{$cdr[c].calldate}</td>
+					<td width="1%" class="text-left">{$cdr[c].src}</td>
+					<td width="1%" class="text-left nobr">{$cdr[c].dst}</td>
+					<td width="1%" class="text-center">{$cdr[c].disposition}</td>
+					<td width="1%" class="text-right">{$cdr[c].seconds|seconds_to_words}</td>
+					<td width="1%" class="text-right">{$cdr[c].tmp_cost} zł</td>
+					<td width="1%" class="text-right">{$cdr[c].cost} zł</td>
+					<td width="1%" class="text-right">{$cdr[c].cost_br} zł</td>
+					<td width="1%" class="text-center">{if $cdr[c].monitor}<a href="?m=voip&f=listen&id={$cdr[c].id}" title="Odsłuchaj nagrania" alt="odsłuchaj">{img src="audio_icon.png" border="0"}</a> <a href="?m=voip&f=delcdr&id={$cdr[c].id}" title="Usuń nagranie">Usuń</a>{else}-{/if}</td>
+				</tr>
+				{/if}
+				{sectionelse}
+				<tr>
+					<td align="center" width="100%" colspan="11">
+						<p><strong>Brak połączeń w wybranym okresie</strong></p>
+					</td>
+				</tr>
+				{/section}
+				
+				<tr class="dark" style="background: #cccccc;">
+					<td></td>
+					<td></td>
+					<td></td>
+					<td class="text-right"><strong>Razem:</strong></td>
+					<td class="text-right"><strong>{$listdata.seconds|seconds_to_words}</strong></td>
+					<td class="text-right"><strong>{$listdata.tmp_cost} zł</strong></td>
+					<td class="text-right"><strong>{$listdata.cost} zł</strong></td>
+					<td class="text-right"><strong>{$listdata.cost_br} zł</strong></td>
+					
+					<td></td>
+				</tr>
+				
+			</table>
+			
 <SCRIPT>
 <!--
 var cal5 = new calendar(document.forms['page'].elements['from']);
 var cal6 = new calendar(document.forms['page'].elements['to']);
 -->
-		</SCRIPT>
-{/box}
+</SCRIPT>
+
+{/box}	
+</div>

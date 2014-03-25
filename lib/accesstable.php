@@ -114,6 +114,8 @@ $access['table'][26]['privilege']	= 'hide_finances';
 $access['table'][27]['name']		= trans('reports');
 $access['table'][27]['privilege']	= 'reports';
 
+
+// Nettelekom
 $access['table'][24]['name']		= 'VoiP';
 $access['table'][24]['allow_reg']	= '^(v_.*|customer(list|info))$';
 

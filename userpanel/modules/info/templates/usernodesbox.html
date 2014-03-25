@@ -8,16 +8,16 @@
 		{*
 			<a href="?m=info&amp;op=updatenodeform&amp;id={$usernodes[usernodes].id}">
 			{if $usernodes[usernodes].access}
-				{img src="access.gif" alt="[ Connect ]"}
+				{img src="access.png" alt="[ Connect ]"}
 			{else}
-				{img src="noaccess.gif" alt="[ Disconnect ]"}
+				{img src="noaccess.png" alt="[ Disconnect ]"}
 			{/if}
 			</a>
 		*}
 			{if $usernodes[usernodes].access}
-				{img src="access.gif" alt="" text="Connected"}
+				{img src="access.png" alt="" text="Connected"}
 			{else}
-				{img src="noaccess.gif" alt="" text="Disconnected"}
+				{img src="noaccess.png" alt="" text="Disconnected"}
 			{/if}
 		<td width="99%">
 			<table width="100%">
@@ -27,11 +27,9 @@
 					</td>
 				</tr>
 				<tr>
-					<td width="1%" style="white-space: nowrap;">
-						{$usernodes[usernodes].ip}{if $usernodes[usernodes].ip_pub!="0.0.0.0"} ({$usernodes[usernodes].ip_pub}){/if} /
-					</td>
-					<td width="99%">
-						{$usernodes[usernodes].mac|replace:",":"<br/>"}
+					<td style="white-space: nowrap; font-size: 10px;">
+						<strong>IP:</strong> {$usernodes[usernodes].ip}{if $usernodes[usernodes].ip_pub!="0.0.0.0"} ({$usernodes[usernodes].ip_pub}){/if}<br/>
+						<strong>MAC:</strong> {$usernodes[usernodes].mac|replace:",":"<br/>"}
 					</td>
 				</tr>
 			</table>

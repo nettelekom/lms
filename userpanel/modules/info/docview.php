@@ -38,7 +38,6 @@ if(!empty($_GET['id'])) {
 	{
 		die;
 	}
-
 	$docnumber = docnumber($doc['number'], $doc['template'], $doc['cdate']);
 	$filename = DOC_DIR.'/'.substr($doc['md5sum'],0,2).'/'.$doc['md5sum'];
 	if(file_exists($filename))
@@ -57,7 +56,6 @@ if(!empty($_GET['id'])) {
 				$title = $docnumber;
 				$copy = false;
 			}
-
 			ob_start();
 			readfile($filename);
 			$htmlbuffer = ob_get_contents();
@@ -71,7 +69,7 @@ if(!empty($_GET['id'])) {
 				header('Content-Disposition: attachment; filename='.$doc['filename']);
 				header('Pragma: public');
 			}
-
+			
 			readfile($filename);
 		}
 	}

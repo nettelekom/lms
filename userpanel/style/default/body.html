@@ -1,46 +1,45 @@
-<table width="100%" cellspacing="0" cellpadding="0" style="background-image:url('style/default/keyboard.jpg'); background-repeat:no-repeat; background-color: #ECECEC;">
-    <tr style="height:100px;">
-	<td align="right" style="padding-right:15px;">
-	    <h2>LMS Userpanel {$layout.upv}<br/>
-	    @ {$layout.hostname}</h2>
-	</td>
-    </tr>
-<tr><td>
-<table style="text-align: left; width: 100%; background-image: url(style/default/tabs_bg.gif); background-repeat: repeat-x;" cellspacing="0" cellpadding="0">
+<body style="background: url('style/default/wrapper_shadow.png') repeat-y center top; margin: 0 auto; width: 962px;">
+
+	<div>
+		<div style="background:url('style/default/line_header.png') no-repeat center 67px; height:112px; padding:18px 0;">
+			
+			<div style="margin-left: 70px; float:left;">
+				<a title="Internet Rumia, Telewizja Rumia, Telefon Rumia - Netarea" name="Logo Netarea" href="http://www.netarea24.pl"><img src="style/default/logo.png" alt="Najlepszy internet w Rumi - Netarea" /></a>
+			</div>
+			
+			<div style="float:right; margin-top:15px; margin-right:10px; color:#647883; font-size:24px;">
+				<span>{trans("Virtual Customer Service")}</span>
+			</div>
+		</div>
+	</div>	
+
+<table id="menu" cellspacing="0" cellpadding="0">
     <tr>
 	{foreach from=$modules item=menuitem name=menu}
 	{if $smarty.foreach.menu.first}
-	    <td style="vertical-align: top;" width="1px">
-    	    <img src="style/default/{if $menuitem.selected}tabs_begin_sel.gif{else}tabs_begin_notsel.gif{/if}" alt=""/>
+	    <td style="vertical-align:">
 	</td>
 	{else}
 	    {if $menuitem.selected}
-	    <td style="vertical-align: top;" width="1px">
-    	    <img src="style/default/tabs_begin_tab_sel.gif" alt=""/>
+	    <td style="vertical-align: top;">
 	    </td>
 	    {else}
 	    {if $display_spacer}
-	    <td style="vertical-align: top;" width="1px">
-    	    <img src="style/default/tabs_spacer_notsel.gif" alt=""/>
+	    <td style="vertical-align: top;">
 	    </td>
 	    {/if}
 	    {/if}
 	{/if}
-        <td style="vertical-align: top; background-image: url(style/default/{if $menuitem.selected}tabs_tab_sel.gif{else}tabs_tab_notsel.gif{/if}); background-repeat: repeat-x; padding-top: 2px;" width="1px">
+        <td style="vertical-align: top; width: 1px;">
     	    <a href="?m={$menuitem.module}" {userpaneltip text=$menuitem.tip} class="{if $menuitem.selected}tabsel{else}tabnotsel{/if}">{$menuitem.name|replace:" ":"&nbsp;"}</a>
         </td>
 	{if $smarty.foreach.menu.last}
-	    <td style="vertical-align: top;" width="1px">
-	{if $menuitem.selected}
-    	    <img src="style/default/tabs_end_sel.gif" alt=''/>
-	{else}
-    	    <img src="style/default/tabs_end_notsel.gif" alt=''/>
-	{/if}
+	    <td style="vertical-align: top;">
+
     	    </td>
 	{else}
 	{if $menuitem.selected}
-	    <td style="vertical-align: top;" width="1px">
-    	    <img src="style/default/tabs_end_tab_sel.gif" alt=''/>
+	    <td style="vertical-align: top;">
         </td>
 	{/if}
 	{/if}
@@ -49,5 +48,3 @@
 	<td>&nbsp;</td>
     </tr>
 </table>
-</tr></td></table>
-<div style="margin:0px; background-image: url('style/default/grad.gif'); background-repeat: repeat-x; height: 400px">

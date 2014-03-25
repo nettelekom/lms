@@ -26,7 +26,7 @@
 
 // REPLACE THIS WITH PATH TO YOUR CONFIG FILE
 
-$CONFIG_FILE = '/etc/lms/lms.ini';
+$CONFIG_FILE = '/etc/lms/lms2.ini';
 
 // PLEASE DO NOT MODIFY ANYTHING BELOW THIS LINE UNLESS YOU KNOW
 // *EXACTLY* WHAT ARE YOU DOING!!!
@@ -37,10 +37,10 @@ define('LMS-UI', true);
 ini_set('error_reporting', E_ALL&~E_NOTICE);
 
 // find alternative config files:
-if(is_readable('lms.ini'))
-	$CONFIG_FILE = 'lms.ini';
-elseif(is_readable('/etc/lms/lms-'.$_SERVER['HTTP_HOST'].'.ini'))
-	$CONFIG_FILE = '/etc/lms/lms-'.$_SERVER['HTTP_HOST'].'.ini';
+if(is_readable('lms2.ini'))
+	$CONFIG_FILE = 'lms2.ini';
+elseif(is_readable('/etc/lms/lms2-'.$_SERVER['HTTP_HOST'].'.ini'))
+	$CONFIG_FILE = '/etc/lms/lms2-'.$_SERVER['HTTP_HOST'].'.ini';
 elseif(!is_readable($CONFIG_FILE))
 	die('Unable to read configuration file ['.$CONFIG_FILE.']!'); 
 
@@ -139,13 +139,11 @@ require_once(LIB_DIR.'/LMS.class.php');
 require_once(LIB_DIR.'/Auth.class.php');
 require_once(LIB_DIR.'/accesstable.php');
 require_once(LIB_DIR.'/Session.class.php');
-
 if(check_conf('voip.enabled'))
 {
 	require_once(LIB_DIR.'/LMSVOIP.class.php');
 	require_once(LIB_DIR.'/floAPI.php');
 }
-
 require_once(LIB_DIR . '/SYSLOG.class.php');
 
 if (check_conf('phpui.logging') && class_exists('SYSLOG'))
@@ -185,8 +183,8 @@ if (!empty($custom_templates_dir) && file_exists(SMARTY_TEMPLATES_DIR . '/' . $c
 	$SMARTY->AddTemplateDir(SMARTY_TEMPLATES_DIR . '/' . $custom_templates_dir);
 $SMARTY->AddTemplateDir(
 	array(
-		SMARTY_TEMPLATES_DIR . '/default',
 		SMARTY_TEMPLATES_DIR,
+		SMARTY_TEMPLATES_DIR . '/default',
 	)
 );
 $SMARTY->setCompileDir(SMARTY_COMPILE_DIR);
