@@ -457,7 +457,7 @@ if($_GET['csv'])
 	exit();
 }
 
-require_once(LIB_DIR.'/pdf.php');
+require_once(LIB_DIR.'/ezpdf.php');
 
 $pdf = init_pdf('A4', 'portrait', trans('Invoices'));
 
