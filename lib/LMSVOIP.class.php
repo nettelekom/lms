@@ -256,7 +256,7 @@ return $this->lmsdb->GetOne('SELECT id FROM taxes WHERE value = 23');
 
 function ImportInvoice($date)
 {
-global $LMS;
+global $LMS, $CONFIG;
 
 if(!$date)
 	$date = date('Y/m/d');
@@ -278,6 +278,13 @@ if(!$tax)
 if(!$taxid) $taxid = 1;
 
 $tax = $tax / 100 + 1;
+
+if (empty($CONFIG['payments']['deadline']))
+	$CONFIG['payments']['deadline'] = 7;
+if (empty($CONFIG['payments']['paytype']))
+	$CONFIG['payments']['paytype'] = 2; // TRANSFER
+$deadline = $CONFIG['payments']['deadline'];
+$paytype = $CONFIG['payments']['paytype'];
 
 $customers = $this->wsdl->_ImportInvoice_customers($day);
 if(is_array($customers)) foreach($customers as $val)
@@ -310,11 +317,19 @@ if(is_array($customers)) foreach($customers as $val)
 		$numberplan = $this->lmsdb->GetOne('SELECT id FROM numberplans WHERE doctype = ? AND isdefault = 1', array(DOC_INVOICE));
 		if(!$numberplan) $numberplan = 0;
 		$number = $LMS->GetNewDocumentNumber(DOC_INVOICE, $numberplan, $now);
-		$urow = $this->lmsdb->GetRow('SELECT lastname, name, address, city, zip, ssn, ten, divisionid FROM customers WHERE id = ?', array($val['lmsid']));
+		$urow = $this->lmsdb->GetRow('SELECT lastname, name, address, city, zip, ssn, ten, divisionid, paytime, paytype FROM customers WHERE id = ?', array($val['lmsid']));
+		$paytime = $urow['paytime'];
+		if ($paytime == -1) $paytime = $deadline;
 		$division = $this->lmsdb->GetRow('SELECT name, address, city, zip, countryid, ten, regon,
-				account, inv_header, inv_footer, inv_author, inv_cplace 
+				account, inv_header, inv_footer, inv_author, inv_cplace, inv_paytype
 				FROM divisions WHERE id = ? ;',array($urow['divisionid']));
-		$this->lmsdb->Execute('INSERT INTO documents (number, numberplanid, type, customerid, name, address, zip, city, ten, ssn, cdate, sdate, paytime, paytype, divisionid, div_name, div_address, div_city, div_zip, div_countryid, div_ten, div_regon, div_account, div_inv_header, div_inv_footer, div_inv_author, div_inv_cplace) VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 2, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', array($number, $numberplan, $val['lmsid'], $urow['lastname'].' '.$urow['name'], $urow['address'], $urow['zip'], $urow['city'], $urow['ten'], $urow['ssn'], $now, $now, 7, $urow['divisionid'],
+			if ($urow['paytype'])
+				$inv_paytype = $urow['paytype'];
+			elseif ($division['inv_paytype'])
+				$inv_paytype = $division['inv_paytype'];
+			else
+				$inv_paytype = $paytype;
+		$this->lmsdb->Execute('INSERT INTO documents (number, numberplanid, type, customerid, name, address, zip, city, ten, ssn, cdate, sdate, paytime, paytype, divisionid, div_name, div_address, div_city, div_zip, div_countryid, div_ten, div_regon, div_account, div_inv_header, div_inv_footer, div_inv_author, div_inv_cplace) VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', array($number, $numberplan, $val['lmsid'], $urow['lastname'].' '.$urow['name'], $urow['address'], $urow['zip'], $urow['city'], $urow['ten'], $urow['ssn'], $now, $now, $paytime, $inv_paytype, $urow['divisionid'],
 			($division['name'] ? $division['name'] : ''),
 			($division['address'] ? $division['address'] : ''), 
 			($division['city'] ? $division['city'] : ''), 
