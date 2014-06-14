@@ -50,6 +50,9 @@ define('MODULES_DIR', $CONFIG['directories']['modules_dir']);
 define('SMARTY_COMPILE_DIR', $CONFIG['directories']['smarty_compile_dir']);
 define('SMARTY_TEMPLATES_DIR', $CONFIG['directories']['smarty_templates_dir']);
 
+// Load autloader
+require_once(LIB_DIR.'/autoloader.php');
+
 // Load config defaults
 
 require_once(LIB_DIR.'/config.php');
@@ -61,14 +64,22 @@ $_DBUSER = $CONFIG['database']['user'];
 $_DBPASS = $CONFIG['database']['password'];
 $_DBNAME = $CONFIG['database']['database'];
 
-require_once(LIB_DIR.'/LMSDB.php');
+$DB = null;
 
-$DB = DBInit($_DBTYPE, $_DBHOST, $_DBUSER, $_DBPASS, $_DBNAME);
+try {
+
+    $DB = LMSDB::getDB($_DBTYPE, $_DBHOST, $_DBUSER, $_DBPASS, $_DBNAME);
+
+} catch (Exception $ex) {
+    
+    trigger_error($ex->getMessage(), E_USER_WARNING);
+    
+    // can't working without database
+    die("Fatal error: cannot connect to database!\n");
+    
+}
 
 // Initialize templates engine
-
-require_once(LIB_DIR.'/Smarty/Smarty.class.php');
-
 $SMARTY = new Smarty;
 $SESSION = NULL;
 
@@ -76,7 +87,6 @@ $SESSION = NULL;
 
 require_once(LIB_DIR.'/language.php');
 require_once(LIB_DIR.'/common.php');
-require_once(LIB_DIR.'/LMS.class.php');
 
 // Initialize LMS class
 

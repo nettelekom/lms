@@ -23,12 +23,14 @@
  */
 
 #include <string.h>
-#include <stdlib.h>
+#include <stdio.h>
 #include <syslog.h>
 #include <stdarg.h>
+#include <stdlib.h>
 #include <unistd.h>
-#include "db.h"
+#include "mysql.h"
 #include "../../util.h"
+#include "../../config.h"
 
 /* Private function for SELECT query result fetching */
 static QueryHandle * get_query_result(ResultHandle *res)
@@ -39,86 +41,74 @@ static QueryHandle * get_query_result(ResultHandle *res)
     VALUE *val;
     int i, j;
     char *buf;
-    Oid dtype;
+    MYSQL_ROW row;
+    MYSQL_FIELD *field;
 
     query = (QueryHandle *) malloc(sizeof(QueryHandle));
-    query->nrows = PQntuples(res); 
-    query->ncols = PQnfields(res); 
-
+    query->ncols = mysql_num_fields(res);
+    query->nrows = mysql_num_rows(res);
+    
     my_col = (COLUMN *) malloc(query->ncols * sizeof(COLUMN));
     my_row = (ROW *) malloc(query->nrows * sizeof(ROW));
-        
+    
     // get columns defs 
     for (i = 0; i < query->ncols; i++) {
 
 	my_col[i].name = (char *) malloc(sizeof(char *));
-       	col = &(my_col[i]);
+        col = &(my_col[i]);
+
+	field = mysql_fetch_field_direct(res, i);
+
+	col->name = str_save(col->name, field->name);
+	col->size = field->length;
 	
-	col->name = str_save(col->name, PQfname(res, i));
-
-	dtype = PQftype(res, i);
-
-	// set column data type & size
-	switch (dtype) {
-	    case INT8OID:
-	    case INT2OID:
-	    case INT4OID:
-	    case OIDOID:
-	    case POSTGISUNKNOWNOID:
+	// set column data type 
+	switch (field->type) {
+	    case FIELD_TYPE_SHORT:
+	    case FIELD_TYPE_LONG:
+	    case FIELD_TYPE_LONGLONG:
 		col->type = DB_INT;
-		col->size = PQfsize(res, i);
 		break;
-	    case CHAROID:
-	    case BPCHAROID:
-	    case VARCHAROID:
-	    case TEXTOID:
-	    case POSTGISPOINTOID:
+	    case FIELD_TYPE_TINY:
+	    case FIELD_TYPE_VAR_STRING:
+	    case FIELD_TYPE_STRING:
+	    case FIELD_TYPE_BLOB:
 		col->type = DB_CHAR;
-		col->size = PQfmod(res, i) - 4; // Looks strange but works
 		break;
-            case FLOAT4OID:
-	    case FLOAT8OID:
+	    case FIELD_TYPE_DOUBLE:
+	    case FIELD_TYPE_FLOAT:
 		col->type = DB_DOUBLE;
-		col->size = PQfsize(res, i);
-		break;
-	    case DATEOID:
-		col->type = DB_DATE;
-		col->size = 10; // YYYY-MM-DD 
-		break;
-	    case TIMEOID:
-		col->type = DB_TIME;
-		col->size = 8; // HH-MM-SS 
 		break;
 	    default:
-    		col->type = DB_UNKNOWN;
+		col->type = DB_UNKNOWN;
 		break;
 	}
     }	
     
     // add column defs to query table
-    query->col = my_col;
-
+    query->col = my_col;   
+    
     // get data
-    for (i = 0; i < query->nrows; i++) {
-    	my_row[i].value = (VALUE *) calloc(query->ncols, sizeof(VALUE));
+    i = 0;
+    while ((row = mysql_fetch_row(res)) != NULL) {
+	my_row[i].value = (VALUE *) calloc(query->ncols, sizeof(VALUE));
         for (j = 0; j < query->ncols; j++) {
-            val = &(my_row[i].value[j]);
-	    buf = (char *) PQgetvalue(res, i, j); 
+	    val = &(my_row[i].value[j]);
+	    buf = (char *) ( row[j] ? row[j] : "");
 	    val->data = str_save(val->data,buf);
 	}
+	i++;
     }
-    
+
     //add rows to query table
     query->row = my_row;
     return query;
 }
 
-/* Parse special sequences query in statement */
+/* Parse special sequences in query statement */
 static void parse_query_stmt(char **stmt)
 {
-    str_replace(stmt, "%NOW%", "EXTRACT(EPOCH FROM CURRENT_TIMESTAMP(0))::integer");
-    str_replace(stmt, "LIKE", "ILIKE");
-    str_replace(stmt, "like", "ILIKE");
+    str_replace(stmt, "%NOW%", "UNIX_TIMESTAMP()");
 }
 
 /************************* CONNECTION FUNCTIONS *************************/
@@ -126,46 +116,46 @@ static void parse_query_stmt(char **stmt)
 ConnHandle * db_connect(const char *db, const char *user, const char *password, 
 		const char *host, int port, int ssl)
 {
-    ConnHandle *conn = NULL;
-    char connect_string[BUFFER_LENGTH];
-    
-    if( !port ) 
-	port = 5432;
-    snprintf(connect_string, sizeof(connect_string)-1, "host='%s' dbname='%s' user='%s' port='%d' password='%s'",
-	host, db, user, port, password);
-
-    if(ssl)
-	strcat(connect_string, " sslmode='require'");
-
-    connect_string[sizeof(connect_string)-1] = '\x0';
-    
-    conn = PQconnectdb(connect_string);
-    
-    if( PQstatus(conn) == CONNECTION_BAD ) {
-	syslog(LOG_CRIT, "ERROR: [db_connect] Unable to connect to database. %s", PQerrorMessage(conn));
-	PQfinish(conn);
-        return NULL;
+    ConnHandle *c = (ConnHandle *) malloc (sizeof(ConnHandle));
+    if( mysql_init(&c->conn)==NULL ) {
+	syslog(LOG_CRIT, "ERROR: [db_connect] Unable to initialize database.");
+	free(c);
+	return NULL;
     }
+    
+    if(ssl)
+	mysql_ssl_set(&c->conn, NULL, NULL, NULL, NULL, NULL);    
+
+    if( !mysql_real_connect(&c->conn,host,user,password,db,port,NULL,0) ) {
+	syslog(LOG_CRIT,"ERROR: [db_connect] Unable to connect to database. %s", mysql_error(&c->conn));
+        mysql_close(&c->conn);
+	free(c);
+	return NULL;
+    }
+    
+    // SET NAMES utf8
+    mysql_set_character_set(&c->conn, "utf8");
+    
 #ifdef DEBUG0
 	syslog(LOG_INFO, "DEBUG: [lmsd] Connected with params: db='%s' host='%s' user='%s' port='%d' passwd='*'.",
 	    db, host, user, port);
 #endif
-    db_exec(conn, "SET CLIENT_ENCODING TO 'UNICODE'");
+    db_exec(c, "SET NAMES utf8");
 
-    return conn;
+    return c;
 }
 
 /* Closes connection to db server */
-int db_disconnect(ConnHandle *conn)
+int db_disconnect(ConnHandle *c)
 {
-    if( !conn ) 
+    if( !c )
     {
-	    syslog(LOG_ERR, "ERROR: [db_disconnect] Lost connection handle.");
-	    return ERROR;
+	syslog(LOG_ERR, "ERROR: [db_disconnect] Lost connection handle.");
+	return ERROR;
     }
 
-    if( PQstatus(conn) != CONNECTION_BAD )
-	PQfinish(conn);
+    mysql_close(&c->conn);
+    free(c);
 #ifdef DEBUG0
     syslog(LOG_INFO, "DEBUG: [lmsd] Disconnected.");
 #endif
@@ -174,16 +164,16 @@ int db_disconnect(ConnHandle *conn)
 
 /************************* QUERY FUNCTIONS ************************/
 /* Executes SELECT query */
-QueryHandle * db_query(ConnHandle *conn, char *q) 
+QueryHandle * db_query(ConnHandle *c, char *q) 
 {
-    ResultHandle *res=NULL;
+    ResultHandle *res = NULL;
     QueryHandle *query;
     char *stmt;
 
-    if( !conn ) 
+    if( !c )
     {
-	    syslog(LOG_ERR, "ERROR: [db_query] Lost connection handle.");
-	    return NULL;
+	syslog(LOG_ERR, "ERROR: [db_query] Lost connection handle.");
+	return NULL;
     }
 
     stmt = strdup(q);
@@ -191,99 +181,35 @@ QueryHandle * db_query(ConnHandle *conn, char *q)
 #ifdef DEBUG0
     syslog(LOG_INFO, "DEBUG: [SQL] %s", stmt);
 #endif
-    res = PQexec(conn,stmt);
-    if( res==NULL || PQresultStatus(res)!=PGRES_TUPLES_OK ) {
-	syslog(LOG_ERR, "ERROR: [db_query] Query failed. %s", PQerrorMessage(conn));
-	PQclear(res);
-        free(stmt);
+    if( mysql_query(&c->conn,stmt) != 0 ) {
+	syslog(LOG_CRIT, "ERROR: [db_query] Query failed. %s", mysql_error(&c->conn));
+	free(stmt);
 	return NULL;
     }
+
+    if( (res = mysql_store_result(&c->conn)) == NULL ) {
+	syslog(LOG_CRIT, "ERROR: [db_query] Unable to get query result. %s", mysql_error(&c->conn));
+	free(stmt);
+	return NULL;
+    }
+
     query = get_query_result(res);
-    PQclear(res);
+    mysql_free_result(res);
     free(stmt);
     return query;
 }
 
 /* Prepares and executes SELECT query */
-QueryHandle * db_pquery(ConnHandle *conn, char *q, ... ) 
+QueryHandle * db_pquery(ConnHandle *c, char *q, ... ) 
 {
     QueryHandle *query;
     va_list ap;
     int i;
     char *p, *s, *result, *escstr;
 
-    result = strdup("");
-    s = (char*) malloc (sizeof(char*));    
-    
-    // find '?' and replace with arg value
-    va_start(ap, q);
-    for(p=q; *p; p++) {
-	    if( *p != '?' ) {
-		    i = strlen(result)+2;
-		    s = (char*) realloc(s, i);
-	    	    snprintf(s, i,"%s%c", result, *p);
-	    } else {
-		    escstr = db_escape(conn, va_arg(ap, char *));
-		    i = strlen(escstr)+strlen(result)+1;
-		    s = (char*) realloc(s, i);
-		    snprintf(s, i, "%s%s", result, escstr);
-		    free(escstr);
-	    }
-	    free(result);
-	    result = (char*) strdup(s);
-    } 
-    va_end(ap);
-
-    // execute prepared query
-    query = db_query(conn, result);
-    // free temporary vars
-    free(s); free(result);
-    
-    return query;
-}
-
-/* executes a INSERT, UPDATE, DELETE queries */
-int db_exec(ConnHandle *conn, char *q)
-{
-    ResultHandle *res=NULL;
-    int result = 0;
-    char *stmt;
-    
-    if( !conn ) 
-    {
-	    syslog(LOG_ERR, "ERROR: [db_exec] Lost connection handle.");
-	    return 0; 
-    }
-    
-    stmt = strdup(q);
-    parse_query_stmt(&stmt);
-#ifdef DEBUG0
-    syslog(LOG_INFO, "DEBUG: [SQL] %s", stmt);
-#endif
-    res = PQexec(conn,stmt);
-    if( res==NULL || (PQresultStatus(res)!=PGRES_COMMAND_OK && PQresultStatus(res)!=PGRES_TUPLES_OK) )
-    {
-	syslog(LOG_ERR, "ERROR: [db_exec] Query failed. %s", PQerrorMessage(conn));
-	PQclear(res);
-	free(stmt);
-        return ERROR;
-    }
-    result = atoi(PQcmdTuples(res));
-    PQclear(res);
-    free(stmt);
-    return result;
-}
-
-/* Prepares and executes INSERT, UPDATE, DELETE queries */
-int db_pexec(ConnHandle *conn, char *q, ... ) 
-{
-    va_list ap;
-    int i, res;
-    char *p, *s, *result, *escstr;
-
-    result = strdup("");
+    result = (char*) strdup("");
     s = (char *) malloc (sizeof(char*));    
-
+    
     // find '?' and replace with arg value
     va_start(ap, q);
     for(p=q; *p; p++) {
@@ -292,7 +218,7 @@ int db_pexec(ConnHandle *conn, char *q, ... )
 		    s = (char*) realloc(s, i);
 	    	    snprintf(s, i,"%s%c", result, *p);
 	    } else {
-		    escstr = db_escape(conn, va_arg(ap, char*));
+        	    escstr = db_escape(c, va_arg(ap, char*));
 		    i = strlen(escstr)+strlen(result)+1;
 		    s = (char*) realloc(s, i);
 		    snprintf(s, i, "%s%s", result, escstr);
@@ -302,9 +228,73 @@ int db_pexec(ConnHandle *conn, char *q, ... )
 	    result = (char *) strdup(s);
     } 
     va_end(ap);
-
+    
     // execute prepared query
-    res = db_exec(conn, result);
+    query = db_query(c, result);
+    // free temporary vars
+    free(s); free(result);
+    
+    return query;
+}
+
+/* executes a INSERT, UPDATE, DELETE queries */
+int db_exec(ConnHandle *c, char *q)
+{
+    int result = 0;
+    char *stmt;
+
+    if( !c )
+    {
+	syslog(LOG_ERR, "ERROR: [db_exec] Lost connection handle.");
+	return 0;
+    }
+
+    stmt = strdup(q);
+    parse_query_stmt(&stmt);
+#ifdef DEBUG0
+    syslog(LOG_INFO, "DEBUG: [SQL] %s", stmt);
+#endif
+    if( mysql_query(&c->conn,stmt) != 0 ) {
+	syslog(LOG_CRIT, "ERROR: [db_exec] Query failed. %s", mysql_error(&c->conn));
+	free(stmt);
+	return ERROR;
+    }
+    result = mysql_affected_rows(&c->conn);
+    free(stmt);
+    return result;
+}
+
+/* Prepares and executes INSERT, UPDATE, DELETE queries */
+int db_pexec(ConnHandle *c, char *q, ... ) 
+{
+    va_list ap;
+    int i, res;
+    char *p, *s, *result, *escstr;
+
+    result = (char*) strdup("");
+    s = (char *) malloc (sizeof(char*));    
+    
+    // find '?' and replace with arg value
+    va_start(ap, q);
+    for(p=q; *p; p++) {
+	    if( *p != '?' ) {
+		    i = strlen(result)+2;
+		    s = (char*) realloc(s, i);
+	    	    snprintf(s, i,"%s%c", result, *p);
+	    } else {
+	    	    escstr = db_escape(c, va_arg(ap, char*));
+		    i = strlen(escstr)+strlen(result)+1;
+		    s = (char*) realloc(s, i);
+		    snprintf(s, i, "%s%s", result, escstr);
+		    free(escstr);
+	    }
+	    free(result);
+	    result = (char *) strdup(s);
+    } 
+    va_end(ap);
+    
+    // execute prepared query
+    res = db_exec(c, result);
     // free temporary vars
     free(s); free(result);
 
@@ -312,96 +302,83 @@ int db_pexec(ConnHandle *conn, char *q, ... )
 }
 
 /* Escapes a string for use within an SQL command */
-char * db_escape(ConnHandle *c, const char *str) 
+char *db_escape(ConnHandle *c, const char *str) 
 {
-    //c isn't used, but required by mysql version of db_escape()
     char *escstr = (char *) malloc(strlen(str)*2 + 1);
-    PQescapeString(escstr, str, strlen(str));
+    mysql_real_escape_string(&c->conn, escstr, str, strlen(str));
     return escstr;
 }
 
 /* Gets last insert id. Returns int. */
 int db_last_insert_id(ConnHandle *c, const char *str)
 {
-	int id = 0;
-	QueryHandle *res = db_pquery(c, "SELECT currval('?_id_seq') AS id", str);
+    int id = 0;
+    QueryHandle *res = db_query(c, "SELECT LAST_INSERT_ID() AS id");
 
-	if(db_nrows(res))
-                id = atoi(db_get_data(res, 0, "id"));
-	db_free(&res);
+    if(db_nrows(res))
+        id = atoi(db_get_data(res, 0, "id"));
+    db_free(&res);
 
-	return id;
+    return id;
 }
 
 /* Starts transaction */
-int db_begin(ConnHandle *conn)
+int db_begin(ConnHandle *c)
 {
-    ResultHandle *res;
-    
-    if( !conn )
+    if( !c )
     {
-	    syslog(LOG_ERR, "ERROR: [db_begin] Lost connection handle.");
-	    return ERROR;
+	syslog(LOG_ERR, "ERROR: [db_begin] Lost connection handle.");
+	return ERROR;
+    }
+#ifdef DEBUG0
+    syslog(LOG_INFO, "DEBUG: [SQL] BEGIN");
+#endif
+    if (mysql_autocommit(&c->conn, 0))
+    {
+	syslog(LOG_CRIT, "ERROR: [db_begin] Error. %s", mysql_error(&c->conn));
+	return ERROR;
     }
     
-    res = PQexec(conn, "BEGIN WORK");
-#ifdef DEBUG0
-    syslog(LOG_INFO, "DEBUG: [SQL] BEGIN WORK");
-#endif
-    if( res==NULL || PQresultStatus(res)!=PGRES_COMMAND_OK ) {
-	syslog(LOG_ERR, "ERROR: [db_begin] Query failed. %s", PQerrorMessage(conn));
-	PQclear(res);
-        return ERROR;
-    }
-    PQclear(res);
     return OK;
 }
 
 /* Commits transaction */
-int db_commit(ConnHandle *conn)
+int db_commit(ConnHandle *c)
 {
-    ResultHandle *res;
-    
-    if( !conn )
+    if( !c )
     {
-	    syslog(LOG_ERR, "ERROR: [db_commit] Lost connection handle.");
-	    return ERROR;
+	syslog(LOG_ERR, "ERROR: [db_commit] Lost connection handle.");
+	return ERROR;
     }
-    
-    res = PQexec(conn, "COMMIT WORK");
 #ifdef DEBUG0
-    syslog(LOG_INFO, "DEBUG: [SQL] COMMIT WORK");
+    syslog(LOG_INFO, "DEBUG: [SQL] COMMIT");
 #endif
-    if( res==NULL || PQresultStatus(res)!=PGRES_COMMAND_OK ) {
-	syslog(LOG_ERR, "ERROR: [db_commit] Query failed. %s", PQerrorMessage(conn));
-	PQclear(res);
-        return ERROR;
+    if (mysql_commit(&c->conn))
+    {
+	syslog(LOG_CRIT, "ERROR: [db_commit] Error. %s", mysql_error(&c->conn));
+	return ERROR;
     }
-    PQclear(res);
+
     return OK;
 }
 
 /* Aborts (rollbacks) transaction */
-int db_abort(ConnHandle *conn)
+int db_abort(ConnHandle *c)
 {
-    ResultHandle *res;
-    
-    if( !conn )
+    if( !c )
     {
-	    syslog(LOG_ERR, "ERROR: [db_abort] Lost connection handle.");
-	    return ERROR;
+	syslog(LOG_ERR, "ERROR: [db_abort] Lost connection handle.");
+	return ERROR;
+    }
+#ifdef DEBUG0
+    syslog(LOG_INFO, "DEBUG: [SQL] ROLLBACK");
+#endif
+    if (mysql_rollback(&c->conn))
+    {
+	syslog(LOG_CRIT, "ERROR: [db_abort] Error. %s", mysql_error(&c->conn));
+	return ERROR;
     }
     
-    res = PQexec(conn, "ROLLBACK WORK");
-#ifdef DEBUG0
-    syslog(LOG_INFO, "DEBUG: [SQL] ROLLBACK WORK");
-#endif    
-    if( res==NULL || PQresultStatus(res)!=PGRES_COMMAND_OK ) {
-	syslog(LOG_ERR, "ERROR: [db_abort] Query failed. %s", PQerrorMessage(conn));
-	PQclear(res);
-        return ERROR;
-    }
-    PQclear(res);
     return OK;
 }
 
@@ -415,7 +392,7 @@ void db_free(QueryHandle **query)
     {
 	for(i=0; i<db_nrows(q); i++) 
 	{
-	    for (j=0; j<db_ncols(q); j++) 
+	    for (j=0; j<db_ncols(q); j++)
 		free(q->row[i].value[j].data);
 	    free(q->row[i].value);
 	}
@@ -436,27 +413,42 @@ char * db_get_data(QueryHandle *query, int row, const char *colname)
 {
     int i;
 
-    if( query ) 
+    if( query )
     {
 	for(i=0; i<db_ncols(query); i++)
-	    if( !strcmp(query->col[i].name, colname) )
+	    if( !strcmp(query->col[i].name,colname) )
 		break;
-
-	if( i >= db_ncols(query) ) 
+		
+	if( i>=db_ncols(query) ) 
 	{
-	    syslog(LOG_ERR, "ERROR: [db_get_data] Column '%s' not found", colname);
+	    syslog(LOG_CRIT, "ERROR: [db_get_data] Column '%s' not found.",colname);
 	    return "";
 	}
-
+    
 	if( row > db_nrows(query) || !db_nrows(query) ) 
 	{
-	    syslog(LOG_ERR, "ERROR: [db_get_data] Row '%d' not found", row);
+	    syslog(LOG_CRIT, "ERROR: [db_get_data] Row '%d' not found.", row);
 	    return "";
 	}
     
 	return query->row[row].value[i].data; 
     }
     return "";
+}
+
+/* fetch name of column given by number */
+char * db_colname(QueryHandle *query, int column) 
+{
+    if( !query )
+	    return "";
+    
+    if( column > db_ncols(query) || !db_ncols(query) ) 
+    {
+	    syslog(LOG_CRIT, "ERROR: [db_colname] Column '%d' not found.", column);
+	    return "";
+    }
+    
+    return query->col[column].name; 
 }
 
 // get number of rows
@@ -477,18 +469,20 @@ int db_ncols(QueryHandle *query)
 	    return 0;
 }
 
-
-/* fetch name of column given by number */
-char * db_colname(QueryHandle *query, int column) 
+/* concat strings specific to mysql */
+char * db_concat(int cnt, ...)
 {
-    if( !query )
-	    return "";
+    const char prefix[] = "CONCAT(";
+    const char suffix[] = ")";
+    va_list vs;
+    va_start(vs, cnt);
+    char * body = va_list_join(cnt, ", ", vs);
+    va_end(vs);
 
-    if( column > db_ncols(query) || !db_ncols(query) ) 
-    {
-	    syslog(LOG_CRIT, "ERROR: [db_colname] Column '%d' not found.", column);
-	    return "";
-    }
-    
-    return query->col[column].name; 
+    char * result = malloc(strlen(body) + strlen(prefix) + strlen(suffix));
+    sprintf(result, "%s%s%s", body, prefix, suffix);
+
+    free(body);
+    return result;
 }
+

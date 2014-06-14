@@ -109,6 +109,10 @@ $CONFIG['directories']['lib_dir'] = (!isset($CONFIG['directories']['lib_dir']) ?
 
 define('SYS_DIR', $CONFIG['directories']['sys_dir']);
 define('LIB_DIR', $CONFIG['directories']['lib_dir']);
+
+// Load autloader
+require_once(LIB_DIR.'/autoloader.php');
+
 // Do some checks and load config defaults
 
 require_once(LIB_DIR.'/config.php');
@@ -121,14 +125,19 @@ $_DBUSER = $CONFIG['database']['user'];
 $_DBPASS = $CONFIG['database']['password'];
 $_DBNAME = $CONFIG['database']['database'];
 
-require(LIB_DIR.'/LMSDB.php');
+$DB = null;
 
-$DB = DBInit($_DBTYPE, $_DBHOST, $_DBUSER, $_DBPASS, $_DBNAME);
+try {
 
-if(!$DB)
-{
-	// can't working without database
-	die("Fatal error: cannot connect to database!\n");
+    $DB = LMSDB::getDB($_DBTYPE, $_DBHOST, $_DBUSER, $_DBPASS, $_DBNAME);
+
+} catch (Exception $ex) {
+    
+    trigger_error($ex->getMessage(), E_USER_WARNING);
+    
+    // can't working without database
+    die("Fatal error: cannot connect to database!\n");
+    
 }
 
 // Read configuration from database
@@ -358,7 +367,7 @@ $query = "SELECT a.tariffid, a.liabilityid, a.customerid,
 		a.invoice, t.description AS description, a.id AS assignmentid, 
 		c.divisionid, c.paytype, a.paytype AS a_paytype, a.numberplanid, 
 		d.inv_paytype AS d_paytype, t.period AS t_period, 
-		(CASE a.liabilityid WHEN 0 THEN -1 ELSE t.type END) AS tarifftype, 
+		(CASE a.liabilityid WHEN 0 THEN t.type ELSE -1 END) AS tarifftype, 
 		(CASE a.liabilityid WHEN 0 THEN t.name ELSE l.name END) AS name, 
 		(CASE a.liabilityid WHEN 0 THEN t.taxid ELSE l.taxid END) AS taxid, 
 		(CASE a.liabilityid WHEN 0 THEN t.prodid ELSE l.prodid END) AS prodid, 
@@ -485,23 +494,24 @@ foreach($assigns as $assign)
 
 				$customer = $DB->GetRow("SELECT lastname, name, address, city, zip, ssn, ten, countryid, divisionid, paytime 
 						FROM customers WHERE id = $cid");
-				
-				$division = $DB->GetRow('SELECT name, address, city, zip, countryid, ten, regon,
+
+				$division = $DB->GetRow('SELECT name, shortname, address, city, zip, countryid, ten, regon,
 						account, inv_header, inv_footer, inv_author, inv_cplace 
 						FROM divisions WHERE id = ? ;',array($customer['divisionid']));
-				
+
 				$paytime = $customer['paytime'];
 				if ($paytime == -1) $paytime = $deadline;
 
 				$DB->Execute("INSERT INTO documents (number, numberplanid, type, countryid, divisionid, 
 					customerid, name, address, zip, city, ten, ssn, cdate, sdate, paytime, paytype,
-					div_name, div_address, div_city, div_zip, div_countryid, div_ten, div_regon,
+					div_name, div_shortname, div_address, div_city, div_zip, div_countryid, div_ten, div_regon,
 					div_account, div_inv_header, div_inv_footer, div_inv_author, div_inv_cplace) 
-					VALUES(?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+					VALUES(?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 					array($numbers[$plan], $plan, $customer['countryid'], $customer['divisionid'], $cid,
 					$customer['lastname']." ".$customer['name'], $customer['address'], $customer['zip'],
 					$customer['city'], $customer['ten'], $customer['ssn'], $currtime, $saledate, $paytime, $inv_paytype,
 					($division['name'] ? $division['name'] : ''),
+					($division['shortname'] ? $division['shortname'] : ''),
 					($division['address'] ? $division['address'] : ''), 
 					($division['city'] ? $division['city'] : ''), 
 					($division['zip'] ? $division['zip'] : ''),
@@ -663,7 +673,7 @@ if (!empty($assigns))
 	}
 
 // delete old assignments
-$DB->Execute("DELETE FROM Liabilities WHERE id IN ( 
+$DB->Execute("DELETE FROM liabilities WHERE id IN ( 
 	SELECT liabilityid FROM assignments 
 	WHERE dateto < ?NOW? - 86400 * 30 AND dateto <> 0 AND at < $today - 86400 * 30 
 		AND liabilityid != 0)");

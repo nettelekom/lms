@@ -24,12 +24,12 @@
  *  $Id$
  */
 
-function getMessageTemplate($tmplid, $elem) {
+function getMessageTemplate($tmplid, $subjectelem, $messageelem) {
 	global $DB;
 
 	$result = new xajaxResponse();
-	$message = $DB->GetOne('SELECT message FROM templates WHERE id = ?', array($tmplid));
-	$result->call('messageTemplateReceived', $elem, $message);
+	$row = $DB->GetRow('SELECT subject, message FROM templates WHERE id = ?', array($tmplid));
+	$result->call('messageTemplateReceived', $subjectelem, $row['subject'], $messageelem, $row['message']);
 
 	return $result;
 }
@@ -257,12 +257,12 @@ if(isset($_POST['message']))
 			case 2:
 				if (empty($msgtmplid))
 					break;
-				$LMS->UpdateMessageTemplate($msgtmplid, $msgtmpltype, null, $message['body']);
+				$LMS->UpdateMessageTemplate($msgtmplid, $msgtmpltype, null, $message['subject'], $message['body']);
 				break;
 			case 3:
 				if (!strlen($msgtmplname))
 					break;
-				$LMS->AddMessageTemplate($msgtmpltype, $msgtmplname, $message['body']);
+				$LMS->AddMessageTemplate($msgtmpltype, $msgtmplname, $message['subject'], $message['body']);
 				break;
 		}
 	}
@@ -429,7 +429,7 @@ if(isset($_POST['message']))
 							is_int($result) ? $result : MSG_ERROR,
 							is_int($result) ? null : $result,
 							$msgid,
-							$row['id'],
+							isset($row['id']) ? $row['id'] : 0,
 							$orig_destination,
 						));
 			}

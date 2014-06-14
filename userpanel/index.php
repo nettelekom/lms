@@ -69,6 +69,9 @@ $_LIB_DIR=LIB_DIR;
 
 // include required files
 
+// Load autloader
+require_once(LIB_DIR.'/autoloader.php');
+
 require_once(USERPANEL_LIB_DIR.'/checkdirs.php');
 require_once(LIB_DIR.'/config.php');
 
@@ -79,16 +82,22 @@ $_DBUSER = $CONFIG['database']['user'];
 $_DBPASS = $CONFIG['database']['password'];
 $_DBNAME = $CONFIG['database']['database'];
 
-require_once(LIB_DIR.'/LMSDB.php');
+$DB = null;
 
-$DB = DBInit($_DBTYPE, $_DBHOST, $_DBUSER, $_DBPASS, $_DBNAME);
+try {
 
-if (!$DB) die;
+    $DB = LMSDB::getDB($_DBTYPE, $_DBHOST, $_DBUSER, $_DBPASS, $_DBNAME);
+
+} catch (Exception $ex) {
+    
+    trigger_error($ex->getMessage(), E_USER_WARNING);
+    
+    // can't working without database
+    die("Fatal error: cannot connect to database!\n");
+    
+}
 
 // Initialize templates engine (must be before locale settings)
-
-require_once(LIB_DIR.'/Smarty/Smarty.class.php');
-
 $SMARTY = new Smarty;
 
 // test for proper version of Smarty
@@ -101,6 +110,9 @@ if (count($ver_chunks) != 2 || version_compare('3.0', $ver_chunks[1]) > 0)
 	die('<B>Wrong version of Smarty engine! We support only Smarty-3.x greater than 3.0.</B>');
 
 define('SMARTY_VERSION', $ver_chunks[1]);
+
+// add LMS's custom plugins directory
+$SMARTY->addPluginsDir(LIB_DIR.'/SmartyPlugins');
 
 // Read configuration of LMS-UI from database
 
@@ -126,7 +138,6 @@ require_once(LIB_DIR.'/language.php');
 include_once(LIB_DIR.'/definitions.php');
 require_once(LIB_DIR.'/unstrip.php');
 require_once(LIB_DIR.'/common.php');
-require_once(LIB_DIR.'/LMS.class.php');
 
 if($CONFIG['voip']['enabled'] == 1)
 {
@@ -179,17 +190,22 @@ while (false !== ($filename = readdir($dh))) {
 $SMARTY->assignByRef('LANGDEFS', $LANGDEFS);
 $SMARTY->assignByRef('_ui_language', $LMS->ui_lang);
 $SMARTY->assignByRef('_language', $LMS->lang);
-$SMARTY->setTemplateDir(USERPANEL_DIR . '/templates');
+$SMARTY->setTemplateDir(null);
+$style = $CONFIG['userpanel']['style'] ? $CONFIG['userpanel']['style'] : 'default';
+$SMARTY->addTemplateDir(array(
+	USERPANEL_DIR . '/style/' .  $style . '/templates',
+	USERPANEL_DIR . '/templates',
+));
 $SMARTY->setCompileDir(SMARTY_COMPILE_DIR);
 $SMARTY->debugging = check_conf('phpui.smarty_debug');
 require_once(USERPANEL_LIB_DIR.'/smarty_addons.php');
 
 $layout['upv'] = $USERPANEL->_version.' ('.$USERPANEL->_revision.'/'.$SESSION->_revision.')';
-$layout['lmsdbv'] = $DB->_version;
+$layout['lmsdbv'] = $DB->GetVersion();
 $layout['lmsv'] = $LMS->_version;
 $layout['smarty_version'] = SMARTY_VERSION;
 $layout['hostname'] = hostname();
-$layout['dberrors'] =& $DB->errors;
+$layout['dberrors'] =& $DB->GetErrors();
 
 $SMARTY->assignByRef('modules', $USERPANEL->MODULES);
 $SMARTY->assignByRef('layout', $layout);
