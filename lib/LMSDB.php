@@ -27,15 +27,40 @@
 /**
  * LMSDB
  * 
- * LMS database provider. Factory pattern.
+ * LMS database provider. Factory pattern. Singleton pattern.
  * 
  * @package LMS
  */
-class LMSDB {
-
+class LMSDB
+{
     const MYSQL = 'mysql';
     const MYSQLI = 'mysqli';
     const POSTGRESQL = 'postgres';
+
+    private static $db;
+    
+    /**
+     * Returns singleton database handler.
+     * 
+     * @return \LMSDBInterface
+     */
+    public static function getInstance()
+    {
+        if (self::$db === null) {
+            $_DBTYPE = LMSConfig::getIniConfig()->getSection('database')->getVariable('type')->getValue();
+            $_DBHOST = LMSConfig::getIniConfig()->getSection('database')->getVariable('host')->getValue();
+            $_DBUSER = LMSConfig::getIniConfig()->getSection('database')->getVariable('user')->getValue();
+            $_DBPASS = LMSConfig::getIniConfig()->getSection('database')->getVariable('password')->getValue();
+            $_DBNAME = LMSConfig::getIniConfig()->getSection('database')->getVariable('database')->getValue();
+            $_DBDEBUG = false;
+            if (LMSConfig::getIniConfig()->getSection('database')->hasVariable('debug')) {
+                $_DBDEBUG = ConfigHelper::checkValue(LMSConfig::getIniConfig()->getSection('database')->getVariable('debug')->getValue());
+            }
+            self::$db = self::getDB($_DBTYPE, $_DBHOST, $_DBUSER, $_DBPASS, $_DBNAME, $_DBDEBUG);
+        }
+        
+        return self::$db;
+    }
 
     /**
      * Returns databse object.
@@ -53,8 +78,8 @@ class LMSDB {
      * @return \LMSDBInterface
      * @throws Exception
      */
-    public static function getDB($dbtype, $dbhost, $dbuser, $dbpasswd, $dbname, $debug = false) {
-
+    public static function getDB($dbtype, $dbhost, $dbuser, $dbpasswd, $dbname, $debug = false)
+    {
         $dbtype = strtolower($dbtype);
 
         $db = null;
@@ -86,6 +111,35 @@ class LMSDB {
         $db->SetEncoding('UTF8');
 
         return $db;
+    }
+    
+    /**
+     * Destroys database handler and singleton instance.
+     * 
+     * Useful for unit tests.
+     * @return null Null database handler
+     */
+    public static function destroyInstance()
+    {
+        if (self::$db !== null) {
+            self::$db->Destroy();
+            self::$db = null;
+        }
+        return self::$db;
+    }
+    
+    /**
+     * Checks if database connection exists
+     * 
+     * @return boolean
+     */
+    public static function checkIfInstanceExists()
+    {
+        if (self::$db !== null) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
 }

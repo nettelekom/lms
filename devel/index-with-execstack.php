@@ -61,19 +61,13 @@ require_once(LIB_DIR.'/autoloader.php');
 require_once(LIB_DIR . '/checkdirs.php');
 require_once(LIB_DIR . '/config.php');
 
-// Init database 
-
-$_DBTYPE = $CONFIG['database']['type'];
-$_DBHOST = $CONFIG['database']['host'];
-$_DBUSER = $CONFIG['database']['user'];
-$_DBPASS = $CONFIG['database']['password'];
-$_DBNAME = $CONFIG['database']['database'];
+// Init database
 
 $DB = null;
 
 try {
 
-    $DB = LMSDB::getDB($_DBTYPE, $_DBHOST, $_DBUSER, $_DBPASS, $_DBNAME);
+    $DB = LMSDB::getInstance();
 
 } catch (Exception $ex) {
     
@@ -103,15 +97,8 @@ define('SMARTY_VERSION', $ver_chunks[1]);
 
 require_once(LIB_DIR . '/language.php');
 
-// Read configuration of LMS-UI from database
-
-if ($cfg = $DB->GetAll('SELECT section, var, value FROM uiconfig WHERE disabled=0'))
-	foreach ($cfg as $row)
-		$CONFIG[$row['section']][$row['var']] = $row['value'];
-
 // Redirect to SSL
-
-$_FORCE_SSL = (isset($CONFIG['phpui']['force_ssl']) ? chkconfig($CONFIG['phpui']['force_ssl']) : FALSE);
+$_FORCE_SSL = ConfigHelper::checkValue(ConfigHelper::getConfig('phpui.force_ssl', false));
 
 if ($_FORCE_SSL && $_SERVER['HTTPS'] != 'on') {
 	header('Location: https://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI']);

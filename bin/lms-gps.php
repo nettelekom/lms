@@ -118,17 +118,11 @@ require_once(LIB_DIR.'/config.php');
 
 // Init database
 
-$_DBTYPE = $CONFIG['database']['type'];
-$_DBHOST = $CONFIG['database']['host'];
-$_DBUSER = $CONFIG['database']['user'];
-$_DBPASS = $CONFIG['database']['password'];
-$_DBNAME = $CONFIG['database']['database'];
-
 $DB = null;
 
 try {
 
-    $DB = LMSDB::getDB($_DBTYPE, $_DBHOST, $_DBUSER, $_DBPASS, $_DBNAME);
+    $DB = LMSDB::getInstance();
 
 } catch (Exception $ex) {
     
@@ -139,12 +133,6 @@ try {
     
 }
 
-// Read configuration from database
-
-if($cfg = $DB->GetAll('SELECT section, var, value FROM uiconfig WHERE disabled=0'))
-        foreach($cfg as $row)
-                $CONFIG[$row['section']][$row['var']] = $row['value'];
-
 // Include required files (including sequence is important)
 
 require_once(LIB_DIR.'/language.php');
@@ -153,7 +141,7 @@ require_once(LIB_DIR.'/unstrip.php');
 require_once(LIB_DIR.'/common.php');
 require_once(LIB_DIR . '/SYSLOG.class.php');
 
-if (check_conf('phpui.logging') && class_exists('SYSLOG'))
+if (ConfigHelper::checkConfig('phpui.logging') && class_exists('SYSLOG'))
 	$SYSLOG = new SYSLOG($DB);
 else
 	$SYSLOG = null;
@@ -161,11 +149,11 @@ else
 // Initialize Session, Auth and LMS classes
 
 $AUTH = NULL;
-$LMS = new LMS($DB, $AUTH, $CONFIG, $SYSLOG);
+$LMS = new LMS($DB, $AUTH, $SYSLOG);
 $LMS->ui_lang = $_ui_language;
 $LMS->lang = $_language;
 
-$_APIKEY = $CONFIG['google']['apikey'];
+$_APIKEY = ConfigHelper::getConfig('google.apikey');
 if (!$_APIKEY) {
         echo "Unable to read apikey from configuration file.\n";
 }

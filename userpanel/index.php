@@ -43,6 +43,8 @@ elseif(is_readable('/etc/lms/lms-'.$_SERVER['HTTP_HOST'].'.ini'))
 elseif(!is_readable($CONFIG_FILE))
         die('Unable to read configuration file ['.$CONFIG_FILE.']!');
 
+define('CONFIG_FILE', $CONFIG_FILE);
+
 // Parse configuration file
 $CONFIG = (array) parse_ini_file($CONFIG_FILE, true);
 
@@ -76,17 +78,12 @@ require_once(USERPANEL_LIB_DIR.'/checkdirs.php');
 require_once(LIB_DIR.'/config.php');
 
 // Initialize database
-$_DBTYPE = $CONFIG['database']['type'];
-$_DBHOST = $CONFIG['database']['host'];
-$_DBUSER = $CONFIG['database']['user'];
-$_DBPASS = $CONFIG['database']['password'];
-$_DBNAME = $CONFIG['database']['database'];
 
 $DB = null;
 
 try {
 
-    $DB = LMSDB::getDB($_DBTYPE, $_DBHOST, $_DBUSER, $_DBPASS, $_DBNAME);
+    $DB = LMSDB::getInstance();
 
 } catch (Exception $ex) {
     
@@ -114,15 +111,9 @@ define('SMARTY_VERSION', $ver_chunks[1]);
 // add LMS's custom plugins directory
 $SMARTY->addPluginsDir(LIB_DIR.'/SmartyPlugins');
 
-// Read configuration of LMS-UI from database
-
-if($cfg = $DB->GetAll('SELECT section, var, value FROM uiconfig WHERE disabled=0'))
-        foreach($cfg as $row)
-                $CONFIG[$row['section']][$row['var']] = $row['value'];
-
 // Redirect to SSL
 
-$_FORCE_SSL = check_conf('phpui.force_ssl');
+$_FORCE_SSL = ConfigHelper::checkConfig('phpui.force_ssl');
 
 if($_FORCE_SSL && $_SERVER['HTTPS'] != 'on')
 {
@@ -130,7 +121,7 @@ if($_FORCE_SSL && $_SERVER['HTTPS'] != 'on')
      exit(0);
 }
 
-$_TIMEOUT = $CONFIG['phpui']['timeout'];
+$_TIMEOUT = ConfigHelper::getConfig('phpui.timeout');
 
 // Include required files (including sequence is important)
 
@@ -146,7 +137,7 @@ if($CONFIG['voip']['enabled'] == 1)
 
 $AUTH = NULL;
 $SYSLOG = null;
-$LMS = new LMS($DB, $AUTH, $CONFIG, $SYSLOG);
+$LMS = new LMS($DB, $AUTH, $SYSLOG);
 
 require_once(USERPANEL_LIB_DIR.'/Session.class.php');
 require_once(USERPANEL_LIB_DIR.'/Userpanel.class.php');
@@ -155,9 +146,9 @@ require_once(USERPANEL_LIB_DIR.'/ULMS.class.php');
 
 unset($LMS); // reset LMS class to enable wrappers for LMS older versions
 
-$LMS = new ULMS($DB, $AUTH, $CONFIG, $SYSLOG);
+$LMS = new ULMS($DB, $AUTH, $SYSLOG);
 $SESSION = new Session($DB, $_TIMEOUT);
-$USERPANEL = new USERPANEL($DB, $SESSION, $CONFIG);
+$USERPANEL = new USERPANEL($DB, $SESSION);
 $LMS->ui_lang = $_ui_language;
 $LMS->lang = $_language;
 if($CONFIG['voip']['enabled'] == 1)
@@ -191,13 +182,13 @@ $SMARTY->assignByRef('LANGDEFS', $LANGDEFS);
 $SMARTY->assignByRef('_ui_language', $LMS->ui_lang);
 $SMARTY->assignByRef('_language', $LMS->lang);
 $SMARTY->setTemplateDir(null);
-$style = $CONFIG['userpanel']['style'] ? $CONFIG['userpanel']['style'] : 'default';
+$style = ConfigHelper::getConfig('userpanel.style', 'default');
 $SMARTY->addTemplateDir(array(
 	USERPANEL_DIR . '/style/' .  $style . '/templates',
 	USERPANEL_DIR . '/templates',
 ));
 $SMARTY->setCompileDir(SMARTY_COMPILE_DIR);
-$SMARTY->debugging = check_conf('phpui.smarty_debug');
+$SMARTY->debugging = ConfigHelper::checkConfig('phpui.smarty_debug');
 require_once(USERPANEL_LIB_DIR.'/smarty_addons.php');
 
 $layout['upv'] = $USERPANEL->_version.' ('.$USERPANEL->_revision.'/'.$SESSION->_revision.')';
@@ -222,7 +213,7 @@ if($SESSION->islogged)
 	$rights = $USERPANEL->GetCustomerRights($SESSION->id);
 	$SMARTY->assign('rights', $rights);
 
-	if(check_conf('userpanel.hide_nodes_modules'))
+	if(ConfigHelper::checkConfig('userpanel.hide_nodes_modules'))
 	{
 		if(!$DB->GetOne('SELECT COUNT(*) FROM nodes WHERE ownerid = ? LIMIT 1', array($SESSION->id)))
 		{

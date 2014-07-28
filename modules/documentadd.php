@@ -170,11 +170,14 @@ if (isset($_POST['document'])) {
 				account, inv_header, inv_footer, inv_author, inv_cplace 
 				FROM divisions WHERE id = ? ;',array($customer['divisionid']));
 
+		$fullnumber = docnumber($document['number'],
+			$DB->GetOne('SELECT template FROM numberplans WHERE id = ?', array($document['numberplanid'])),
+			$time);
 		$DB->Execute('INSERT INTO documents (type, number, numberplanid, cdate, 
 			customerid, userid, name, address, zip, city, ten, ssn, divisionid, 
 			div_name, div_shortname, div_address, div_city, div_zip, div_countryid, div_ten, div_regon,
-			div_account, div_inv_header, div_inv_footer, div_inv_author, div_inv_cplace, closed)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', array($document['type'],
+			div_account, div_inv_header, div_inv_footer, div_inv_author, div_inv_cplace, closed, fullnumber)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', array($document['type'],
 				$document['number'],
 				$document['numberplanid'],
 				$time,
@@ -200,7 +203,8 @@ if (isset($_POST['document'])) {
 				($division['inv_footer'] ? $division['inv_footer'] : ''), 
 				($division['inv_author'] ? $division['inv_author'] : ''), 
 				($division['inv_cplace'] ? $division['inv_cplace'] : ''),
-				isset($document['closed']) ? 1 : 0
+				isset($document['closed']) ? 1 : 0,
+				$fullnumber,
 		));
 
 		$docid = $DB->GetLastInsertID('documents');
@@ -274,7 +278,7 @@ $layout['pagetitle'] = trans('New Document');
 
 $SESSION->save('backto', $_SERVER['QUERY_STRING']);
 
-if (!isset($CONFIG['phpui']['big_networks']) || !chkconfig($CONFIG['phpui']['big_networks'])) {
+if (!ConfigHelper::checkValue(ConfigHelper::getConfig('phpui.big_networks', false))) {
 	$SMARTY->assign('customers', $LMS->GetCustomerNames());
 }
 

@@ -60,12 +60,16 @@ define('MSG_MAIL', 1);
 define('MSG_SMS', 2);
 define('MSG_ANYSMS', 3);
 define('MSG_WWW', 4);
+define('MSG_USERPANEL', 5);
+define('MSG_USERPANEL_URGENT', 6);
 
 // Template types
 define('TMPL_WARNING', 1);
 define('TMPL_MAIL', 2);
 define('TMPL_SMS', 3);
 define('TMPL_WWW', 4);
+define('TMPL_USERPANEL', 5);
+define('TMPL_USERPANEL_URGENT', 6);
 
 // Account types
 define('ACCOUNT_SHELL', 1);
@@ -174,12 +178,12 @@ define('TARIFF_TV', 5);
 define('TARIFF_OTHER', -1);
 
 $TARIFFTYPES = array(
-	TARIFF_INTERNET	=> isset($CONFIG['tarifftypes']['internet']) ? $CONFIG['tarifftypes']['internet'] : trans('internet'),
-	TARIFF_HOSTING	=> isset($CONFIG['tarifftypes']['hosting']) ? $CONFIG['tarifftypes']['hosting'] : trans('hosting'),
-	TARIFF_SERVICE	=> isset($CONFIG['tarifftypes']['service']) ? $CONFIG['tarifftypes']['service'] : trans('service'),
-	TARIFF_PHONE	=> isset($CONFIG['tarifftypes']['phone']) ? $CONFIG['tarifftypes']['phone'] : trans('phone'),
-	TARIFF_TV	=> isset($CONFIG['tarifftypes']['tv']) ? $CONFIG['tarifftypes']['tv'] : trans('tv'),
-	TARIFF_OTHER	=> isset($CONFIG['tarifftypes']['other']) ? $CONFIG['tarifftypes']['other'] : trans('other'),
+	TARIFF_INTERNET	=> ConfigHelper::getConfig('tarifftypes.internet', trans('internet')),
+	TARIFF_HOSTING	=> ConfigHelper::getConfig('tarifftypes.hosting', trans('hosting')),
+	TARIFF_SERVICE	=> ConfigHelper::getConfig('tarifftypes.service', trans('service')),
+	TARIFF_PHONE	=> ConfigHelper::getConfig('tarifftypes.phone', trans('phone')),
+	TARIFF_TV	=> ConfigHelper::getConfig('tarifftypes.tv', trans('tv')),
+	TARIFF_OTHER	=> ConfigHelper::getConfig('tarifftypes.other', trans('other')),
 );
 
 $PAYTYPES = array(

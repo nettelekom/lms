@@ -317,7 +317,7 @@
 		</TD>
 	</TR>
 	{/if}
-	{if !check_conf('privileges.hide_finances')}
+	{if !ConfigHelper::checkConfig('privileges.hide_finances')}
 	<TR>
 		<TD WIDTH="1%">
 			<IMG SRC="img/money.gif" ALT="">
@@ -370,7 +370,7 @@
 				<A HREF="?m=customeredit&id={$customerinfo.id}&action=recover">{trans("Restore")} <IMG SRC="img/recover.gif" ALT="[ {trans("Restore")} ]"></A>
 			{else}
 				<NOBR>
-				{if check_conf('voip.enabled', 0) eq 1}
+				{if ConfigHelper::checkConfig('voip.enabled')}
 				{if ! $isvoip and $smarty.get.m|truncate:2:"" neq 'v_'}
 					<A HREF="?m=v_export&id={$customerinfo.id}">Eksport do VOIP</A> <IMG src="img/phone.gif"></A> 
 				{else}

@@ -25,12 +25,12 @@
  */
 
 // REPLACE THIS WITH PATH TO YOU CONFIG FILE
-$CONFIG_FILE = (is_readable('lms.ini')) ? 'lms.ini' : '/etc/lms/lms.ini';
+define('CONFIG_FILE', 'lms.ini');
 
 ini_set('error_reporting', E_ALL&~E_NOTICE);
 
 // Parse configuration file
-$CONFIG = (array) parse_ini_file($CONFIG_FILE, true);
+$CONFIG = (array) parse_ini_file(CONFIG_FILE, true);
 
 // Check for configuration vars and set default values
 $CONFIG['directories']['sys_dir'] = (! $CONFIG['directories']['sys_dir'] ? getcwd() : $CONFIG['directories']['sys_dir']);
@@ -48,18 +48,13 @@ require_once(LIB_DIR.'/autoloader.php');
 
 require_once(LIB_DIR.'/config.php');
 
-// Init database 
-$_DBTYPE = $CONFIG['database']['type'];
-$_DBHOST = $CONFIG['database']['host'];
-$_DBUSER = $CONFIG['database']['user'];
-$_DBPASS = $CONFIG['database']['password'];
-$_DBNAME = $CONFIG['database']['database'];
+// Init database
 
 $DB = null;
 
 try {
 
-    $DB = LMSDB::getDB($_DBTYPE, $_DBHOST, $_DBUSER, $_DBPASS, $_DBNAME);
+    $DB = LMSDB::getInstance();
 
 } catch (Exception $ex) {
     
@@ -70,12 +65,6 @@ try {
     
 }
 
-// Read configuration of LMS-UI from database
-
-if($cfg = $DB->GetAll('SELECT section, var, value FROM uiconfig WHERE disabled=0'))
-	foreach($cfg as $row)
-		$CONFIG[$row['section']][$row['var']] = $row['value'];
-
 // Include required files (including sequence is important)
 
 require_once(LIB_DIR.'/language.php');
@@ -83,19 +72,19 @@ require_once(LIB_DIR.'/definitions.php');
 require_once(LIB_DIR.'/common.php');
 require_once(LIB_DIR.'/LMS.class.php');
 
-if(check_conf('voip.enabled'))
+if(ConfigHelper::checkConfig('voip.enabled'))
 	require_once(LIB_DIR.'/LMSVOIP.class.php');
 
 require_once(LIB_DIR . '/SYSLOG.class.php');
 
-if (check_conf('phpui.logging') && class_exists('SYSLOG'))
+if (ConfigHelper::checkConfig('phpui.logging') && class_exists('SYSLOG'))
 	$SYSLOG = new SYSLOG($DB);
 else
 	$SYSLOG = null;
 
 $AUTH = NULL;
 
-$LMS = new LMS($DB, $AUTH, $CONFIG, $SYSLOG);
+$LMS = new LMS($DB, $AUTH, $SYSLOG);
 $LMS->ui_lang = $_ui_language;
 $LMS->lang = $_language;
 

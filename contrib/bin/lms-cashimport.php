@@ -111,18 +111,12 @@ require_once(LIB_DIR.'/autoloader.php');
 require_once(LIB_DIR.'/config.php');
 
 // Init database
- 
-$_DBTYPE = $CONFIG['database']['type'];
-$_DBHOST = $CONFIG['database']['host'];
-$_DBUSER = $CONFIG['database']['user'];
-$_DBPASS = $CONFIG['database']['password'];
-$_DBNAME = $CONFIG['database']['database'];
 
 $DB = null;
 
 try {
 
-    $DB = LMSDB::getDB($_DBTYPE, $_DBHOST, $_DBUSER, $_DBPASS, $_DBNAME);
+    $DB = LMSDB::getInstance();
 
 } catch (Exception $ex) {
     
@@ -133,12 +127,6 @@ try {
     
 }
 
-// Read configuration from database
-
-if($cfg = $DB->GetAll('SELECT section, var, value FROM uiconfig WHERE disabled=0'))
-	foreach($cfg as $row)
-		$CONFIG[$row['section']][$row['var']] = $row['value'];
-
 // Include required files (including sequence is important)
 
 require_once(LIB_DIR.'/language.php');
@@ -147,7 +135,7 @@ require_once(LIB_DIR.'/unstrip.php');
 require_once(LIB_DIR.'/common.php');
 require_once(LIB_DIR . '/SYSLOG.class.php');
 
-if (check_conf('phpui.logging') && class_exists('SYSLOG'))
+if (ConfigHelper::checkConfig('phpui.logging') && class_exists('SYSLOG'))
 	$SYSLOG = new SYSLOG($DB);
 else
 	$SYSLOG = null;
@@ -155,17 +143,20 @@ else
 // Initialize Session, Auth and LMS classes
 
 $AUTH = NULL;
-$LMS = new LMS($DB, $AUTH, $CONFIG, $SYSLOG);
+$LMS = new LMS($DB, $AUTH, $SYSLOG);
 $LMS->ui_lang = $_ui_language;
 $LMS->lang = $_language;
 
-if (empty($CONFIG['cashimport']['server']) || empty($CONFIG['cashimport']['username']) || empty($CONFIG['cashimport']['password']))
+$server = ConfigHelper::getConfig('cashimport.server');
+$username = ConfigHelper::getConfig('cashimport.username');
+$password = ConfigHelper::getConfig('cashimport.password');
+if (empty($server) || empty($username) || empty($password))
 	die("Fatal error: mailbox credentials are not set!\n");
 
-@include(!empty($CONFIG['phpui']['import_config']) ? $CONFIG['phpui']['import_config'] : 'cashimportcfg.php');
+@include(ConfigHelper::getConfig('phpui.import_config', 'cashimportcfg.php'));
 
 function parse_file($filename, $contents) {
-	global $CONFIG, $DB, $quiet, $patterns;
+	global $DB, $quiet, $patterns;
 
 	if (!$quiet)
 		printf("Getting cash import file ".$filename." ... ");
@@ -364,7 +355,7 @@ function parse_file($filename, $contents) {
 
 function commit_cashimport()
 {
-	global $DB, $LMS, $CONFIG;
+	global $DB, $LMS;
 
 	$imports = $DB->GetAll('SELECT i.*, f.idate
 		FROM cashimport i
@@ -372,10 +363,9 @@ function commit_cashimport()
 		WHERE i.closed = 0 AND i.customerid <> 0');
 
 	if (!empty($imports)) {
-		$idate  = isset($CONFIG['finances']['cashimport_use_idate'])
-			&& chkconfig($CONFIG['finances']['cashimport_use_idate']);
-		$icheck = isset($CONFIG['finances']['cashimport_checkinvoices'])
-			&& chkconfig($CONFIG['finances']['cashimport_checkinvoices']);
+            
+		$idate  = ConfigHelper::checkValue(ConfigHelper::getConfig('finances.cashimport_use_idate', false));
+		$icheck = ConfigHelper::checkValue(ConfigHelper::getConfig('finances.cashimport_checkinvoices', false));
 
 		foreach ($imports as $import) {
 
@@ -436,11 +426,11 @@ function commit_cashimport()
 	}
 }
 
-$ih = @imap_open("{" . $CONFIG['cashimport']['server'] . "}INBOX", $CONFIG['cashimport']['username'], $CONFIG['cashimport']['password']);
+$ih = @imap_open("{" . ConfigHelper::getConfig('cashimport.server') . "}INBOX", ConfigHelper::getConfig('cashimport.username'), ConfigHelper::getConfig('cashimport.password'));
 if (!$ih)
 	die("Cannot connect to mail server!\n");
 
-$posts = imap_search($ih, chkconfig($CONFIG['cashimport']['use_seen_flag'], true) ? 'UNSEEN' : 'ALL');
+$posts = imap_search($ih, ConfigHelper::checkValue(ConfigHelper::getConfig('cashimport.use_seen_flag', true)) ? 'UNSEEN' : 'ALL');
 if (!empty($posts))
 	foreach ($posts as $postid) {
 		$post = imap_fetchstructure($ih, $postid);
@@ -453,10 +443,10 @@ if (!empty($posts))
 					$msg = imap_fetchbody($ih, $postid, $partid + 1);
 					if ($part->encoding == 3)
 						$msg = imap_base64($msg);
-					if (chkconfig($CONFIG['cashimport']['use_seen_flag'], true))
+					if (ConfigHelper::checkValue(ConfigHelper::getConfig('cashimport.use_seen_flag', true)))
 						imap_setflag_full($ih, $postid, "\\Seen");
 					parse_file($fname, $msg);
-					if (chkconfig($CONFIG['cashimport']['autocommit']))
+					if (ConfigHelper::checkValue(ConfigHelper::getConfig('cashimport.autocommit', false)))
 						commit_cashimport();
 				}
 		}
