@@ -49,14 +49,12 @@ define('CONFIG_FILE', $CONFIG_FILE);
 $CONFIG = (array) parse_ini_file($CONFIG_FILE, true);
 
 // Check for configuration vars and set default values
-if(empty($CONFIG['directories']['sys_dir']) || !file_exists($CONFIG['directories']['sys_dir']))
-	die('System directory is not set or not exists!');
-else
-	$CONFIG['directories']['sys_dir'] = $CONFIG['directories']['sys_dir'];
+$CONFIG['directories']['sys_dir'] = (!isset($CONFIG['directories']['sys_dir']) ? getcwd() : $CONFIG['directories']['sys_dir']);
 $CONFIG['directories']['lib_dir'] = (!isset($CONFIG['directories']['lib_dir']) ? $CONFIG['directories']['sys_dir'].'/lib' : $CONFIG['directories']['lib_dir']);
-$CONFIG['directories']['modules_dir'] = (!isset($CONFIG['directories']['modules_dir']) ? $CONFIG['directories']['sys_dir'].'/modules' : $CONFIG['directories']['modules_dir']);
 $CONFIG['directories']['userpanel_dir'] = (!isset($CONFIG['directories']['userpanel_dir']) ? getcwd() : $CONFIG['directories']['userpanel_dir']);
+$CONFIG['directories']['modules_dir'] = (!isset($CONFIG['directories']['modules_dir']) ? $CONFIG['directories']['userpanel_dir'].'/modules' : $CONFIG['directories']['modules_dir']);
 $CONFIG['directories']['smarty_compile_dir'] = $CONFIG['directories']['userpanel_dir'].'/templates_c';
+$CONFIG['directories']['plugins_dir'] = (!isset($CONFIG['directories']['plugins_dir']) ? $CONFIG['directories']['sys_dir'].'/plugins' : $CONFIG['directories']['plugins_dir']);
 
 define('USERPANEL_DIR', $CONFIG['directories']['userpanel_dir']);
 define('USERPANEL_LIB_DIR', USERPANEL_DIR.'/lib/');
@@ -67,6 +65,7 @@ define('LIB_DIR', $CONFIG['directories']['lib_dir']);
 define('DOC_DIR', $CONFIG['directories']['doc_dir']);
 define('MODULES_DIR', $CONFIG['directories']['modules_dir']);
 define('SMARTY_COMPILE_DIR', $CONFIG['directories']['smarty_compile_dir']);
+define('PLUGINS_DIR', $CONFIG['directories']['plugins_dir']);
 $_LIB_DIR=LIB_DIR;
 
 // include required files
@@ -103,7 +102,8 @@ if (constant('Smarty::SMARTY_VERSION'))
 	$ver_chunks = preg_split('/[- ]/', Smarty::SMARTY_VERSION);
 else
 	$ver_chunks = NULL;
-if (count($ver_chunks) != 2 || version_compare('3.0', $ver_chunks[1]) > 0)
+
+if (count($ver_chunks) < 2 || version_compare('3.1', $ver_chunks[1]) > 0)
 	die('<B>Wrong version of Smarty engine! We support only Smarty-3.x greater than 3.0.</B>');
 
 define('SMARTY_VERSION', $ver_chunks[1]);
@@ -174,6 +174,16 @@ while (false !== ($filename = readdir($dh))) {
         {
 	@include(USERPANEL_MODULES_DIR.$filename.'/locale/'.$_ui_language.'/strings.php');
 	include(USERPANEL_MODULES_DIR.$filename.'/configuration.php');
+<<<<<<< HEAD
+=======
+	if (is_dir(USERPANEL_MODULES_DIR.$filename.'/plugins/'))
+	{
+		$plugins = glob(USERPANEL_MODULES_DIR.$filename.'/plugins/*.php');
+		if (!empty($plugins))
+			foreach ($plugins as $plugin_name)
+				if(is_readable($plugin_name))
+					include($plugin_name);
+>>>>>>> upstream/master
 	}
     }
 };
@@ -217,10 +227,13 @@ if($SESSION->islogged)
 	{
 		if(!$DB->GetOne('SELECT COUNT(*) FROM nodes WHERE ownerid = ? LIMIT 1', array($SESSION->id)))
 		{
-			unset($USERPANEL->MODULES['messages']);
+			unset($USERPANEL->MODULES['notices']);
 			unset($USERPANEL->MODULES['stats']);
 		}
 	}
+
+	// Userpanel popup for urgent notice
+	$res = $LMS->ExecHook('userpanel_module_call_before', array('module' => $USERPANEL->MODULES['notices']));
 
 	if( file_exists(USERPANEL_MODULES_DIR.$module.'/functions.php')
 	    && isset($USERPANEL->MODULES[$module]) )

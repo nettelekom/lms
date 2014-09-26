@@ -215,6 +215,7 @@ AC_DEFUN([SETUP_MYSQL],
 ############################
 AC_DEFUN([LOCATE_SNMP],
 [
+    AC_MSG_CHECKING([for libsnmp])
     AC_ARG_WITH(snmp,
                 AC_HELP_STRING([--with-snmp=DIR], [SNMP include base directory [[/usr/(local/)include]]]),
     [
@@ -242,6 +243,9 @@ AC_DEFUN([LOCATE_SNMP],
         fi
         if test -z "$SNMP_INCDIR"; then
             AC_MSG_ERROR(Cannot find SNMP header files under $SNMP_DIR)
+        else
+            AC_MSG_RESULT(ok)
+            have_snmp=yes
         fi
     ],
     [
@@ -272,12 +276,12 @@ AC_DEFUN([LOCATE_SNMP],
             done
         fi
 
-        if test -z "$SNMP_LIBDIR"; then
-            AC_MSG_ERROR(Cannot find SNMP library files under $SNMP_DIR)
-        fi
-
         if test -z "$SNMP_INCDIR"; then
-            AC_MSG_ERROR(Cannot find SNMP headers.  Use --with-snmp= to specify non-default path.)
+            AC_MSG_RESULT(no)
+            have_snmp=no
+        else
+            AC_MSG_RESULT(yes)
+            have_snmp=yes
         fi
 
     ])
@@ -288,7 +292,9 @@ AC_DEFUN([LOCATE_SNMP],
 #####################################################
 AC_DEFUN([SETUP_SNMP],
 [
-    SNMP_LDFLAGS="-L$SNMP_LIBDIR"
+    if test -n "$SNMP_LIBDIR"; then
+        SNMP_LDFLAGS="-L$SNMP_LIBDIR $LDFLAGS"
+    fi
     SNMP_CFLAGS="-I$SNMP_INCDIR -I$SNMP_INCDIR/.."
 
     # Net/UCD-SNMP includes v3 support and insists on crypto unless compiled --without-openssl

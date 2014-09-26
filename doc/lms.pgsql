@@ -1142,6 +1142,7 @@ CREATE TABLE events (
 	note 		text 		DEFAULT '' NOT NULL,
 	date 		integer 	DEFAULT 0 NOT NULL,
 	begintime 	smallint 	DEFAULT 0 NOT NULL,
+	enddate 	integer 	DEFAULT 0 NOT NULL,
 	endtime 	smallint 	DEFAULT 0 NOT NULL,
 	userid 		integer 	DEFAULT 0 NOT NULL,
 	customerid 	integer 	DEFAULT 0 NOT NULL,
@@ -1659,8 +1660,10 @@ CREATE SEQUENCE managementurls_id_seq;
 DROP TABLE IF EXISTS managementurls;
 CREATE TABLE managementurls (
 	id integer		DEFAULT nextval('managementurls_id_seq'::text) NOT NULL,
-	netdevid integer	NOT NULL
+	netdevid integer	DEFAULT NULL
 		REFERENCES netdevices (id) ON DELETE CASCADE ON UPDATE CASCADE,
+	nodeid integer		DEFAULT NULL
+		REFERENCES nodes (id) ON DELETE CASCADE ON UPDATE CASCADE,
 	url text		DEFAULT '' NOT NULL,
 	comment varchar(100)	DEFAULT NULL,
 	PRIMARY KEY (id)
@@ -2048,6 +2051,7 @@ INSERT INTO uiconfig (section, var, value, description, disabled) VALUES
 ('userpanel', 'hide_nodesbox', '0', '', 0),
 ('userpanel', 'logout_url', '', '', 0),
 ('userpanel', 'owner_stats', '0', '', 0),
-('userpanel', 'default_categories', '1', '', 0);
+('userpanel', 'default_categories', '1', '', 0),
+('directories', 'userpanel_dir', 'userpanel', '', 0);
 
-INSERT INTO dbinfo (keytype, keyvalue) VALUES ('dbversion', '2014072500');
+INSERT INTO dbinfo (keytype, keyvalue) VALUES ('dbversion', '2014090600');

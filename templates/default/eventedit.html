@@ -1,4 +1,6 @@
-{include file="header.html"}
+{extends file="layout.html"}
+{block name=title}::: LMS :{$layout.pagetitle|striphtml} :::{/block}
+{block name=module_content}
 <!--// $Id$ //-->
 {include file="calendar_js.html"}
 <SCRIPT type="text/javascript">
@@ -48,13 +50,14 @@
 			<B>{trans("Time:")}</B>
 		</TD>
 		<TD width="98%">
-			<INPUT type="text" name="event[date]" value="{$event.date}" size="10" OnCLick="javascript:cal1.popup();" {tip text="Enter date in YYYY/MM/DD format (empty field means today) or click to choose it from calendar" trigger="date"}>
-			{trans("Begin:")} <SELECT name="event[begintime]" size="1" {tip text="Select time of"} OnChange="javascript:SetEndtime();">
+			{trans("Begin:")} <INPUT type="text" name="event[date]" value="{$event.date}" size="10" OnCLick="javascript:cal1.popup();" {tip text="Enter date in YYYY/MM/DD format (empty field means today) or click to choose it from calendar" trigger="date"}>
+			<SELECT name="event[begintime]" size="1" {tip text="Select time of"} OnChange="javascript:SetEndtime();">
 				{section name=time loop=$hours}
 				<OPTION value="{$hours[time]}" {if $hours[time] == $event.begintime}SELECTED{/if}>{math equation="floor(x/100)" x=$hours[time] format="%02d"}:{math equation="x % 100" x=$hours[time] format="%02d"}</OPTION>
 				{/section}
 			</SELECT>
-			{trans("End:")} <SELECT name="event[endtime]" size="1" {tip text="Select time of"} OnChange="javascript:CheckEndtime();">
+			{trans("End:")} <INPUT type="text" name="event[enddate]" value="{$event.enddate}" size="10" OnCLick="javascript:cal2.popup();" {tip text="Enter date in YYYY/MM/DD format (empty field means today) or click to choose it from calendar" trigger="enddate"}>
+			<SELECT name="event[endtime]" size="1" {tip text="Select time of"} OnChange="javascript:CheckEndtime();">
 				{section name=time loop=$hours}
 				<OPTION value="{$hours[time]}" {if $hours[time] == $event.endtime}SELECTED{/if}>{math equation="floor(x/100)" x=$hours[time] format="%02d"}:{math equation="x % 100" x=$hours[time] format="%02d"}</OPTION>
 				{/section}
@@ -111,22 +114,18 @@
 		</TD>
 	</TR>
 	<TR>
-		<TD width="1%" valign="top">
+		<TD width="1%" class="valign-top">
 			<IMG src="img/users.gif" alt="">
 		</TD>
-		<TD width="1%" valign="top">
+		<TD width="1%" class="valign-top">
 			<B>{trans("Users:")}</B>
 		</TD>
-		<TD width="98%" nowrap>
-			<SELECT name="event[user]" {tip text="Select user (optional)"}>
-				<OPTION value=""{if !$event.user} SELECTED{/if}>{trans("- select user -")}</OPTION>
-				{section name=userlist loop=$userlist}	
-				<OPTION value="{$userlist[userlist].id}"{if $event.user == $userlist[userlist].id} SELECTED{/if}>{$userlist[userlist].name}</OPTION>
-				{/section}
-			</SELECT><BR>
-			{foreach item=user from=$event.userlist}	
-				<NOBR><A href="?m=userinfo&id={$user.id}">{$user.name}</A>&nbsp;<A href="?m=eventedit&action=dropuser&eid={$event.id}&aid={$user.id}"><IMG src="img/delete.gif" ALT="[ {trans("Delete")} ]" OnClick="return confirm('{t a=$user.name}Are you sure, you want to drop user $a from that event?{/t}')"></A></NOBR><BR>
-			{/foreach}
+		<TD width="98%" class="nobr">
+			<SELECT size="{if $userlistsize > 5}5{else}{size of=$userlist}{/if}" name="event[userlist][]" {tip text="Select user(s) (optional)"} multiple>
+				{foreach $userlist as $user}
+				<OPTION value="{$user.id}"{if in_array($user.id, $event.userlist)} selected{/if}>{$user.name}</OPTION>
+				{/foreach}
+			</SELECT>
 		</TD>
 	</TR>
 	<TR>
@@ -147,7 +146,9 @@
 <!--
 var cal1 = new calendar(document.forms['event'].elements['event[date]']);
 cal1.time_comp = false;
+var cal2 = new calendar(document.forms['event'].elements['event[enddate]']);
+cal2.time_comp = false;
 document.forms['event'].elements['event[title]'].focus();
 //-->
 </SCRIPT>
-{include file="footer.html"}
+{/block}

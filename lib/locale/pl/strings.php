@@ -1289,7 +1289,7 @@ $_LANG['There are no devices in your database.'] = 'Nie ma żadnych urządzeń w
 $_LANG['The rest of group:'] = 'Reszta grupy:';
 $_LANG['This field must be greater than 8 and greater than download rate'] = 'To pole musi mieć wartość większą niż 8 i większą niż download';
 $_LANG['This field must be greater than 8 and greater than upload rate'] = 'To pole musi mieć wartość większą niż 8 i większą niż upload';
-$_LANG['This field must be within range 8 - 100000'] = 'To pole musi zawierać się w przedziale 8 - 100000';
+$_LANG['This field must be within range 8 - 500000'] = 'To pole musi zawierać się w przedziale 8 - 500000';
 $_LANG['This field must contain number greater than 8 and greater than download rate'] = 'To pole musi mieć wartość większą niż 8 i większą niż download';
 $_LANG['This field must contain number greater than 8 and greater than upload rate'] = 'To pole musi mieć wartość większą niż 8 i większą niż upload';
 $_LANG['This group hasn\'t got any members.'] = 'Ta grupa nie posiada żadnych członków.';
@@ -2568,7 +2568,7 @@ $_LANG['Remove lock'] = 'Usuń blokadę';
 $_LANG['Days:'] = 'Dni:';
 
 $_LANG['UKE report'] = 'Raport do UKE';
-$_LANG['Allows you to prepare SIIS v3 report for UKE'] = 'Wygenerowanie raportu SIIS w wersji 3 do UKE';
+$_LANG['Allows you to prepare SIIS v4 report for UKE'] = 'Wygenerowanie raportu SIIS w wersji 4 do UKE';
 
 $_LANG['Link speed:'] = 'Szybkość łącza:';
 $_LANG['Select link speed'] = 'Wybierz szybkość łącza';
@@ -2811,5 +2811,15 @@ $_LANG['Are you sure, you want to delete all liabilities?'] = 'Jesteś pewien, �
 
 $_LANG['Enter document number and press Enter'] = 'Wprowadź numer dokumentu i naciśnij Enter';
 $_LANG['Document id:'] = 'Id dokumentu:';
+
+$_LANG['prefix'] = 'prefiks';
+$_LANG['interface'] = 'interfejs';
+$_LANG['network'] = 'sieć';
+$_LANG['Addresses'] = 'Adresy';
+$_LANG['total'] = 'wszystkie';
+$_LANG['busy'] = 'zajęte';
+$_LANG['on-line'] = 'włączone';
+
+$_LANG['End time:'] = 'Czas zakończenia:';
 
 ?>

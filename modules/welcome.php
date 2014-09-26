@@ -60,6 +60,10 @@ if (!ConfigHelper::checkConfig('privileges.hide_summaries')) {
 	$SMARTY->assign('nodestats', $LMS->NodeStats());
 }
 
-$SMARTY->display('welcome.html');
+$template_file = 'welcome/welcome.html';
+
+$template_file = $LMS->executeHook('welcome_before_display', $template_file);
+
+$SMARTY->display($template_file);
 
 ?>

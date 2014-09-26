@@ -85,6 +85,7 @@ $SMARTY->assign('netdevices', $netdevices);
 $SMARTY->assign('nodegroups', $nodegroups);
 $SMARTY->assign('othernodegroups', $othernodegroups);
 $SMARTY->assign('nodeinfo', $nodeinfo);
+$SMARTY->assign('objectid', $nodeinfo['id']);
 $SMARTY->display('nodeinfo.html');
 
 ?>

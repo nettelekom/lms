@@ -1,8 +1,10 @@
-{include file="header.html"}
+{extends file="layout.html"}
+{block name=title}::: LMS :{$layout.pagetitle|striphtml} :::{/block}
+{block name=module_content}
 <!--// $Id$ //-->
 <H1>{$layout.pagetitle}</H1>
 {include file="calendar_js.html"}
-<FORM method="POST" action="?m=eventsearch" name="event">
+<FORM method="POST" action="?m=eventsearch" name="event" id="event">
 <INPUT type="submit" class="hiddenbtn">
 <TABLE class="lmsbox">
     <THEAD>
@@ -93,9 +95,9 @@
 			<B>{trans("User:")}</B>
 		</TD>
 		<TD width="98%" nowrap>
-			<SELECT name="event[userid]">
-				<OPTION value="" SELECTED>{trans("- select user -")}</OPTION>
-				{section name=userlist loop=$userlist}	
+			<SELECT name="event[userid][]" id="userid" multiple>
+				{*<OPTION value="">{trans("- select user -")}</OPTION>*}
+				{section name=userlist loop=$userlist}
 				<OPTION value="{$userlist[userlist].id}">{$userlist[userlist].name}</OPTION>
 				{/section}
 			</SELECT>
@@ -116,7 +118,8 @@ var cal1 = new calendar(document.forms['event'].elements['event[datefrom]']);
 cal1.time_comp = false;
 var cal2 = new calendar(document.forms['event'].elements['event[dateto]']);
 cal2.time_comp = false;
+multiselect('event', 'userid', '{trans("- select user -")}');
 document.forms['event'].elements['event[title]'].focus();
 //-->
 </SCRIPT>
-{include file="footer.html"}
+{/block}

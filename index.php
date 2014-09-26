@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2013 LMS Developers
+ *  (C) Copyright 2001-2014 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -25,7 +25,7 @@
  */
 
 // REPLACE THIS WITH PATH TO YOUR CONFIG FILE
-define('CONFIG_FILE', 'lms.ini');
+$CONFIG_FILE = '';
 
 // PLEASE DO NOT MODIFY ANYTHING BELOW THIS LINE UNLESS YOU KNOW
 // *EXACTLY* WHAT ARE YOU DOING!!!
@@ -34,6 +34,15 @@ define('CONFIG_FILE', 'lms.ini');
 define('START_TIME', microtime(true));
 define('LMS-UI', true);
 ini_set('error_reporting', E_ALL&~E_NOTICE);
+
+if(is_readable('/etc/lms/lms-'.$_SERVER['HTTP_HOST'].'.ini'))
+        $CONFIG_FILE = '/etc/lms/lms-'.$_SERVER['HTTP_HOST'].'.ini';
+elseif(is_readable('/etc/lms/lms.ini'))
+        $CONFIG_FILE = '/etc/lms/lms.ini';
+elseif (!is_readable($CONFIG_FILE))
+        die('Unable to read configuration file ['.$CONFIG_FILE.']!');
+
+define('CONFIG_FILE', $CONFIG_FILE);
 
 $CONFIG = (array) parse_ini_file(CONFIG_FILE, true);
 
@@ -46,6 +55,8 @@ $CONFIG['directories']['backup_dir'] = (!isset($CONFIG['directories']['backup_di
 $CONFIG['directories']['config_templates_dir'] = (!isset($CONFIG['directories']['config_templates_dir']) ? $CONFIG['directories']['sys_dir'].'/config_templates' : $CONFIG['directories']['config_templates_dir']);
 $CONFIG['directories']['smarty_compile_dir'] = (!isset($CONFIG['directories']['smarty_compile_dir']) ? $CONFIG['directories']['sys_dir'].'/templates_c' : $CONFIG['directories']['smarty_compile_dir']);
 $CONFIG['directories']['smarty_templates_dir'] = (!isset($CONFIG['directories']['smarty_templates_dir']) ? $CONFIG['directories']['sys_dir'].'/templates' : $CONFIG['directories']['smarty_templates_dir']);
+$CONFIG['directories']['plugins_dir'] = (!isset($CONFIG['directories']['plugins_dir']) ? $CONFIG['directories']['sys_dir'].'/plugins' : $CONFIG['directories']['plugins_dir']);
+$CONFIG['directories']['vendor_dir'] = (!isset($CONFIG['directories']['vendor_dir']) ? $CONFIG['directories']['sys_dir'].'/vendor' : $CONFIG['directories']['vendor_dir']);
 
 define('SYS_DIR', $CONFIG['directories']['sys_dir']);
 define('LIB_DIR', $CONFIG['directories']['lib_dir']);
@@ -54,6 +65,8 @@ define('BACKUP_DIR', $CONFIG['directories']['backup_dir']);
 define('MODULES_DIR', $CONFIG['directories']['modules_dir']);
 define('SMARTY_COMPILE_DIR', $CONFIG['directories']['smarty_compile_dir']);
 define('SMARTY_TEMPLATES_DIR', $CONFIG['directories']['smarty_templates_dir']);
+define('PLUGINS_DIR', $CONFIG['directories']['plugins_dir']);
+define('VENDOR_DIR', $CONFIG['directories']['vendor_dir']);
 
 // Load autloader
 require_once(LIB_DIR.'/autoloader.php');
@@ -149,6 +162,9 @@ if(ConfigHelper::checkConfig('voip.enabled'))
 	$voip = new LMSVOIP($DB, $CONFIG['voip']);
 	$layout['v_errors'] =& $voip->errors;
 }
+
+$plugin_manager = new LMSPluginManager();
+$LMS->setPluginManager($plugin_manager);
 
 // Initialize Swekey class
 
@@ -264,6 +280,7 @@ if ($AUTH->islogged) {
 		{
 			$layout['module'] = $module;
 			$LMS->InitUI();
+                        $LMS->executeHook($module.'_on_load');
 			include(MODULES_DIR.'/'.$module.'.php');
 		} else {
 			if ($SYSLOG)

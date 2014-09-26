@@ -1,4 +1,6 @@
-{include file="header.html"}
+{extends file="layout.html"}
+{block name=title}::: LMS :{$layout.pagetitle|striphtml} :::{/block}
+{block name=module_content}
 <!--// $Id$ //-->
 <script type="text/javascript" src="img/tinymce3/tiny_mce.js"> </script>
 <H1>{$layout.pagetitle}</H1>
@@ -12,6 +14,11 @@
 	<TR>
 		<TD WIDTH="100%">
 			{include file="nodesessions.html"}
+		</TD>
+	</TR>
+	<TR>
+		<TD WIDTH="100%">
+			{include file="managementurls.html"}
 		</TD>
 	</TR>
 	<TR>
@@ -70,4 +77,4 @@
 		</TD>
 	</TR>
 </TABLE>
-{include file="footer.html"}
+{/block}
