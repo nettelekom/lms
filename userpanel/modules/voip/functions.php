@@ -388,7 +388,7 @@ $taxes=$LMS->GetTaxes();
 $tax=0;
 if(is_array($taxes)) foreach($taxes as $val) if($val['id'] == $voip->config['taxid']) $tax=$val['value'];
 
-	$SMARTY->assign('err',$cost[1].'<br>Koszt: '.number_format(round($cost[0]*($tax/100)+$cost[0],2),2,'.','').' PLN za minutę połączenia');
+	$SMARTY->assign('err',$cost[1].'<br>Koszt: '.number_format(round($cost[0]*($tax/100)+$cost[0],2),2,'.','').' PLN brutto za minutę połączenia');
 }
 $SMARTY->assign('tonr',$to);
 }
