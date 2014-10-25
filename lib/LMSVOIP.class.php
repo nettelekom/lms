@@ -28,8 +28,7 @@ $this->mailboxdir = $config['mailboxdir'];
 $this->dialplan_file = $config['dialplan_file'];
 $this->incvoipdir = $config['incvoipdir'];
 $this->ivrdir = $config['ivrdir'];
-$this->wsdl = new SoapClient($config['wsdlurl'], array('login' => $config['wsdllogin'], 'password' => $config['wsdlpassword'], 'cache_wsdl' => WSDL_CACHE_NONE));
-$this->rategroups = $this->wsdl->makerategroups();
+$this->wsdl = new SoapClient($config['wsdlurl'], array('login' => $config['wsdllogin'], 'password' => $config['wsdlpassword'], 'cache_wsdl' => WSDL_CACHE_BOTH));
 if(!is_dir($this->mondir))
 	$this->errors = 'Katalog <B>'.dirname($this->mondir).'</B> nie jest zamontowany. Niektóre funkcjonalności mogą nie działać prawidłowo.';
 }
@@ -257,6 +256,8 @@ return $this->lmsdb->GetOne('SELECT id FROM taxes WHERE value = 23');
 function ImportInvoice($date)
 {
 global $LMS, $CONFIG;
+
+$this->rategroups = $this->wsdl->makerategroups();
 
 if(!$date)
 	$date = date('Y/m/d');

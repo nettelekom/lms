@@ -22,6 +22,7 @@ if($_GET['id'])
 	$SMARTY->assign('n', $rate[0]);
 }
 $SMARTY->assign('af', array('NIE', 'TAK'));
+$voip->rategroups = $voip->wsdl->makerategroups();
 $SMARTY->assign('rategroups', $voip->rategroups);
 $SMARTY->display('v_numbersadd.html');
 ?>

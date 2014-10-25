@@ -9,6 +9,7 @@ if($_POST['id'])
 }
 $SMARTY->assign('sip', $_GET['account']);
 $SMARTY->assign('alr', $voip->wsdl->GetAllowedRates($_GET['account']));
+$voip->rategroups = $voip->wsdl->makerategroups();
 $SMARTY->assign('alrs', $voip->rategroups);
 $SMARTY->assign('alrss', $voip->wsdl->rategroups_selected($_GET['account']));
 $SMARTY->display('v_allowedrates.html');

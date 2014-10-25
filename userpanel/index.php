@@ -173,18 +173,16 @@ while (false !== ($filename = readdir($dh))) {
         }
         else
         {
-	@include(USERPANEL_MODULES_DIR.$filename.'/locale/'.$_ui_language.'/strings.php');
-	include(USERPANEL_MODULES_DIR.$filename.'/configuration.php');
-<<<<<<< HEAD
-=======
-	if (is_dir(USERPANEL_MODULES_DIR.$filename.'/plugins/'))
-	{
-		$plugins = glob(USERPANEL_MODULES_DIR.$filename.'/plugins/*.php');
-		if (!empty($plugins))
-			foreach ($plugins as $plugin_name)
-				if(is_readable($plugin_name))
-					include($plugin_name);
->>>>>>> upstream/master
+		@include(USERPANEL_MODULES_DIR.$filename.'/locale/'.$_ui_language.'/strings.php');
+		include(USERPANEL_MODULES_DIR.$filename.'/configuration.php');
+		if (is_dir(USERPANEL_MODULES_DIR.$filename.'/plugins/'))
+		{
+			$plugins = glob(USERPANEL_MODULES_DIR.$filename.'/plugins/*.php');
+			if (!empty($plugins))
+				foreach ($plugins as $plugin_name)
+					if(is_readable($plugin_name))
+						include($plugin_name);
+		}
 	}
     }
 };

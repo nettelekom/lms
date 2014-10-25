@@ -85,6 +85,7 @@ unset($cdr['zysk']);
 $listdata['totalpos'] = sizeof($cdr);
 $SMARTY->assign('customers', $voip->wsdl->GetCustomerNames());
 $SMARTY->assign('listdata', $listdata);
+$voip->rategroups = $voip->wsdl->makerategroups();
 $SMARTY->assign('rategroups', $voip->rategroups);
 $SMARTY->assign('start', $start);
 $SMARTY->assign('cdr', $cdr);

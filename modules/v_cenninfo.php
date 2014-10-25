@@ -12,6 +12,7 @@ $out = array();
 foreach($cennlist as $val) if($val['id'] != $_GET['id']) $out[$val['id']] = $val['name'];
 foreach($trunks as $val) $out['t_' . $val['id']] = $val['name'];
 $SMARTY->assign('cennfrom', $out);
+$voip->rategroups = $voip->wsdl->makerategroups();
 $SMARTY->assign('rategr', $voip->rategroups);
 $cust = $voip->GetCustomersWithT($_GET['id']);
 $SMARTY->assign('tariff', $cust);

@@ -92,6 +92,7 @@ foreach($cdr as $key => $val)
 	}
 $listdata['cost_br'] = number_format(round($listdata['cost'] * ($tax/100) + $listdata['cost'], 2), 2, '.', '');
 $SMARTY->assign('listdata', $listdata);
+$voip->rategroups = $voip->wsdl->makerategroups();
 $SMARTY->assign('rategroups', $voip->rategroups);
 $SMARTY->assign('cdr', $cdr);
 $SMARTY->display('module:voip.html');

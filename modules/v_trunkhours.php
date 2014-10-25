@@ -7,6 +7,7 @@ if($_GET['id_rates'])
 }
 else
 {
+	$voip->rategroups = $voip->wsdl->makerategroups();
 	$layout['pagetitle'] = $voip->wsdl->GetTrunkgrpName($_GET['id']) . ' - ' . $voip->rategroups[$_GET['c']];
 	$hours = $voip->wsdl->GetTrunkHourDetails($_GET['id'], $_GET['c']);
 }

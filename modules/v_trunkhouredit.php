@@ -4,6 +4,7 @@ if($_GET['id_rates'])
 	$rate = $voip->wsdl->getratebyid($_GET['id_rates']);
 	$layout['pagetitle'] = $voip->wsdl->GetTrunkgrpName($_GET['id']) . ' - ' . $rate[0]['desc'] . ' - edytuj godziny';
 }
+$voip->rategroups = $voip->wsdl->makerategroups();
 $layout['pagetitle'] = $voip->wsdl->GetTrunkgrpName($_GET['id']) . ' - ' . $voip->rategroups[$_GET['c']] . ' - edytuj godziny';
 
 $ha = $_POST['hoursadd'];
