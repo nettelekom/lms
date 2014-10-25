@@ -25,22 +25,11 @@
  */
 
 /**
- * LMSManager
- *
+ * LMSEventManagerInterface
+ * 
  * @author Maciej Lew <maciej.lew.1987@gmail.com>
  */
-abstract class LMSManager
+interface LMSEventManagerInterface
 {
-    protected $db;
-    protected $auth;
-    protected $cache;
-    protected $syslog;
-
-    public function __construct(LMSDBInterface $db = null, Auth $auth = null, LMSCache $cache = null, SYSLOG $syslog = null)
-    {
-        $this->db = $db;
-        $this->auth = $auth;
-        $this->cache = $cache;
-        $this->syslog = $syslog;
-    }
+    public function EventSearch($search, $order = 'date,asc', $simple = false);
 }

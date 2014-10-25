@@ -25,22 +25,25 @@
  */
 
 /**
- * LMSManager
+ * LMSCashManager
  *
  * @author Maciej Lew <maciej.lew.1987@gmail.com>
  */
-abstract class LMSManager
+class LMSCashManager extends LMSManager implements LMSCashManagerInterface
 {
-    protected $db;
-    protected $auth;
-    protected $cache;
-    protected $syslog;
-
-    public function __construct(LMSDBInterface $db = null, Auth $auth = null, LMSCache $cache = null, SYSLOG $syslog = null)
+    /**
+     * Returns cash
+     * 
+     * @param int $id Cash id
+     * @return array Cash data
+     */
+    public function GetCashByID($id)
     {
-        $this->db = $db;
-        $this->auth = $auth;
-        $this->cache = $cache;
-        $this->syslog = $syslog;
+        return $this->db->GetRow(
+            'SELECT time, userid, value, taxid, customerid, comment 
+            FROM cash WHERE id=?', 
+            array($id)
+        );
     }
+
 }

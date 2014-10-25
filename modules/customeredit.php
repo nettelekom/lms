@@ -147,6 +147,16 @@ elseif (isset($_POST['customerdata']))
 	} else
 		$error['cutoffstop'] = trans('Incorrect date of cutoff suspending!');
 
+        $hook_data = $LMS->executeHook(
+            'customeredit_validation_before_submit', 
+            array(
+                'customerdata' => $customerdata,
+                'error' => $error
+            )
+        );
+        $customerdata = $hook_data['customerdata'];
+        $error = $hook_data['error'];
+        
 	if(!$error) {
 		$customerdata['cutoffstop'] = $cutoffstop;
 
@@ -164,6 +174,15 @@ elseif (isset($_POST['customerdata']))
 		$LMS->CustomerUpdate($customerdata);
 		if($customerdata['isvoip']) $voip->update_user($customerdata);
 
+                $hook_data = $LMS->executeHook(
+                    'customeredit_after_submit', 
+                    array(
+                        'customerdata' => $customerdata,
+                    )
+                );
+                $customeradd = $hook_data['customeradd'];
+                $id = $hook_data['id'];
+                
 		if ($SYSLOG) {
 			$imids = $DB->GetCol('SELECT id FROM imessengers WHERE customerid = ?', array($customerdata['id']));
 			if (!empty($imids))
@@ -273,6 +292,15 @@ $SESSION->save('backto', $_SERVER['QUERY_STRING']);
 $customerid = $customerinfo['id'];
 include(MODULES_DIR.'/customer.inc.php');
 include(MODULES_DIR.'/customer.voip.inc.php');
+
+$hook_data = $LMS->executeHook(
+    'customeredit_before_display', 
+    array(
+        'customerinfo' => $customerinfo,
+        'smarty' => $SMARTY
+    )
+);
+$customerinfo = $hook_data['customerinfo'];
 
 $SMARTY->assign('customerinfo',$customerinfo);
 $SMARTY->assign('cstateslist',$LMS->GetCountryStates());

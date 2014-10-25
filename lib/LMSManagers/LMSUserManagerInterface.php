@@ -3,7 +3,7 @@
 /*
  *  LMS version 1.11-git
  *
- *  Copyright (C) 2001-2013 LMS Developers
+ *  Copyright (C); 2001-2013 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -25,22 +25,33 @@
  */
 
 /**
- * LMSManager
- *
+ * LMSUserManagerInterface
+ * 
  * @author Maciej Lew <maciej.lew.1987@gmail.com>
  */
-abstract class LMSManager
+interface LMSUserManagerInterface
 {
-    protected $db;
-    protected $auth;
-    protected $cache;
-    protected $syslog;
+    public function setUserPassword($id, $passwd);
 
-    public function __construct(LMSDBInterface $db = null, Auth $auth = null, LMSCache $cache = null, SYSLOG $syslog = null)
-    {
-        $this->db = $db;
-        $this->auth = $auth;
-        $this->cache = $cache;
-        $this->syslog = $syslog;
-    }
+    public function getUserName($id = null);
+
+    public function getUserNames();
+
+    public function getUserList();
+
+    public function getUserIDByLogin($login);
+
+    public function userAdd($user);
+
+    public function userDelete($id);
+
+    public function userExists($id);
+
+    public function userAccess($id, $access);
+
+    public function getUserInfo($id);
+
+    public function userUpdate($user);
+
+    public function getUserRights($id);
 }

@@ -25,22 +25,17 @@
  */
 
 /**
- * LMSManager
- *
+ * LMSLocationManagerInterface
+ * 
  * @author Maciej Lew <maciej.lew.1987@gmail.com>
  */
-abstract class LMSManager
+interface LMSLocationManagerInterface
 {
-    protected $db;
-    protected $auth;
-    protected $cache;
-    protected $syslog;
+    public function UpdateCountryState($zip, $stateid);
 
-    public function __construct(LMSDBInterface $db = null, Auth $auth = null, LMSCache $cache = null, SYSLOG $syslog = null)
-    {
-        $this->db = $db;
-        $this->auth = $auth;
-        $this->cache = $cache;
-        $this->syslog = $syslog;
-    }
+    public function GetCountryStates();
+
+    public function GetCountries();
+
+    public function GetCountryName($id);
 }

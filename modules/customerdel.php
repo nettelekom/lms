@@ -41,7 +41,13 @@ if (!$LMS->CustomerExists($_GET['id']))
 		header("Location: ?".$SESSION->get('backto'));
 		$body = '<P>'.trans('Customer $a has been removed.',$LMS->GetCustomerName($_GET['id'])).'</P>';
 		$LMS->DeleteCustomer($_GET['id']);
+
 		if($voip->CustomerExists($_GET['id'])) $voip->DeleteCustomer($_GET['id']);
+
+                $LMS->executeHook(
+                    'customerdel_after_submit',
+                    array('id' => $_GET['id'])
+                );
 	}
 }
 

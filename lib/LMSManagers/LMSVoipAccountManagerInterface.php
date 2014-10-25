@@ -3,7 +3,7 @@
 /*
  *  LMS version 1.11-git
  *
- *  Copyright (C) 2001-2013 LMS Developers
+ *  Copyright (C); 2001-2013 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -25,22 +25,35 @@
  */
 
 /**
- * LMSManager
- *
+ * LMSVoipAccountManagerInterface
+ * 
  * @author Maciej Lew <maciej.lew.1987@gmail.com>
  */
-abstract class LMSManager
+interface LMSVoipAccountManagerInterface
 {
-    protected $db;
-    protected $auth;
-    protected $cache;
-    protected $syslog;
+    public function getVoipAccountList($order = 'login,asc', $search = null, $sqlskey = 'AND');
 
-    public function __construct(LMSDBInterface $db = null, Auth $auth = null, LMSCache $cache = null, SYSLOG $syslog = null)
-    {
-        $this->db = $db;
-        $this->auth = $auth;
-        $this->cache = $cache;
-        $this->syslog = $syslog;
-    }
+    public function voipAccountSet($id, $access = -1);
+
+    public function voipAccountSetU($id, $access = false);
+
+    public function voipAccountAdd($voipaccountdata);
+
+    public function voipAccountExists($id);
+
+    public function getVoipAccountOwner($id);
+
+    public function getVoipAccount($id);
+
+    public function getVoipAccountIDByLogin($login);
+
+    public function getVoipAccountIDByPhone($phone);
+
+    public function getVoipAccountLogin($id);
+
+    public function deleteVoipAccount($id);
+
+    public function voipAccountUpdate($voipaccountdata);
+
+    public function getCustomerVoipAccounts($id);
 }

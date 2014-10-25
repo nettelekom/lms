@@ -25,22 +25,23 @@
  */
 
 /**
- * LMSManager
- *
+ * LMSNodeGroupManagerInterface
+ * 
  * @author Maciej Lew <maciej.lew.1987@gmail.com>
  */
-abstract class LMSManager
+interface LMSNodeGroupManagerInterface
 {
-    protected $db;
-    protected $auth;
-    protected $cache;
-    protected $syslog;
+    public function GetNodeGroupNames();
 
-    public function __construct(LMSDBInterface $db = null, Auth $auth = null, LMSCache $cache = null, SYSLOG $syslog = null)
-    {
-        $this->db = $db;
-        $this->auth = $auth;
-        $this->cache = $cache;
-        $this->syslog = $syslog;
-    }
+    public function GetNodeGroupNamesByNode($nodeid);
+
+    public function GetNodeGroupNamesWithoutNode($nodeid);
+
+    public function GetNodesWithoutGroup($groupid, $network = NULL);
+
+    public function GetNodesWithGroup($groupid, $network = NULL);
+
+    public function GetNodeGroup($id, $network = NULL);
+
+    public function CompactNodeGroups();
 }

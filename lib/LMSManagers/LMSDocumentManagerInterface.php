@@ -25,22 +25,17 @@
  */
 
 /**
- * LMSManager
- *
+ * LMSDocumentManagerInterface
+ * 
  * @author Maciej Lew <maciej.lew.1987@gmail.com>
  */
-abstract class LMSManager
+interface LMSDocumentManagerInterface
 {
-    protected $db;
-    protected $auth;
-    protected $cache;
-    protected $syslog;
+    public function GetDocuments($customerid = NULL, $limit = NULL);
+    
+    public function GetNumberPlans($doctype = NULL, $cdate = NULL, $division = NULL, $next = true);
 
-    public function __construct(LMSDBInterface $db = null, Auth $auth = null, LMSCache $cache = null, SYSLOG $syslog = null)
-    {
-        $this->db = $db;
-        $this->auth = $auth;
-        $this->cache = $cache;
-        $this->syslog = $syslog;
-    }
+    public function GetNewDocumentNumber($doctype = NULL, $planid = NULL, $cdate = NULL);
+
+    public function DocumentExists($number, $doctype = NULL, $planid = 0, $cdate = NULL);
 }

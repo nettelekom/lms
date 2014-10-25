@@ -25,22 +25,15 @@
  */
 
 /**
- * LMSManager
- *
+ * LMSConfigManagerInterface
+ * 
  * @author Maciej Lew <maciej.lew.1987@gmail.com>
  */
-abstract class LMSManager
+interface LMSConfigManagerInterface
 {
-    protected $db;
-    protected $auth;
-    protected $cache;
-    protected $syslog;
-
-    public function __construct(LMSDBInterface $db = null, Auth $auth = null, LMSCache $cache = null, SYSLOG $syslog = null)
-    {
-        $this->db = $db;
-        $this->auth = $auth;
-        $this->cache = $cache;
-        $this->syslog = $syslog;
-    }
+    public function GetConfigSections();
+    
+    public function GetConfigOptionId($var, $section);
+    
+    public function CheckOption($var, $value);
 }

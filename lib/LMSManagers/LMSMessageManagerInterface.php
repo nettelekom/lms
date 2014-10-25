@@ -25,22 +25,17 @@
  */
 
 /**
- * LMSManager
- *
+ * LMSMessageManagerInterface
+ * 
  * @author Maciej Lew <maciej.lew.1987@gmail.com>
  */
-abstract class LMSManager
+interface LMSMessageManagerInterface
 {
-    protected $db;
-    protected $auth;
-    protected $cache;
-    protected $syslog;
-
-    public function __construct(LMSDBInterface $db = null, Auth $auth = null, LMSCache $cache = null, SYSLOG $syslog = null)
-    {
-        $this->db = $db;
-        $this->auth = $auth;
-        $this->cache = $cache;
-        $this->syslog = $syslog;
-    }
+    public function GetMessages($customerid, $limit = NULL);
+    
+    public function AddMessageTemplate($type, $name, $subject, $message);
+    
+    public function UpdateMessageTemplate($id, $type, $name, $subject, $message);
+    
+    public function GetMessageTemplates($type);
 }
