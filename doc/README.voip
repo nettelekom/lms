@@ -1,0 +1,12 @@
+2014-10-25:
+Istnieje możliwość wystawiania faktur voip w innym niż domyślny planie
+numeracyjnym oraz z inną nazwą pozycji na fakturze. Aby to osiągnąć, należy
+utworzyć nową taryfę (Finanse -> Nowa taryfa) jako typ ustawiając 'Telefon'.
+Inne brane pod uwagę parametry to nazwa oraz PTU. Wartość powinna być ustawiona
+na 0. Następnie należy dodać zobowiązanie do klienta, wybierając uprzednio
+stworzoną taryfę oraz żądany plan numeracyjny. Klientom bez dopisanego takiego
+zobowiązania faktury będą wystawiać się jak poprzednio. Ponadto istnieje
+możliwość globalnej zmiany nazwy pozycji na fakturze 'Usługi
+telekomunikacyjne', odpowiedni wpis można znaleźć w pliku sample/lms.ini.
+
+/* vim: set tw=79: */

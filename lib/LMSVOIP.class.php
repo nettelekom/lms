@@ -264,21 +264,17 @@ if(!$date)
 list($year, $month, $day) = explode('/',$date);	
 
 $alltaxes = $LMS->GetTaxes();
+$globaltax = 23;
+$globaltaxid = 1;
 foreach($alltaxes as $val) if($val['id'] == $this->config['taxid'])
 {
-	$tax = $val['value'];
-	$taxid = $val['id'];
+	$globaltax = $val['value'];
+	$globaltaxid = $val['id'];
 	$this->wsdl->UpdateTax($val['value']);
 	break;
 }
-if(!$tax)
-{
-	if($year >= 2011) $tax = 23;
-	else $tax = 22;
-}
-if(!$taxid) $taxid = 1;
 
-$tax = $tax / 100 + 1;
+$globaltax = $globaltax / 100 + 1;
 
 if (empty($CONFIG['payments']['deadline']))
 	$CONFIG['payments']['deadline'] = 7;
@@ -305,9 +301,25 @@ if(is_array($customers)) foreach($customers as $val)
 	$netto += $addserv['sum'];
 	if($netto == 0) continue;
 
+	$taxid = $globaltaxid;
+	$tax = $globaltax;
+	$invdesc = $this->config['invdesc'];
+	$numberplan = 0;
+
+	if($lmsassignment = $this->lmsdb->GetRow('SELECT t.name, t.taxid, a.numberplanid, ta.value FROM assignments a LEFT JOIN tariffs t ON a.tariffid = t.id LEFT JOIN taxes ta ON t.taxid = ta.id WHERE t.type = ? AND a.customerid = ?', array(TARIFF_PHONE, $val['lmsid'])))
+	{
+		$invdesc = $lmsassignment['name'];
+		$taxid = $lmsassignment['taxid'];
+		$numberplan = $lmsassignment['numberplanid'];
+		$tax = $lmsassignment['value'] / 100 + 1; 
+	}
+
 	$daybegin = mktime(0, 0, 0, $month, $day, $year);
 	$dayend = mktime(23, 59, 59, $month, $day, $year);
-	$docid = $this->lmsdb->GetOne('SELECT id FROM documents WHERE cdate >= ? AND cdate <= ? AND customerid = ? AND type = ?',array($daybegin, $dayend, $val['lmsid'], DOC_INVOICE));
+	if($numberplan)
+		$docid = $this->lmsdb->GetOne('SELECT id FROM documents WHERE cdate >= ? AND cdate <= ? AND customerid = ? AND type = ? AND numberplanid = ?',array($daybegin, $dayend, $val['lmsid'], DOC_INVOICE, $numberplan));
+	else
+		$docid = $this->lmsdb->GetOne('SELECT id FROM documents WHERE cdate >= ? AND cdate <= ? AND customerid = ? AND type = ?',array($daybegin, $dayend, $val['lmsid'], DOC_INVOICE));
 	if($docid)
 	{
 		$itemid = $this->lmsdb->getone('SELECT MAX(itemid) FROM invoicecontents WHERE docid = ?',array($docid));
@@ -315,7 +327,8 @@ if(is_array($customers)) foreach($customers as $val)
 	}
 	else
 	{
-		$numberplan = $this->lmsdb->GetOne('SELECT id FROM numberplans WHERE doctype = ? AND isdefault = 1', array(DOC_INVOICE));
+		if(!$numberplan)
+			$numberplan = $this->lmsdb->GetOne('SELECT id FROM numberplans WHERE doctype = ? AND isdefault = 1', array(DOC_INVOICE));
 		if(!$numberplan) $numberplan = 0;
 		$number = $LMS->GetNewDocumentNumber(DOC_INVOICE, $numberplan, $now);
 		$urow = $this->lmsdb->GetRow('SELECT lastname, name, address, city, zip, ssn, ten, divisionid, paytime, paytype FROM customers WHERE id = ?', array($val['lmsid']));
@@ -347,11 +360,11 @@ if(is_array($customers)) foreach($customers as $val)
 		$docid = $this->lmsdb->GetLastInsertID("documents");
 		$itemid = 1;
 	}
-	$this->lmsdb->Execute('INSERT INTO invoicecontents (docid, value, taxid, prodid, content, count, description, tariffid, itemid, pdiscount, vdiscount) VALUES (?, ?, ?, \'\', \'szt\', 1, ?, 0, ?, 0, 0)', array($docid, round($tax*$netto,2), $taxid, 'Usługi telekomunikacyjne', $itemid));
+	$this->lmsdb->Execute('INSERT INTO invoicecontents (docid, value, taxid, prodid, content, count, description, tariffid, itemid, pdiscount, vdiscount) VALUES (?, ?, ?, \'\', \'szt\', 1, ?, 0, ?, 0, 0)', array($docid, round($tax * $netto, 2), $taxid, $invdesc, $itemid));
 	
-	$this->lmsdb->Execute('INSERT INTO cash (time, value, taxid, customerid, comment, docid, itemid) VALUES (?, ?, ?, ?, ?, ?, ?)', array($now, round($tax * $netto, 2) * -1, $taxid, $val['lmsid'], 'Usługi telekomunikacyjne', $docid, $itemid));
+	$this->lmsdb->Execute('INSERT INTO cash (time, value, taxid, customerid, comment, docid, itemid) VALUES (?, ?, ?, ?, ?, ?, ?)', array($now, round($tax * $netto, 2) * -1, $taxid, $val['lmsid'], $invdesc, $docid, $itemid));
 	
-	echo "CID: {$val['lmsid']} VAL: " . round($tax * $netto, 2) . " DESC: Usługi telekomunikacyjne\n";
+	echo "CID: {$val['lmsid']} VAL: " . round($tax * $netto, 2) . " DESC: $invdesc\n";
 	
 	$cachedrates = array();
 	$konta = $this->wsdl->_ImportInvoice_konta($val['id']);

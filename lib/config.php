@@ -239,7 +239,8 @@ $DEFAULTS = array(
 		'wsdlurl' => 'https://soap.nettelekom.pl/voip.wsdl',
 		'wsdllogin' => '',
 		'wsdlpassword' => '',
-		'cdrperpage' => '20'
+		'cdrperpage' => '20',
+		'invdesc' => 'Usługi telekomunikacyjne'
 	),
 );
 
