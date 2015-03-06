@@ -180,7 +180,7 @@ if($items)
 			set_taxes($item['taxid']);
 
 			$refitemsum = $item['value'] * $item['count'];
-			$refitemval = round($refitemsum / ($taxes[$item['taxid']]['value']+100) * 100, 2);
+			$refitemval = $refitemsum / ($taxes[$item['taxid']]['value']+100) * 100;
 			$refitemtax = $refitemsum - $refitemval;
 
 			$invoicelist[$idx][$item['taxid']]['tax'] -= $refitemtax;
@@ -195,7 +195,7 @@ if($items)
 		}
 
 		$sum = $row['value'] * $row['count'];
-		$val = round($sum / ($taxes[$taxid]['value']+100) * 100, 2);
+		$val = $sum / ($taxes[$taxid]['value']+100) * 100;
 		$tax = $sum - $val;
 
 		$invoicelist[$idx][$taxid]['tax'] += $tax;
@@ -283,18 +283,18 @@ if(isset($_POST['extended']))
 	$SMARTY->assign('pagescount', sizeof($pages));
 	$SMARTY->assign('reccount', $reccount);
 	if (strtolower(ConfigHelper::getConfig('phpui.report_type')) == 'pdf') {
-		$output = $SMARTY->fetch('invoicereport-ext.html');
+		$output = $SMARTY->fetch('invoice/invoicereport-ext.html');
 		html2pdf($output, trans('Reports'), $layout['pagetitle'], NULL, NULL, 'L', array(5, 5, 5, 5), ($_GET['save'] == 1) ? true : false);
 	} else {
-		$SMARTY->display('invoicereport-ext.html');
+		$SMARTY->display('invoice/invoicereport-ext.html');
 	}
 }
 else {
 	if (strtolower(ConfigHelper::getConfig('phpui.report_type')) == 'pdf') {
-		$output = $SMARTY->fetch('invoicereport.html');
+		$output = $SMARTY->fetch('invoice/invoicereport.html');
 		html2pdf($output, trans('Reports'), $layout['pagetitle'], NULL, NULL, 'L', array(5, 5, 5, 5), ($_GET['save'] == 1) ? true : false);
 	} else {
-		$SMARTY->display('invoicereport.html');
+		$SMARTY->display('invoice/invoicereport.html');
 	}
 }
 

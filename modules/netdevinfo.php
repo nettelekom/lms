@@ -48,6 +48,30 @@ $layout['pagetitle'] = trans('Device Info: $a $b $c', $netdevinfo['name'], $netd
 
 $netdevinfo['id'] = $_GET['id'];
 
+if ($netdevinfo['netnodeid']) {
+	$netnode = $DB->GetRow("SELECT * FROM netnodes WHERE id=".$netdevinfo['netnodeid']);
+	if ($netnode) {
+		$netdevinfo['nodename'] = $netnode['name'];
+	}
+}
+
+$netdevinfo['projectname'] = trans('none');
+if ($netdevinfo['invprojectid']) {
+	$prj = $DB->GetRow("SELECT * FROM invprojects WHERE id = ?", array($netdevinfo['invprojectid']));
+	if ($prj) {
+		if ($prj['type'] == INV_PROJECT_SYSTEM && intval($prj['id'])==1) {
+			/* inherited */
+			if ($netnode) {
+				$prj = $DB->GetRow("SELECT * FROM invprojects WHERE id=?",
+					array($netnode['invprojectid']));
+				if ($prj)
+					$netdevinfo['projectname'] = trans('$a (from network node $b)', $prj['name'], $netnode['name']);
+			}
+		} else
+			$netdevinfo['projectname'] = $prj['name'];
+	}
+} 
+
 $SMARTY->assign('netdevinfo', $netdevinfo);
 $SMARTY->assign('objectid', $netdevinfo['id']);
 $SMARTY->assign('netdevlist', $netdevconnected);
@@ -68,8 +92,8 @@ include(MODULES_DIR . '/netdevxajax.inc.php');
 
 if (isset($_GET['ip'])) {
 	$SMARTY->assign('nodeipdata', $LMS->GetNode($_GET['ip']));
-	$SMARTY->display('netdevipinfo.html');
+	$SMARTY->display('netdev/netdevipinfo.html');
 } else {
-	$SMARTY->display('netdevinfo.html');
+	$SMARTY->display('netdev/netdevinfo.html');
 }
 ?>

@@ -46,7 +46,7 @@ class LMSFinanceManager extends LMSManager implements LMSFinanceManagerInterface
 
         if ($assignments = $this->db->GetAll('SELECT a.id AS id, a.tariffid,
 			a.customerid, a.period, a.at, a.suspended, a.invoice, a.settlement,
-			a.datefrom, a.dateto, a.pdiscount, a.vdiscount, a.liabilityid,
+			a.datefrom, a.dateto, a.pdiscount, a.vdiscount, a.attribute, a.liabilityid,
 			t.uprate, t.upceil, t.downceil, t.downrate,
 			(CASE WHEN t.value IS NULL THEN l.value ELSE t.value END) AS value,
 			(CASE WHEN t.name IS NULL THEN l.name ELSE t.name END) AS name
@@ -300,12 +300,13 @@ class LMSFinanceManager extends LMSManager implements LMSFinanceManagerInterface
                     'dateto' => $idx ? $dateto : 0,
                     'pdiscount' => 0,
                     'vdiscount' => 0,
+                    'attribute' => !empty($data['attribute']) ? $data['attribute'] : NULL,
                     $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_LIAB] => $lid,
                 );
 
                 $this->db->Execute('INSERT INTO assignments (tariffid, customerid, period, at, invoice,
-					    settlement, numberplanid, paytype, datefrom, dateto, pdiscount, vdiscount, liabilityid)
-					    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', array_values($args));
+					    settlement, numberplanid, paytype, datefrom, dateto, pdiscount, vdiscount, attribute, liabilityid)
+					    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', array_values($args));
 
                 $id = $this->db->GetLastInsertID('assignments');
 
@@ -346,12 +347,13 @@ class LMSFinanceManager extends LMSManager implements LMSFinanceManagerInterface
                         'dateto' => 0,
                         'pdiscount' => 0,
                         'vdiscount' => 0,
+                         'attribute' => !empty($data['attribute']) ? $data['attribute'] : NULL,
                         $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_LIAB] => 0,
                     );
 
                     $this->db->Execute('INSERT INTO assignments (tariffid, customerid, period, at, invoice,
-					    settlement, numberplanid, paytype, datefrom, dateto, pdiscount, vdiscount, liabilityid)
-					    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', array_values($args));
+					    settlement, numberplanid, paytype, datefrom, dateto, pdiscount, vdiscount, attribute, liabilityid)
+					    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', array_values($args));
 
                     $id = $this->db->GetLastInsertID('assignments');
 
@@ -402,11 +404,12 @@ class LMSFinanceManager extends LMSManager implements LMSFinanceManagerInterface
                 'dateto' => $data['dateto'],
                 'pdiscount' => str_replace(',', '.', $data['pdiscount']),
                 'vdiscount' => str_replace(',', '.', $data['vdiscount']),
+                 'attribute' => !empty($data['attribute']) ? $data['attribute'] : NULL,
                 $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_LIAB] => isset($lid) ? $lid : 0,
             );
             $this->db->Execute('INSERT INTO assignments (tariffid, customerid, period, at, invoice,
-					    settlement, numberplanid, paytype, datefrom, dateto, pdiscount, vdiscount, liabilityid)
-					    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', array_values($args));
+					    settlement, numberplanid, paytype, datefrom, dateto, pdiscount, vdiscount, attribute, liabilityid)
+					    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', array_values($args));
 
             $id = $this->db->GetLastInsertID('assignments');
 

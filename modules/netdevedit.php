@@ -575,6 +575,15 @@ if (isset($_POST['netdev'])) {
 		$error['purchasedate'] = trans('Purchase date cannot be empty when guarantee period is set!');
 	}
 
+	if ($netdevdata['invprojectid'] == '-1') { // nowy projekt
+		if (!strlen(trim($netdevdata['projectname']))) {
+		 $error['projectname'] = trans('Project name is required');
+		}
+		if ($DB->GetOne("SELECT id FROM invprojects WHERE name=? AND type<>?",
+			array($netdevdata['projectname'], INV_PROJECT_SYSTEM)))
+			$error['projectname'] = trans('Project with that name already exists');
+	}
+
 	if (!$error) {
 		if ($netdevdata['guaranteeperiod'] == -1)
 			$netdevdata['guaranteeperiod'] = NULL;
@@ -594,8 +603,48 @@ if (isset($_POST['netdev'])) {
 			$netdevdata['location_house'] = null;
 			$netdevdata['location_flat'] = null;
 		}
+		$ipi = $netdevdata['invprojectid'];
+		if ($ipi == '-1') {
+			$DB->BeginTrans();
+			$DB->Execute("INSERT INTO invprojects (name, type) VALUES (?, ?)",
+				array($netdevdata['projectname'], INV_PROJECT_REGULAR));
+			$ipi = $DB->GetLastInsertID('invprojects');
+			$DB->CommitTrans();
+		} 
+		if ($netdevdata['invprojectid'] == '-1' || intval($ipi)>0) {
+			$netdevdata['invprojectid'] = intval($ipi);
+		} else {
+			$netdevdata['invprojectid'] = NULL;
+		}
+		if ($netdevdata['netnodeid']=="-1") {
+			$netdevdata['netnodeid']=NULL;
+			$tmp = $DB->GetRow("SELECT netnodeid FROM netdevices WHERE id=?",array($netdevdata['id']));
+			if ($tmp && $tmp['netnodeid']) {
+				/* Był jakiś węzeł i został usunięty */
+				$netdevdata['location'] = '';
+				$netdevdata['location_city'] = null;
+				$netdevdata['location_street'] = null;
+				$netdevdata['location_house'] = null;
+				$netdevdata['location_flat'] = null;
+				$netdevdata['longitude'] = null;
+            			$netdevdata['latitude'] = null;
+			}
+		} else {
+			/* dziedziczenie lokalizacji */
+			$dev = $DB->GetRow("SELECT * FROM netnodes n WHERE id=?",array($netdevdata['netnodeid']));
+			if ($dev) {
+				$netdevdata['location'] = $dev['location'];
+				$netdevdata['location_city'] = $dev['location_city'];
+            			$netdevdata['location_street'] = $dev['location_street'];
+            			$netdevdata['location_house'] = $dev['location_house'];
+				$netdevdata['location_flat'] = $dev['location_flat'];
+				$netdevdata['longitude'] = $dev['longitude'];
+            			$netdevdata['latitude'] = $dev['latitude'];
+			}
+		}
 
 		$LMS->NetDevUpdate($netdevdata);
+		$LMS->CleanupInvprojects();
 		$SESSION->redirect('?m=netdevinfo&id=' . $_GET['id']);
 	}
 } else {
@@ -634,6 +683,13 @@ $layout['pagetitle'] = trans('Device Edit: $a ($b)', $netdevdata['name'], $netde
 if ($subtitle)
 	$layout['pagetitle'] .= ' - ' . $subtitle;
 
+$nprojects = $DB->GetAll("SELECT * FROM invprojects WHERE type<>? ORDER BY name",
+	array(INV_PROJECT_SYSTEM));
+$SMARTY->assign('NNprojects',$nprojects);
+$netnodes = $DB->GetAll("SELECT * FROM netnodes ORDER BY name");
+$SMARTY->assign('NNnodes',$netnodes);
+
+
 $SMARTY->assign('error', $error);
 $SMARTY->assign('netdevinfo', $netdevdata);
 $SMARTY->assign('objectid', $netdevdata['id']);
@@ -659,16 +715,16 @@ switch ($edit) {
 		if (ConfigHelper::checkValue(ConfigHelper::getConfig('phpui.ewx_support', false)))
 			$SMARTY->assign('channels', $DB->GetAll('SELECT id, name FROM ewx_channels ORDER BY name'));
 
-		$SMARTY->display('netdevedit.html');
+		$SMARTY->display('netdev/netdevedit.html');
 		break;
 	case 'ip':
-		$SMARTY->display('netdevipedit.html');
+		$SMARTY->display('netdev/netdevipedit.html');
 		break;
 	case 'addip':
-		$SMARTY->display('netdevipadd.html');
+		$SMARTY->display('netdev/netdevipadd.html');
 		break;
 	default:
-		$SMARTY->display('netdevinfo.html');
+		$SMARTY->display('netdev/netdevinfo.html');
 		break;
 }
 ?>

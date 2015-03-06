@@ -45,8 +45,11 @@ if(isset($_POST['voipaccountedit']))
 {
 	$voipaccountedit = $_POST['voipaccountedit'];
 	
-	foreach($voipaccountedit as $key => $value)
-		$voipaccountedit[$key] = trim($value);
+	foreach($voipaccountedit as $key => $value) {
+		if (!is_array($value)) {
+			$voipaccountedit[$key] = trim($value);
+		}
+	}
 	
 	if($voipaccountedit['login']=='')
 		$error['login'] = trans('Voip account login is required!');
@@ -83,7 +86,7 @@ if(isset($_POST['voipaccountedit']))
 		$error['passwd'] = trans('Voip account password is required!');
 	elseif(strlen($voipaccountedit['passwd']) > 32)
 		$error['passwd'] = trans('Voip account password is too long (max.32 characters)!');
-	elseif(!preg_match('/^[_a-z0-9-]+$/i', $voipaccountedit['passwd']))
+	elseif(!preg_match('/^[_a-z0-9-@]+$/i', $voipaccountedit['passwd']))
 		$error['passwd'] = trans('Specified password contains forbidden characters!');		
 
 	if($voipaccountedit['phone']=='')

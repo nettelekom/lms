@@ -79,7 +79,7 @@ elseif (isset($_POST['customerdata']))
 		$post_zipwarning = 1;
 	}
 
-	if($customerdata['email']!='' && !check_email($customerdata['email']))
+	if($customerdata['email']!='' && !check_emails($customerdata['email']))
 		$error['email'] = trans('Incorrect email!');
 
 	if($customerdata['pin'] == '')
@@ -307,6 +307,6 @@ $SMARTY->assign('cstateslist',$LMS->GetCountryStates());
 $SMARTY->assign('countrieslist',$LMS->GetCountries());
 $SMARTY->assign('divisions', $DB->GetAll('SELECT id, shortname, status FROM divisions ORDER BY shortname'));
 $SMARTY->assign('recover',($action == 'recover' ? 1 : 0));
-$SMARTY->display('customeredit.html');
+$SMARTY->display('customer/customeredit.html');
 
 ?>

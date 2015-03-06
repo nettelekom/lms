@@ -12,19 +12,19 @@ foreach($res as $val)
 {
 	$el = array();
 	$el['L.p.'] = $i++;
-	$el['Nazwa us≥ugi'] = iconv('UTF-8', 'ISO-8859-2//TRANSLIT', $val['name']);
+	$el['Nazwa us≈Çugi'] = $val['name'];
 	$el['Liczba jedn.'] = '1.00';
-	$el['Warto∂Ê netto'] = $val['value'];
+	$el['Warto≈õƒá netto'] = $val['value'];
 	$el['VAT'] = number_format(round($val['value'] * ($tax / 100), 2), 2, '.', '');
-	$el['Warto∂Ê brutto'] = number_format($val['value'] + $el['VAT'], 2, '.', '');
+	$el['Warto≈õƒá brutto'] = number_format($val['value'] + $el['VAT'], 2, '.', '');
 	$data[] = $el;
 	$suma += $val['value']; $poz++;
 }
 $el = array();
-$el['Nazwa us≥ugi'] = 'Razem';
-$el['Warto∂Ê netto'] = number_format($suma, 2, '.', '');
+$el['Nazwa us≈Çugi'] = 'Razem';
+$el['Warto≈õƒá netto'] = number_format($suma, 2, '.', '');
 $el['VAT'] = number_format(round($suma * ($tax / 100), 2), 2, '.', '');
-$el['Warto∂Ê brutto'] = number_format($suma + $el['VAT'], 2, '.', '');
+$el['Warto≈õƒá brutto'] = number_format($suma + $el['VAT'], 2, '.', '');
 $el['Liczba jedn.'] = number_format($poz, 2, '.', '');
 $data[] = array();
 $data[] = $el;
@@ -34,7 +34,7 @@ require_once(LIB_DIR . '/ezpdf.php');
 $pdf =& init_pdf('A4', 'portrait', trans('Invoices'));
 $inv = $LMS->GetInvoiceContent($docid);
 $numer = docnumber($inv['number'], $inv['template'], $inv['cdate']);
-$pdf->ezText("Za≥±cznik do faktury VAT\nNr $numer\n", 30, array('left' => 130));
+$pdf->ezText("Za≈ÇƒÖcznik do faktury VAT\nNr $numer\n", 30, array('left' => 130));
 $pdf->ezTable($data);
 if($_GET['is_sure'] == 1)
 {
@@ -63,8 +63,8 @@ if(is_array($data)) foreach($data as $val)
 	$el['Na numer'] = $val['dst'];
 	$el['Czas'] = $val['seconds'];
 	$el['Koszt'] = $val['tmp_cost'];
-	$el['Op≥ata'] = $val['cost'];
-	$el['Op≥ata brutto'] = number_format(round($val['cost'] * ($tax/100) + $val['cost'], 2), 2, '.', '');
+	$el['Op≈Çata'] = $val['cost'];
+	$el['Op≈Çata brutto'] = number_format(round($val['cost'] * ($tax/100) + $val['cost'], 2), 2, '.', '');
 	$out[] = $el;
 }
 return $out;

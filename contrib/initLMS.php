@@ -29,6 +29,8 @@ define('CONFIG_FILE', 'lms.ini');
 
 ini_set('error_reporting', E_ALL&~E_NOTICE);
 
+define('CONFIG_FILE', $CONFIG_FILE);
+
 // Parse configuration file
 $CONFIG = (array) parse_ini_file(CONFIG_FILE, true);
 
