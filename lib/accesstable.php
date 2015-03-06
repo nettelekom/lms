@@ -114,9 +114,6 @@ $access['table'][26]['privilege']	= 'hide_finances';
 $access['table'][27]['name']		= trans('reports');
 $access['table'][27]['privilege']	= 'reports';
 
-$access['table'][24]['name']		= 'VoiP';
-$access['table'][24]['allow_reg']	= '^(v_.*|customer(list|info))$';
-
 $access['table'][28]['name']		= trans('cash registry administration');
 $access['table'][28]['allow_reg']	= '^cashreg(add|edit|del)$';
 
@@ -129,6 +126,9 @@ $access['table'][30]['privilege']     = 'hide_voip_passwords';
 
 $access['table'][31]['name']		= trans('traffic stats compacting');
 $access['table'][31]['allow_reg']	= '^trafficdbcompact$';
+
+$access['table'][200]['name']		= 'VoiP';
+$access['table'][200]['allow_reg']	= '^(v_.*|customer(list|info))$';
 
 $access['table'][249]['name']		= trans('backup access forbidden');
 $access['table'][249]['deny_reg']	= '^db(del|list|new|recover|view)$';
