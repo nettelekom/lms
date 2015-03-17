@@ -306,7 +306,15 @@ if(is_array($customers)) foreach($customers as $val)
 	$invdesc = $this->config['invdesc'];
 	$numberplan = 0;
 
-	if($lmsassignment = $this->lmsdb->GetRow('SELECT t.name, t.taxid, a.numberplanid, ta.value FROM assignments a LEFT JOIN tariffs t ON a.tariffid = t.id LEFT JOIN taxes ta ON t.taxid = ta.id WHERE t.type = ? AND a.customerid = ?', array(TARIFF_PHONE, $val['lmsid'])))
+	if($lmsassignment = $this->lmsdb->GetRow('SELECT t.name, t.taxid, a.numberplanid, ta.value
+		FROM assignments a
+		LEFT JOIN tariffs t ON a.tariffid = t.id
+		LEFT JOIN taxes ta ON t.taxid = ta.id
+		WHERE t.type = ? AND a.customerid = ?
+		AND a.suspended = 0
+		AND (a.datefrom = 0 OR a.datefrom < ?)
+		AND (a.dateto = 0 OR a.dateto > ?)
+		AND a.at = ?', array(TARIFF_PHONE, $val['lmsid'], $now, $now, $day)))
 	{
 		$invdesc = $lmsassignment['name'];
 		$taxid = $lmsassignment['taxid'];
