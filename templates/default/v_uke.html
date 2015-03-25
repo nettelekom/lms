@@ -14,10 +14,10 @@
 	<TR><TD>Czas trwania połączeń krajowych na numery zagraniczne (minut):</TD><TD>{$res[1][2].minut|default:0}</TD></TR>
 	<TR><TD>SUMA (minut):</TD><TD>{$res[1][0].minut+$res[1][1].minut+$res[1][2].minut}</TD></TR>
 	<TR><TD colspan="2">&nbsp;</TD></TR>
-	<TR><TD>Przychody z połączeń krajowych na numery stacjonarne:</TD><TD>{$res[1][0].zysk|money_format}</TD></TR>
-	<TR><TD>Przychody z połączeń krajowych na numery komórkowe:</TD><TD>{$res[1][1].zysk|money_format}</TD></TR>
-	<TR><TD>Przychody z połączeń krajowych na numery zagraniczne:</TD><TD>{$res[1][2].zysk|money_format}</TD></TR>
-	<TR><TD>SUMA:</TD><TD>{$res[1][0].zysk+$res[1][1].zysk+$res[1][2].zysk|money_format}</TD></TR>
+	<TR><TD>Przychody z połączeń krajowych na numery stacjonarne:</TD><TD>{$res[1][0].koszt|money_format}</TD></TR>
+	<TR><TD>Przychody z połączeń krajowych na numery komórkowe:</TD><TD>{$res[1][1].koszt|money_format}</TD></TR>
+	<TR><TD>Przychody z połączeń krajowych na numery zagraniczne:</TD><TD>{$res[1][2].koszt|money_format}</TD></TR>
+	<TR><TD>SUMA:</TD><TD>{$res[1][0].koszt+$res[1][1].koszt+$res[1][2].koszt|money_format}</TD></TR>
 	</TABLE>
 {else}
 	<SPAN><FORM action="?m=v_uke" method="post">Wygeneruj dane za rok: <INPUT type="text" name="rok" size="4" maxlength="4"> <INPUT type="submit" value="Dalej"></FORM></SPAN>
