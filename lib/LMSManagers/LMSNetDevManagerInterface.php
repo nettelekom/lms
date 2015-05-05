@@ -33,13 +33,13 @@ interface LMSNetDevManagerInterface
 {
     public function GetNetDevLinkedNodes($id);
 
-    public function NetDevLinkNode($id, $devid, $type = 0, $technology = 0, $speed = 100000, $port = 0);
+    public function NetDevLinkNode($id, $devid, $link = NULL);
 
-    public function SetNetDevLinkType($dev1, $dev2, $type = 0, $technology = 0, $speed = 100000);
+    public function SetNetDevLinkType($dev1, $dev2, $link = NULL);
     
     public function IsNetDevLink($dev1, $dev2);
     
-    public function NetDevLink($dev1, $dev2, $type = 0, $technology = 0, $speed = 100000, $sport = 0, $dport = 0);
+    public function NetDevLink($dev1, $dev2, $link);
     
     public function NetDevUnLink($dev1, $dev2);
     

@@ -24,7 +24,7 @@
  *  $Id$
  */
 
-if (!ConfigHelper::checkConfig('privileges.reports'))
+if (!ConfigHelper::checkConfig('privileges.superuser') && !ConfigHelper::checkConfig('privileges.reports'))
 	access_denied();
 
 $type = isset($_GET['type']) ? $_GET['type'] : '';
@@ -33,7 +33,7 @@ switch($type)
 {
 	case 'customerbalance': /********************************************/
 
-		if (!ConfigHelper::checkConfig('privileges.finances_management'))
+		if (!ConfigHelper::checkConfig('privileges.superuser') && !ConfigHelper::checkConfig('privileges.finances_management'))
 			access_denied();
 
 		$from = $_POST['from'];
@@ -134,7 +134,7 @@ switch($type)
 	
 	case 'balancelist': /********************************************/
 
-		if (!ConfigHelper::checkConfig('privileges.finances_management'))
+		if (!ConfigHelper::checkConfig('privileges.superuser') && !ConfigHelper::checkConfig('privileges.finances_management'))
 			access_denied();
 
 		$from = $_POST['balancefrom'];
@@ -219,7 +219,7 @@ switch($type)
 					.($group ? 'LEFT JOIN customerassignments a ON (c.customerid = a.customerid)  ' : '')
 					.'WHERE time <= ? '
 					.($docs ? ($docs == 'documented' ? ' AND c.docid > 0' : ' AND c.docid = 0') : '')
-					.($source ? ' AND c.sourceid = '.intval($source) : '')
+					.($source ? ($source == -1 ? ' AND c.sourceid IS NULL' : ' AND c.sourceid = '.intval($source)) : '')
 					.(isset($date['from']) ? ' AND time >= '.$date['from'] : '')
 					.($group ? ' AND a.customergroupid = '.$group : '')
 					.($net ? ' AND EXISTS (SELECT 1 FROM nodes WHERE c.customerid = ownerid AND ((ipaddr > '.$net['address'].' AND ipaddr < '.$net['broadcast'].') OR (ipaddr_pub > '.$net['address'].' AND ipaddr_pub < '.$net['broadcast'].')))' : '')
@@ -305,7 +305,7 @@ switch($type)
 
 	case 'incomereport': /********************************************/
 
-		if (!ConfigHelper::checkConfig('privileges.finances_management'))
+		if (!ConfigHelper::checkConfig('privileges.superuser') && !ConfigHelper::checkConfig('privileges.finances_management'))
 			access_denied();
 
 		$from = $_POST['from'];
@@ -346,7 +346,7 @@ switch($type)
 
 	case 'importlist': /********************************************/
 
-		if (!ConfigHelper::checkConfig('privileges.finances_management'))
+		if (!ConfigHelper::checkConfig('privileges.superuser') && !ConfigHelper::checkConfig('privileges.finances_management'))
 			access_denied();
 
 		$from = $_POST['importfrom'];
@@ -393,7 +393,7 @@ switch($type)
 
 	case 'invoices': /********************************************/
 
-		if (!ConfigHelper::checkConfig('privileges.finances_management'))
+		if (!ConfigHelper::checkConfig('privileges.superuser') && !ConfigHelper::checkConfig('privileges.finances_management'))
 			access_denied();
 
 		$from = $_POST['invoicefrom'];
@@ -438,7 +438,7 @@ switch($type)
 
 	case 'transferforms': /********************************************/
 
-		if (!ConfigHelper::checkConfig('privileges.finances_management'))
+		if (!ConfigHelper::checkConfig('privileges.superuser') && !ConfigHelper::checkConfig('privileges.finances_management'))
 			access_denied();
 
 		$from = $_POST['invoicefrom'];
@@ -474,7 +474,7 @@ switch($type)
 
 	case 'transferforms2': /********************************************/
 
-		if (!ConfigHelper::checkConfig('privileges.finances_management'))
+		if (!ConfigHelper::checkConfig('privileges.superuser') && !ConfigHelper::checkConfig('privileges.finances_management'))
 			access_denied();
 
 		require_once(MODULES_DIR.'/transferforms2.php');
@@ -482,7 +482,7 @@ switch($type)
 
 	case 'liabilityreport': /********************************************/
 
-		if (!ConfigHelper::checkConfig('privileges.finances_management'))
+		if (!ConfigHelper::checkConfig('privileges.superuser') && !ConfigHelper::checkConfig('privileges.finances_management'))
 			access_denied();
 
 		if (isset($_POST['day']) && $_POST['day']) 
@@ -662,7 +662,7 @@ switch($type)
 	
 	case 'receiptlist':
 
-		if (!ConfigHelper::checkConfig('privileges.cash_operations'))
+		if (!ConfigHelper::checkConfig('privileges.superuser') && !ConfigHelper::checkConfig('privileges.cash_operations'))
 			access_denied();
 
 		if($_POST['from'])

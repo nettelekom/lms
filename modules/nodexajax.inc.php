@@ -162,16 +162,32 @@ function getNodeStats($nodeid) {
 	return $result;
 }
 
-function getManagementUrls($nodeid) {
+function validateManagementUrl($params, $update = false) {
+	global $DB;
+
+	$error = NULL;
+
+	if (!strlen($params['url']))
+		$error['url'] = trans('Management URL cannot be empty!');
+	elseif (strlen($params['url']) < 10)
+		$error['url'] = trans('Management URL is too short!');
+
+	return $error;
+}
+
+function getManagementUrls($formdata = NULL) {
 	global $SMARTY, $DB;
 
 	$result = new xajaxResponse();
 
-	$nodeid = intval($nodeid);
+	$nodeid = intval($_GET['id']);
 
 	$mgmurls = NULL;
 	$mgmurls = $DB->GetAll('SELECT id, url, comment FROM managementurls WHERE nodeid = ? ORDER BY id', array($nodeid));
 	$SMARTY->assign('mgmurls', $mgmurls);
+	if (isset($formdata['error']))
+		$SMARTY->assign('error', $formdata['error']);
+	$SMARTY->assign('formdata', $formdata);
 	$mgmurllist = $SMARTY->fetch('managementurl/managementurllist.html');
 
 	$result->assign('managementurltable', 'innerHTML', $mgmurllist);
@@ -179,49 +195,54 @@ function getManagementUrls($nodeid) {
 	return $result;
 }
 
-function addManagementUrl($nodeid, $params) {
+function addManagementUrl($params) {
 	global $DB, $SYSLOG, $SYSLOG_RESOURCE_KEYS;
 
 	$result = new xajaxResponse();
 
-	if (empty($params['url']))
-		return $result;
+	$error = validateManagementUrl($params);
 
-	$nodeid = intval($nodeid);
+	$params['error'] = $error;
 
-	if (!preg_match('/^[[:alnum:]]+:\/\/.+/i', $params['url']))
-		$params['url'] = 'http://' . $params['url'];
+	$nodeid = intval($_GET['id']);
 
-	$args = array(
-		$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NODE] => $nodeid,
-		'url' => $params['url'],
-		'comment' => $params['comment'],
-	);
-	$DB->Execute('INSERT INTO managementurls (nodeid, url, comment) VALUES (?, ?, ?)', array_values($args));
-	if ($SYSLOG) {
-		$args[$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_MGMTURL]] = $DB->GetLastInsertID('managementurls');
-		$SYSLOG->AddMessage(SYSLOG_RES_MGMTURL, SYSLOG_OPER_ADD, $args,
-			array($SYSLOG_RESOURCE_KEYS[SYSLOG_RES_MGMTURL], $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NODE]));
+	if (!$error) {
+		if (!preg_match('/^[[:alnum:]]+:\/\/.+/i', $params['url']))
+			$params['url'] = 'http://' . $params['url'];
+
+		$args = array(
+			$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NODE] => $nodeid,
+			'url' => $params['url'],
+			'comment' => $params['comment'],
+		);
+		$DB->Execute('INSERT INTO managementurls (nodeid, url, comment) VALUES (?, ?, ?)', array_values($args));
+		if ($SYSLOG) {
+			$args[$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_MGMTURL]] = $DB->GetLastInsertID('managementurls');
+			$SYSLOG->AddMessage(SYSLOG_RES_MGMTURL, SYSLOG_OPER_ADD, $args,
+				array($SYSLOG_RESOURCE_KEYS[SYSLOG_RES_MGMTURL], $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NODE]));
+		}
+		$params = NULL;
 	}
-	$result->call('xajax_getManagementUrls', $nodeid);
+
+	$result->call('xajax_getManagementUrls', $params);
 	$result->assign('managementurladdlink', 'disabled', false);
 
 	return $result;
 }
 
-function delManagementUrl($nodeid, $id) {
+function delManagementUrl($id) {
 	global $DB, $SYSLOG, $SYSLOG_RESOURCE_KEYS;
 
 	$result = new xajaxResponse();
 
-	$nodeid = intval($nodeid);
+	$nodeid = intval($_GET['id']);
 	$id = intval($id);
 
 	$res = $DB->Execute('DELETE FROM managementurls WHERE id = ?', array($id));
 	if ($res && $SYSLOG) {
 		$args = array(
 			$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_MGMTURL] => $id,
-			$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NODE] => $nodeid,
+			$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETDEV] => $nodeid,
 		);
 		$SYSLOG->AddMessage(SYSLOG_RES_MGMTURL, SYSLOG_OPER_DELETE, $args, array_keys($args));
 	}
@@ -231,9 +252,62 @@ function delManagementUrl($nodeid, $id) {
 	return $result;
 }
 
+function updateManagementUrl($urlid, $params) {
+	global $DB, $SYSLOG, $SYSLOG_RESOURCE_KEYS;
+
+	$result = new xajaxResponse();
+
+	$urlid = intval($urlid);
+	$nodeid = intval($_GET['id']);
+
+	$res = validateManagementUrl($params, true);
+
+	$error = array();
+	foreach ($res as $key => $val)
+		$error[$key . '_edit_' . $urlid] = $val;
+	$params['error'] = $error;
+
+	if (!$error) {
+		if (!preg_match('/^[[:alnum:]]+:\/\/.+/i', $params['url']))
+			$params['url'] = 'http://' . $params['url'];
+
+		$args = array(
+			'url' => $params['url'],
+			'comment' => $params['comment'],
+			$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_MGMTURL] => $urlid,
+		);
+		$DB->Execute('UPDATE managementurls SET url = ?, comment = ? WHERE id = ?', array_values($args));
+		if ($SYSLOG) {
+			$args[$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NODE]] = $nodeid;
+			$SYSLOG->AddMessage(SYSLOG_RES_MGMTURL, SYSLOG_OPER_UPDATE, $args,
+				array($SYSLOG_RESOURCE_KEYS[SYSLOG_RES_MGMTURL], $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NODE]));
+		}
+		$params = NULL;
+	}
+
+	$result->call('xajax_getManagementUrls', $params);
+	$result->assign('managementurltable', 'disabled', false);
+
+	return $result;
+}
+
+function getRadioSectors($netdev, $technology = 0) {
+	global $DB;
+
+	$result = new xajaxResponse();
+
+	$radiosectors = $DB->GetAll('SELECT * FROM netradiosectors WHERE netdev = ?'
+		. ($technology ? ' AND (technology = ' . intval($technology) . ' OR technology = 0)' : '')
+		. ' ORDER BY name', array($netdev));
+
+	$result->call('radio_sectors_received', $radiosectors);
+
+	return $result;
+}
+
 $LMS->InitXajax();
 $LMS->RegisterXajaxFunction(array('getNodeLocks', 'addNodeLock', 'delNodeLock', 'getThroughput', 'getNodeStats',
-	'getManagementUrls', 'addManagementUrl', 'delManagementUrl'));
+	'getManagementUrls', 'addManagementUrl', 'delManagementUrl', 'updateManagementUrl', 'getRadioSectors'));
 $SMARTY->assign('xajax', $LMS->RunXajax());
 
 ?>

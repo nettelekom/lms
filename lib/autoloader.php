@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2013 LMS Developers
+ *  (C) Copyright 2001-2015 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -26,7 +26,7 @@
 
 // set cache directory
 if (!defined('CACHE_DIR')) {
-    $CONFIG['directories']['cache_dir'] = (!isset($CONFIG['directories']['cache_dir']) ? $CONFIG['directories']['sys_dir'].'/cache' : $CONFIG['directories']['cache_dir']);
+    $CONFIG['directories']['cache_dir'] = (!isset($CONFIG['directories']['cache_dir']) ? $CONFIG['directories']['sys_dir'] . DIRECTORY_SEPARATOR . 'cache' : $CONFIG['directories']['cache_dir']);
     define('CACHE_DIR', $CONFIG['directories']['cache_dir']);
 }
 
@@ -60,7 +60,7 @@ if (!defined('CACHE_DIR')) {
  */
 function application_autoloader($class) {
 
-    $namespace = explode('\\', $class);
+    $namespace = explode("\\", $class);
     
     $class = $namespace[count($namespace) - 1];
     
@@ -75,21 +75,22 @@ function application_autoloader($class) {
         'Session' => 'Session.class.php',
         'Sysinfo' => 'Sysinfo.class.php',
         'TCPDFpl' => 'tcpdf.php',
-        'Smarty' => 'Smarty/Smarty.class.php',
-        'SmartyBC' => 'Smarty/SmartyBC.class.php',
-        'Cezpdf' => 'ezpdf/Cezpdf.php',
-        'Cpdf' => 'ezpdf/Cpdf.php',
-        'HTML2PDF' => 'html2pdf/html2pdf.class.php',
-        'TCPDF' => 'tcpdf/tcpdf.php'
+        'Smarty' => 'Smarty' . DIRECTORY_SEPARATOR . 'Smarty.class.php',
+        'SmartyBC' => 'Smarty' . DIRECTORY_SEPARATOR . 'SmartyBC.class.php',
+        'Cezpdf' => 'ezpdf' . DIRECTORY_SEPARATOR . 'Cezpdf.php',
+        'Cpdf' => 'ezpdf' . DIRECTORY_SEPARATOR . 'Cpdf.php',
+        'HTML2PDF' => 'html2pdf' . DIRECTORY_SEPARATOR . 'html2pdf.class.php',
+        'TCPDF' => 'tcpdf' . DIRECTORY_SEPARATOR . 'tcpdf.php'
     );
 
-    if (array_key_exists($class, $base_classes)) {
+    if (array_key_exists($class, $base_classes))
         require_once LIB_DIR . DIRECTORY_SEPARATOR . $base_classes[$class];
-    } else {
+    else {
         // set cache file path
-        $cache_file = CACHE_DIR . "/classpaths.cache";
+        $cache_file = CACHE_DIR . DIRECTORY_SEPARATOR . 'classpaths.cache';
         // read cache
-        $path_cache = (file_exists($cache_file)) ? unserialize(file_get_contents($cache_file)) : array();
+	$serialized_path_cache = (file_exists($cache_file) ? file_get_contents($cache_file) : '');
+        $path_cache = unserialize($serialized_path_cache);
         // create empty cache container if cache is empty
         if (!is_array($path_cache)) {
             $path_cache = array();
@@ -102,7 +103,7 @@ function application_autoloader($class) {
                 require_once $path_cache[$class];
             }
         } else {
-            // try to find class file in LIB_DIR, PLUGINS_DIR and VENDOR_DIR
+            // try to find class file in LIB_DIR, PLUGIN_DIR and VENDOR_DIR
             $suspicious_file_names = array(
                 $class . '.php',
                 $class . '.class.php',
@@ -111,7 +112,9 @@ function application_autoloader($class) {
                 strtoupper($class) . '.php',
                 strtoupper($class) . '.class.php',
             );
-            $search_paths = array(LIB_DIR, PLUGINS_DIR);
+            $search_paths = array(LIB_DIR);
+	    if (defined('PLUGINS_DIR'))
+		array_push($search_paths, PLUGINS_DIR);
             $file_found = false;
             foreach ($search_paths as $search_path) {
                 if ($file_found === true) {
@@ -119,6 +122,8 @@ function application_autoloader($class) {
                 }
                 $directories = new RecursiveDirectoryIterator($search_path);
                 foreach (new RecursiveIteratorIterator($directories) as $file) {
+                    if ($file->getPath() == LIB_DIR . DIRECTORY_SEPARATOR . 'plugins')
+                        continue;
                     if (in_array($file->getFilename(), $suspicious_file_names)) {
                         // get class file path
                         $full_path = $file->getRealPath();
@@ -135,9 +140,8 @@ function application_autoloader($class) {
         // serialize cache
         $serialized_paths = serialize($path_cache);
         // if cache changed save it
-        if ($serialized_paths != $path_cache) {
+        if ($serialized_paths != $serialized_path_cache)
             file_put_contents($cache_file, $serialized_paths);
-        }
     }
 }
 

@@ -266,8 +266,10 @@
 			<IMG src="img/empty.gif" width="16" alt=""> {trans("Created:")}
 		</TD>
 		<TD style="width: 99%;">
-			{trans("from")} <INPUT type="text" value="" name="search[createdfrom]" size="10" OnClick="javascript:cal1.popup();">
-			{trans("to")} <INPUT type="text" value="" name="search[createdto]" size="10" OnClick="javascript:cal2.popup();">
+			<div class="calendar">
+			{trans("from")} <INPUT type="text" value="" name="search[createdfrom]" size="10">
+			{trans("to")} <INPUT type="text" value="" name="search[createdto]" size="10">
+			</div>
 		</TD>
 	</TR>
 	<TR>
@@ -275,8 +277,10 @@
 			<IMG src="img/empty.gif" width="16" alt=""> {trans("Deleted:")}
 		</TD>
 		<TD style="width: 99%;">
-			{trans("from")} <INPUT type="text" value="" name="search[deletedfrom]" size="10" OnClick="javascript:cal3.popup();">
-			{trans("to")} <INPUT type="text" value="" name="search[deletedto]" size="10" OnClick="javascript:cal4.popup();">
+			<div class="calendar">
+			{trans("from")} <INPUT type="text" value="" name="search[deletedfrom]" size="10">
+			{trans("to")} <INPUT type="text" value="" name="search[deletedto]" size="10">
+			</div>
 		</TD>
 	</TR>
 	<TR>
@@ -378,14 +382,6 @@
 <SCRIPT type="text/javascript">
 <!--
 document.forms['customersearch'].elements['search[customername]'].focus();
-var cal1 = new calendar(document.customersearch.elements['search[createdfrom]']);
-cal1.time_comp = false;
-var cal2 = new calendar(document.customersearch.elements['search[createdto]']);
-cal2.time_comp = false;
-var cal3 = new calendar(document.customersearch.elements['search[deletedfrom]']);
-cal3.time_comp = false;
-var cal4 = new calendar(document.customersearch.elements['search[deletedto]']);
-cal4.time_comp = false;
 multiselect('customersearch', 'customertariffs', '{t}- all -{/t}', null);
 //-->
 </SCRIPT>

@@ -2,6 +2,22 @@ $Id$
 
 version ?.??.?? (????-??-??):
 
+  - added support for radio sectors management in user interface [chilan]
+  - fixed serious performance regression introduced by autoloader [chilan]
+  - added radio sector management for network device links [chilan]
+  - added license number and frequency for radio sectors [chilan]
+  - added link technology and bandwidth support for radio sectors [chilan]
+  - userpanel: we can enable/disable modules from lms user interface [chilan]
+  - added connection type (PPPoE, DHCP, EAP) in nodes [nicraM Marcin Romanowski]
+  - added network device selection from map [chilan]
+  - added connection type (DHCP, EAP) in network device nodes [nicraM Marcin Romanowski]
+  - move 'replace device" to popup for better netdevinfo/edit performance [maniac]
+  - added visualisation of radio sectors on network device map [chilan]
+  - added filter in network device list which allows to select device status
+    and investment project to which device belong to [chilan]
+
+version 1.11.16 (2015-03-31):
+
   - allow for separated template files in userpanel style [chilan]
   - print customer list from selected division is possible [chilan]
   - save also message subjects in message templates [chilan]
@@ -39,8 +55,20 @@ version ?.??.?? (????-??-??):
   - correction of typos on domain record list [darton]
   - correction of the table that displays a list of domain records [darton]
   - update top level domains list to newest version [darton]
-  - preparation for tariff liabilities composed of two elements [darton]
-  - prepare lmsd payments module for the tariff liabilities composed of two elements [darton]
+  - tariff liabilities composed of two elements [darton]
+  - added transaction log core modules [chilan]
+  - allow to use old-style and new-style plugins at the same time [chilan]
+  - added terminate cause in node sessions [chilan]
+  - network node list can be filtered by nodes without investment project [chilan]
+  - added network node column in network device list [chilan]
+  - show info about state, district and borough in netnode, netdev and node info boxes [chilan]
+  - full location info in netnode, netdev and node lists [chilan]
+  - lms-teryt: added option which allows to choose if city matches should be unique [chilan]
+  - added network device producers and models management [chilan]
+  - siisv5: new version of siis report generator which allows to save much time;
+    the old generator still works and can be selected by user [chilan]
+  - siisv5: create fake network ranges with the same location as network node
+    to avoid strange siis bussiness logic rules [chilan]
 
 version 1.11.15 (2014-05-15):
 

@@ -59,6 +59,8 @@ class LMSNodeManager extends LMSManager implements LMSNodeManagerInterface
             'chkmac' => $nodedata['chkmac'],
             'halfduplex' => $nodedata['halfduplex'],
             'linktype' => isset($nodedata['linktype']) ? intval($nodedata['linktype']) : 0,
+	    'linkradiosector' => (isset($nodedata['linktype']) && intval($nodedata['linktype']) == 1 ?
+		(isset($nodedata['radiosector']) && intval($nodedata['radiosector']) ? intval($nodedata['radiosector']) : null) : null),
             'linktechnology' => isset($nodedata['linktechnology']) ? intval($nodedata['linktechnology']) : 0,
             'linkspeed' => isset($nodedata['linkspeed']) ? intval($nodedata['linkspeed']) : 100000,
             'port' => isset($nodedata['port']) && $nodedata['netdev'] ? intval($nodedata['port']) : 0,
@@ -67,14 +69,15 @@ class LMSNodeManager extends LMSManager implements LMSNodeManagerInterface
             'latitude' => !empty($nodedata['latitude']) ? str_replace(',', '.', $nodedata['latitude']) : null,
             $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETWORK] => $nodedata['netid'],
             'invprojectid' => $nodedata['invprojectid'],
+	    'authtype' => $nodedata['authtype'] ? $nodedata['authtype'] : 0,
             $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NODE] => $nodedata['id']
         );
         $this->db->Execute('UPDATE nodes SET name=UPPER(?), ipaddr_pub=inet_aton(?),
 				ipaddr=inet_aton(?), passwd=?, netdev=?, moddate=?NOW?,
 				modid=?, access=?, warning=?, ownerid=?, info=?, location=?,
 				location_city=?, location_street=?, location_house=?, location_flat=?,
-				chkmac=?, halfduplex=?, linktype=?, linktechnology=?, linkspeed=?,
-				port=?, nas=?, longitude=?, latitude=?, netid=?, invprojectid=?
+				chkmac=?, halfduplex=?, linktype=?, linkradiosector=?, linktechnology=?, linkspeed=?,
+				port=?, nas=?, longitude=?, latitude=?, netid=?, invprojectid=?, authtype=?
 				WHERE id=?', array_values($args));
 
         if ($this->syslog) {
@@ -202,21 +205,33 @@ class LMSNodeManager extends LMSManager implements LMSNodeManagerInterface
     {
         return $this->db->GetOne('SELECT name FROM nodes WHERE ipaddr=inet_aton(?) OR ipaddr_pub=inet_aton(?)', array($ipaddr, $ipaddr));
     }
+    public function GetNodeConnType($id)
+    {
+        return $this->db->GetOne('SELECT authtype FROM nodes WHERE id=?', array($id));
+    }
 
     public function GetNode($id)
     {
-        if ($result = $this->db->GetRow('SELECT n.*,
+        if ($result = $this->db->GetRow('SELECT n.*, rs.name AS linkradiosectorname,
 		    inet_ntoa(n.ipaddr) AS ip, inet_ntoa(n.ipaddr_pub) AS ip_pub,
 		    lc.name AS city_name,
-				(CASE WHEN ls.name2 IS NOT NULL THEN ' . $this->db->Concat('ls.name2', "' '", 'ls.name') . ' ELSE ls.name END) AS street_name, lt.name AS street_type
+				(CASE WHEN ls.name2 IS NOT NULL THEN ' . $this->db->Concat('ls.name2', "' '", 'ls.name') . ' ELSE ls.name END) AS street_name,
+				lt.name AS street_type,
+			lb.name AS borough_name, lb.type AS borough_type,
+			ld.name AS district_name, lst.name AS state_name
 			FROM vnodes n
+			LEFT JOIN netradiosectors rs ON rs.id = n.linkradiosector
 			LEFT JOIN location_cities lc ON (lc.id = n.location_city)
 			LEFT JOIN location_streets ls ON (ls.id = n.location_street)
 			LEFT JOIN location_street_types lt ON (lt.id = ls.typeid)
+			LEFT JOIN location_boroughs lb ON (lb.id = lc.boroughid)
+			LEFT JOIN location_districts ld ON (ld.id = lb.districtid)
+			LEFT JOIN location_states lst ON (lst.id = ld.stateid)
 			WHERE n.id = ?', array($id))
         ) {
             $customer_manager = new LMSCustomerManager($this->db, $this->auth, $this->cache, $this->syslog);
             $user_manager = new LMSUserManager($this->db, $this->auth, $this->cache, $this->syslog);
+            $result['radiosectors'] = $this->db->GetAll('SELECT * FROM netradiosectors WHERE netdev = ?', array($result['netdev']));
             $result['owner'] = $customer_manager->GetCustomerName($result['ownerid']);
             $result['createdby'] = $user_manager->GetUserName($result['creatorid']);
             $result['modifiedby'] = $user_manager->GetUserName($result['modid']);
@@ -328,10 +343,16 @@ class LMSNodeManager extends LMSManager implements LMSNodeManagerInterface
         if ($nodelist = $this->db->GetAll('SELECT n.id AS id, n.ipaddr, inet_ntoa(n.ipaddr) AS ip, ipaddr_pub,
 				inet_ntoa(n.ipaddr_pub) AS ip_pub, n.mac, n.name, n.ownerid, n.access, n.warning,
 				n.netdev, n.lastonline, n.info, '
-                . $this->db->Concat('c.lastname', "' '", 'c.name') . ' AS owner, net.name AS netname, n.location
+				. $this->db->Concat('c.lastname', "' '", 'c.name') . ' AS owner, net.name AS netname, n.location,
+				lb.name AS borough_name, lb.type AS borough_type,
+				ld.name AS district_name, ls.name AS state_name
 				FROM vnodes n
 				JOIN customersview c ON (n.ownerid = c.id)
-				JOIN networks net ON net.id = n.netid '
+				JOIN networks net ON net.id = n.netid 
+				LEFT JOIN location_cities lc ON lc.id = n.location_city
+				LEFT JOIN location_boroughs lb ON lb.id = lc.boroughid
+				LEFT JOIN location_districts ld ON ld.id = lb.districtid
+				LEFT JOIN location_states ls ON ls.id = ld.stateid '
                 . ($customergroup ? 'JOIN customerassignments ON (customerid = c.id) ' : '')
                 . ($nodegroup ? 'JOIN nodegroupassignments ON (nodeid = n.id) ' : '')
                 . ' WHERE 1=1 '
@@ -544,6 +565,8 @@ class LMSNodeManager extends LMSManager implements LMSNodeManagerInterface
             'location_house' => $nodedata['location_house'] ? $nodedata['location_house'] : null,
             'location_flat' => $nodedata['location_flat'] ? $nodedata['location_flat'] : null,
             'linktype' => isset($nodedata['linktype']) ? intval($nodedata['linktype']) : 0,
+	    'linkradiosector' => (isset($nodedata['linktype']) && intval($nodedata['linktype']) == 1 ?
+		(isset($nodedata['radiosector']) && intval($nodedata['radiosector']) ? intval($nodedata['radiosector']) : null) : null),
             'linktechnology' => isset($nodedata['linktechnology']) ? intval($nodedata['linktechnology']) : 0,
             'linkspeed' => isset($nodedata['linkspeed']) ? intval($nodedata['linkspeed']) : 100000,
             'port' => isset($nodedata['port']) && $nodedata['netdev'] ? intval($nodedata['port']) : 0,
@@ -554,15 +577,16 @@ class LMSNodeManager extends LMSManager implements LMSNodeManagerInterface
             'latitude' => !empty($nodedata['latitude']) ? str_replace(',', '.', $nodedata['latitude']) : null,
             $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETWORK] => $nodedata['netid'],
             'invprojectid' => $nodedata['invprojectid'],
+	    'authtype' => $nodedata['authtype'],
         );
 
         if ($this->db->Execute('INSERT INTO nodes (name, ipaddr, ipaddr_pub, ownerid,
 			passwd, creatorid, creationdate, access, warning, info, netdev,
 			location, location_city, location_street, location_house, location_flat,
-			linktype, linktechnology, linkspeed, port, chkmac, halfduplex, nas,
-			longitude, latitude, netid, invprojectid)
+			linktype, linkradiosector, linktechnology, linkspeed, port, chkmac, halfduplex, nas,
+			longitude, latitude, netid, invprojectid, authtype)
 			VALUES (?, inet_aton(?), inet_aton(?), ?, ?, ?,
-			?NOW?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', array_values($args))) {
+			?NOW?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', array_values($args))) {
             $id = $this->db->GetLastInsertID('nodes');
 
             // EtherWerX support (devices have some limits)
@@ -634,11 +658,26 @@ class LMSNodeManager extends LMSManager implements LMSNodeManagerInterface
         return $result;
     }
     
-    public function SetNodeLinkType($node, $type = 0, $technology = 0, $speed = 100000)
+    public function SetNodeLinkType($node, $link = NULL)
     {
         global $SYSLOG_RESOURCE_KEYS;
 
-        $res = $this->db->Execute('UPDATE nodes SET linktype=?, linktechnology=?, linkspeed=? WHERE id=?', array($type, $technology, $speed, $node));
+	if (empty($link)) {
+		$type = 0;
+		$technology = 0;
+		$radiosector = NULL;
+		$speed = 100000;
+	} else {
+		$type = isset($link['type']) ? intval($link['type']) : 0;
+		$radiosector = isset($link['radiosector']) ? intval($link['radiosector']) : NULL;
+		if ($type != 1 || $radiosector == 0)
+			$radiosector = NULL;
+		$technology = isset($link['technology']) ? intval($link['technology']) : 0;
+		$speed = isset($link['speed']) ? intval($link['speed']) : 100000;
+	}
+
+        $res = $this->db->Execute('UPDATE nodes SET linktype=?, linkradiosector = ?, linktechnology=?, linkspeed=? WHERE id=?',
+        	array($type, $radiosector, $technology, $speed, $node));
         if ($this->syslog && $res) {
             $nodedata = $this->db->GetRow('SELECT ownerid, netdev FROM nodes WHERE id=?', array($node));
             $args = array(
@@ -646,6 +685,7 @@ class LMSNodeManager extends LMSManager implements LMSNodeManagerInterface
                 $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_CUST] => $nodedata['ownerid'],
                 $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETDEV] => $nodedata['netdev'],
                 'linktype' => $type,
+                'linkradiosector' => $radiosector,
                 'linktechnology' => $technology,
                 'linkspeed' => $speed,
             );

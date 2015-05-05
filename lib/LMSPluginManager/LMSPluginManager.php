@@ -46,11 +46,12 @@ class LMSPluginManager extends Subject implements SubjectInterface
     {
         $plugins_config = ConfigHelper::getConfig('phpui.plugins');
         if ($plugins_config) {
-            $plugins_tuples = explode(';', $plugins_config);
+            $plugins_tuples = preg_split('/[;,\s\t\n]+/', $plugins_config, -1, PREG_SPLIT_NO_EMPTY);
             foreach ($plugins_tuples as $position => $plugin_tuple) {
                 list($plugin_name, $plugin_priority) = explode(":", $plugin_tuple);
                 if (!class_exists($plugin_name)) {
-                    throw new Exception("Unknown plugin $plugin_name at position $position");
+                    writesyslog("Unknown plugin $plugin_name at position $position", LOG_ERR);
+                    continue;
                 }
                 $plugin = new $plugin_name();
                 if (!($plugin instanceof LMSPlugin)) {

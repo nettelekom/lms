@@ -96,12 +96,13 @@
 			<IMG SRC="img/netdev.gif" ALT="{trans("Net devices:")}">
 		</TD>
 		<TD style="width: 99%; white-space: nowrap;" COLSPAN="2">
-			<SELECT SIZE="1" NAME="nodeedit[netdev]" {tip text="Select net device from list" trigger="netdev"} style="max-width:250px;">
+			<SELECT SIZE="1" NAME="nodeedit[netdev]" id="netdev" {tip text="Select net device from list" trigger="netdev"} onchange="change_netdevice(this.options[this.selectedIndex].value);" style="max-width:250px;">
 				<OPTION VALUE="0" {if ! $nodeinfo.netdev}SELECTED{/if}>- {trans("no device")} -</OPTION>
 				{section name="netdev" loop=$netdevices}
 				<OPTION VALUE="{$netdevices[netdev].id}" {if $nodeinfo.netdev == $netdevices[netdev].id} SELECTED {/if}>{$netdevices[netdev].name} {if $netdevices[netdev].producer}/ {$netdevices[netdev].producer}{/if} {if $netdevices[netdev].location}({$netdevices[netdev].location }){/if}</OPTION>
 				{/section}
 			</SELECT>
+			<a href="javascript: void(0);" onClick="return netdevfrommapchoosewin(document.editnode.elements['nodeedit[netdev]']);" {tip text="Click to select network device from map"}>&raquo;&raquo;&raquo;</A>
 			<INPUT type="text" name="nodeedit[port]" value="{if $nodeinfo.port}{$nodeinfo.port}{/if}" size="2" {tip text="Enter port number in device (optional)" trigger="port"}>
 			<BR>
 			<SELECT NAME="nodeedit[linktype]" id="linktype" {tip trigger="linktype" text="Select link type"} onchange="change_linktype(this.options[this.selectedIndex].value)">
@@ -109,7 +110,13 @@
 				<OPTION value="{$key}"{if $key==$nodeinfo.linktype} selected{/if}>{$item}</OPTION>
 				{/foreach}
 			</SELECT>
-			<SELECT NAME="nodeedit[linktechnology]" id="linktechnology" {tip trigger="linktechnology" text="Select link technology"}>
+			<SELECT NAME="nodeedit[radiosector]" id="radiosector" {tip trigger="radiosector" text="Select radio sector"}{if $nodeinfo.linktype != 1} style="display: none;"{/if}>
+				<OPTION value="0">- {trans("none")} -</OPTION>
+				{foreach $nodeinfo.radiosectors as $radiosector}
+				<OPTION value="{$radiosector.id}"{if $radiosector.id == $nodeinfo.linkradiosector} selected{/if}>{$radiosector.name}</OPTION>
+				{/foreach}
+			</SELECT>
+			<SELECT NAME="nodeedit[linktechnology]" id="linktechnology" {tip trigger="linktechnology" text="Select link technology"} onchange="change_linktechnology(this.options[this.selectedIndex].value)">
 				<OPTION value="0">{trans("- unknown -")}</OPTION>
 				{foreach $_LINKTECHNOLOGIES[$nodeinfo.linktype] as $linktechnologyidx => $linktechnology}
 				<OPTION value="{$linktechnologyidx}"{if $linktechnologyidx == $nodeinfo.linktechnology} selected{/if}>{$linktechnology}</OPTION>
@@ -129,7 +136,7 @@
 		</TD>
 		<TD WIDTH="98%">
 			<SELECT NAME="nodeedit[invprojectid]" ID="NNproject" VALUE="{$nodeinfo.invprojectid}" {tip text="Select project"} onchange="setNNProject();">
-				<OPTION value="-2" {if ($nodeinfo.invprojectid == '-2' ) } selected="selected" {/if} >{trans("None")}</OPTION>
+				<OPTION value="-2" {if ($nodeinfo.invprojectid == '-2' ) } selected="selected" {/if} >- {trans("none")} -</OPTION>
 				<OPTION value="-1" {if ($nodeinfo.invprojectid == '-1' ) } selected="selected" {/if}>{trans("New project")}</OPTION>
 				<OPTION value="1" {if ($nodeinfo.invprojectid == '1' ) } selected="selected" {/if}>{trans("From root device")}</OPTION>
 				{section name=project loop=$NNprojects}
@@ -165,6 +172,16 @@
 			<label for="chkmac">{trans("MAC checking")}:</label><INPUT TYPE="checkbox" NAME="nodeedit[chkmac]" VALUE="1" ID="chkmac" {tip text="Enable/disable MAC address checking" trigger="chkmac"}{if !isset($nodeinfo.chkmac) || $nodeinfo.chkmac} checked{/if}>&nbsp;
 			<label for="duplex">{trans("Half duplex")}:</label><INPUT TYPE="checkbox" NAME="nodeedit[halfduplex]" VALUE="1" ID="duplex" {if $nodeinfo.halfduplex} checked{/if} {tip text="Select transmission mode"}> 
 		</TD>
+		<TR>
+		<TD style="width: 1%;">
+			<IMG SRC="img/netdev.gif" ALT="">
+		</TD>
+		<TD style="width: 98%; white-space: nowrap;" COLSPAN="2">
+			<label for="pppoe">{trans("PPPoE Client")}</label><INPUT TYPE="checkbox" NAME="nodeauthtype[pppoe]" value="1" id="pppoe" {if $nodeauthtype.pppoe}checked="checked"{/if}{tip text="Enable/disable PPPoE Server Client" trigger="pppoe"}>&nbsp;
+			<label for="dhcp">{trans("DHCP Client")}</label><INPUT TYPE="checkbox" NAME="nodeauthtype[dhcp]" value="2" id="dhcp" {if $nodeauthtype.dhcp}checked="checked"{/if}{tip text="Enable/disable DHCP Server Client" trigger="dhcp"}>&nbsp;
+			<label for="eap">{trans("EAP Client")}</label><INPUT TYPE="checkbox" NAME="nodeauthtype[eap]" value="4" id="eap" {if $nodeauthtype.eap}checked="checked"{/if}{tip text="Enable/disable EAP Server Client" trigger="eap"}>
+		</TD>
+		</TR>
 	</TR>
 					</TABLE>
 				</TD>
@@ -302,9 +319,19 @@
 			document.forms['editnode'].elements['nodeedit[customerid]'].value = val;
 	}
 
+	function change_netdevice(id) {
+		if (xjx.$('linktype').value == 1) {
+			xjx.$('linktype').disabled = true;
+			xjx.$('radiosector').disabled = true;
+			xjx.$('linktechnology').disabled = true;
+			xjx.$('linkspeed').disabled = true;
+			xajax_getRadioSectors(id, xjx.$('linktechnology').value);
+		}
+	}
+
 	function change_linktype(linktype) {
 		linktype = parseInt(linktype);
-		var options = document.getElementById('linktechnology').options;
+		var options = xjx.$('linktechnology').options;
 		while (options.length)
 			options.remove(0);
 		options.add(new Option('{trans("- unknown -")}', 0));
@@ -325,7 +352,51 @@
 				{/foreach}
 				break;
 		}
+		xjx.$('radiosector').style.display = (linktype == 1 ? '' : 'none');
+
+		if (linktype == 1) {
+			var selected = xjx.$('netdev').selectedIndex;
+			if (selected) {
+				netdev = xjx.$('netdev').options[selected].value;
+				xjx.$('radiosector').disabled = true;
+				xajax_getRadioSectors(netdev);
+			}
+		}
 	}
+
+	function change_linktechnology(technology) {
+		technology = parseInt(technology);
+		var linktype = xjx.$('linktype').options[xjx.$('linktype').selectedIndex].value;
+		if (linktype != 1)
+			return;
+		var netdev = xjx.$('netdev').options[xjx.$('netdev').selectedIndex].value;
+		if (netdev !== undefined) {
+			xjx.$('radiosector').disabled = true;
+			xajax_getRadioSectors(netdev, technology);
+		}
+	}
+
+	function radio_sectors_received(radiosectors) {
+		var options = xjx.$('radiosector').options;
+		var oldvalue = options[xjx.$('radiosector').selectedIndex].value;
+		while (options.length)
+			options.remove(0);
+		options.add(new Option('- {trans("none")} -', 0));
+		if (radiosectors !== null) {
+			radiosectors.forEach(function(elem) {
+				var option = new Option(elem.name, elem.id);
+				if (elem.id == oldvalue)
+					option.selected = true;
+				options.add(option);
+			});
+		}
+		xjx.$('linktype').disabled = false;
+		xjx.$('radiosector').disabled = false;
+		xjx.$('linktechnology').disabled = false;
+		xjx.$('linkspeed').disabled = false;
+	}
+
+	xajax_getRadioSectors({$nodeinfo.netdev}, {$nodeinfo.linktechnology});
 
 	check_teryt('location', true);
 

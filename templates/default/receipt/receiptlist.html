@@ -84,6 +84,7 @@
 	</TR>
 	<TR>
 		<TD colspan="7">
+				<div style="float: left;">
 				<B>{trans("Filter:")} </B> 
 				<INPUT name="search" type="text" value="{$listdata.search}" size="15" {tip text="Enter value of searching data and select category"}>&nbsp;
 				<SELECT size="1" name="cat">
@@ -95,11 +96,16 @@
 					<OPTION value="ten"{if $listdata.cat eq "ten"} SELECTED{/if}>{trans("TEN")}</OPTION>
 					<OPTION value="address"{if $listdata.cat eq "address"} SELECTED{/if}>{trans("address")}</OPTION>
 				</SELECT>&nbsp;
+				</div>
+				<div class="calendar" style="float: left;">
 				<B>{trans("Period:")}</B>&nbsp;
-				{trans("from")}&nbsp;<INPUT TYPE="text" NAME="from" SIZE="10" MAXSIZE="10" value="{if $listdata.from > 0}{$listdata.from|date_format:"%Y/%m/%d"}{/if}" OnClick="javascript:cal1.popup();" {tip text="Enter date in YYYY/MM/DD format (empty field means no limit) or click to choose it from calendar"}>
-				{trans("to")}&nbsp;<INPUT TYPE="text" NAME="to" SIZE="10" MAXSIZE="10" value="{if $listdata.to > 0}{$listdata.to|date_format:"%Y/%m/%d"}{/if}" OnClick="javascript:cal2.popup();"  {tip text="Enter date in YYYY/MM/DD format (empty field means no limit) or click to choose it from calendar"}>&nbsp;
+				{trans("from")}&nbsp;<INPUT TYPE="text" NAME="from" SIZE="10" MAXSIZE="10" value="{if $listdata.from > 0}{$listdata.from|date_format:"%Y/%m/%d"}{/if}" {tip text="Enter date in YYYY/MM/DD format (empty field means no limit) or click to choose it from calendar"}>
+				{trans("to")}&nbsp;<INPUT TYPE="text" NAME="to" SIZE="10" MAXSIZE="10" value="{if $listdata.to > 0}{$listdata.to|date_format:"%Y/%m/%d"}{/if}" {tip text="Enter date in YYYY/MM/DD format (empty field means no limit) or click to choose it from calendar"}>&nbsp;
+				</div>
+				<div style="float: left;">
 				<INPUT type="checkbox" id="advances" name="advances" value="1"{if $listdata.advances} checked{/if}><label for="advances">{trans("not settled adv. only")}</label>&nbsp;
 				<A href="javascript: filter();">&raquo;&raquo;&raquo;</A>
+				</div>
 		</TD>
 	</TR>		
 	{if $listdata.total != 0}
@@ -187,14 +193,14 @@
 	</TR>
         <TR>
 		<TD colspan="2" align="right" NOWRAP style="vertical-align: top;">
-			{if !ConfigHelper::checkConfig('privileges.hide_summaries')}
+			{if ConfigHelper::checkConfig('privileges.superuser') || !ConfigHelper::checkConfig('privileges.hide_summaries')}
 			<B>{trans("Total:")}</B><HR>
 			<B>{trans("Initial balance:")}</B><BR>
 			<B>{trans("Final balance:")}</B><BR>
 			{/if}
 		</TD>
 		<TD nowrap align="right" style="vertical-align: top;">
-			{if !ConfigHelper::checkConfig('privileges.hide_summaries')}
+			{if ConfigHelper::checkConfig('privileges.superuser') || !ConfigHelper::checkConfig('privileges.hide_summaries')}
 			<NOBR>
 			{$listdata.totalincome|money_format}<HR>
 			{$listdata.startbalance|money_format}<BR>
@@ -203,12 +209,12 @@
 			{/if}
 		</TD>
 		<TD nowrap align="right" style="vertical-align: top;">
-			{if !ConfigHelper::checkConfig('privileges.hide_summaries')}
+			{if ConfigHelper::checkConfig('privileges.superuser') || !ConfigHelper::checkConfig('privileges.hide_summaries')}
 			{$listdata.totalexpense|money_format}<HR>
 			{/if}
 		</TD>
 		<TD colspan="3" align="right">
-			{if !ConfigHelper::checkConfig('privileges.hide_summaries')}<H1>{trans("Cash state:")} <B>{$listdata.cashstate|money_format}</B></H1>{/if}
+			{if ConfigHelper::checkConfig('privileges.superuser') || !ConfigHelper::checkConfig('privileges.hide_summaries')}<H1>{trans("Cash state:")} <B>{$listdata.cashstate|money_format}</B></H1>{/if}
 			<A href="?m=cashreglogview&regid={$listdata.regid}">{trans("Cash history")} <img src="img/value.gif" alt=""></A>&nbsp;
 			<A href="?m=receiptadd&type=in&action=init&regid={$listdata.regid}">{trans("New Cash-in Receipt")} <img src="img/save.gif" alt=""></A>&nbsp;
 			<A href="?m=receiptadd&type=out&action=init&regid={$listdata.regid}">{trans("New Cash-out Receipt")} <img src="img/save.gif" alt=""></A>
@@ -238,12 +244,4 @@
 </TABLE>
 </P>
 {/if}
-<SCRIPT type="text/javascript">
-<!--
-var cal1 = new calendar(document.page.elements['from']);
-cal1.time_comp = false;
-var cal2 = new calendar(document.page.elements['to']);
-cal2.time_comp = false;
-//-->
-</SCRIPT>
 {/block}

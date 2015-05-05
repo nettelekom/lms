@@ -26,6 +26,7 @@
 
 $nodedata['access'] = 1;
 $nodedata['ownerid'] = 0;
+$nodedata['authtype'] = 0;
 
 if(isset($_GET['ownerid']))
 {
@@ -172,6 +173,7 @@ if (isset($_POST['nodedata']))
 
 	if(!isset($nodedata['chkmac']))	$nodedata['chkmac'] = 0;
 	if(!isset($nodedata['halfduplex'])) $nodedata['halfduplex'] = 0;
+	
 
 	if ($nodedata['invprojectid'] == '-1') { // nowy projekt
 		if (!strlen(trim($nodedata['projectname']))) {
@@ -182,6 +184,16 @@ if (isset($_POST['nodedata']))
 			$error['projectname'] = trans('Project with that name already exists');
 	}
 
+	if(isset($_POST['nodeauthtype'])) {
+		$authtype = $_POST['nodeauthtype'];
+		if (!empty($authtype)) {
+			foreach ($authtype as $op) {
+			$op = (int)$op;
+			$nodedata['authtype'] |= $op;
+			}
+		}
+	}
+	if(!isset($nodedata['authtype'])) $nodedata['authtype'] = 0;
 	if(!$error)
 	{
         if (empty($nodedata['teryt'])) {
@@ -192,7 +204,6 @@ if (isset($_POST['nodedata']))
         }
 
         $nodedata = $LMS->ExecHook('node_add_before', $nodedata);
-
 
 	$ipi = $nodedata['invprojectid'];
 	if ($ipi == '-1') {
@@ -252,6 +263,10 @@ if (!ConfigHelper::checkValue(ConfigHelper::getConfig('phpui.big_networks', fals
 {
     $SMARTY->assign('customers', $LMS->GetCustomerNames());
 }
+
+include(MODULES_DIR . '/nodexajax.inc.php');
+
+$SMARTY->assign('xajax', $LMS->RunXajax());
 
 $nprojects = $DB->GetAll("SELECT * FROM invprojects WHERE type<>? ORDER BY name",
 	array(INV_PROJECT_SYSTEM));

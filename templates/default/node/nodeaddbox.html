@@ -109,18 +109,22 @@
 			<IMG SRC="img/netdev.gif" ALT="{trans("Net device:")}">
 		</TD>
 		<TD style="width: 99%; white-space: nowrap;">
-			<SELECT SIZE="1" NAME="nodedata[netdev]" {tip text="Select network device (optional)" trigger="netdev"} style="max-width:250px;">
+			<SELECT SIZE="1" NAME="nodedata[netdev]" {tip text="Select network device (optional)" trigger="netdev"} onchange="change_netdevice(this.options[this.selectedIndex].value)" style="max-width:250px;">
 				<OPTION VALUE="0"{if !$nodedata.netdev} SELECTED{/if}>{trans("- select device -")}</OPTION>
 				{section name=netdevices loop=$netdevices}
 				<OPTION VALUE="{$netdevices[netdevices].id}"{if $netdevices[netdevices].id==$nodedata.netdev} SELECTED{/if}>{$netdevices[netdevices].name} {$netdevices[netdevices].producer}{if $netdevices[netdevices].location} / {$netdevices[netdevices].location}{/if}</OPTION>
 				{/section}
 			</SELECT>
+			<a href="javascript: void(0);" onClick="return netdevfrommapchoosewin(document.nodeadd.elements['nodedata[netdev]']);" {tip text="Click to select network device from map"}>&raquo;&raquo;&raquo;</A>
 			<INPUT type="text" name="nodedata[port]" value="{if $nodedata.port}{$nodedata.port}{/if}" size="2" {tip text="Enter port number in device (optional)" trigger="port"}>
 			<BR>
 			<SELECT NAME="nodedata[linktype]" id="linktype" {tip trigger="linktype" text="Select link type"} onchange="change_linktype(this.options[this.selectedIndex].value)">
 				{foreach from=$_LINKTYPES item=item key=key}
 				<OPTION value="{$key}">{$item}</OPTION>
 				{/foreach}
+			</SELECT>
+			<SELECT NAME="nodedata[radiosector]" id="radiosector" {tip trigger="radiosector" text="Select radio sector"} style="display: none;">
+				<OPTION value="0">- {trans("none")} -</OPTION>
 			</SELECT>
 			<SELECT NAME="nodedata[linktechnology]" id="linktechnology" {tip trigger="linktechnology" text="Select link technology"}>
 				<OPTION value="0">{trans("- unknown -")}</OPTION>
@@ -142,7 +146,7 @@
 		</TD>
 		<TD WIDTH="98%">
 			<SELECT NAME="nodedata[invprojectid]" ID="NNproject" VALUE="{$nodedata.invprojectid}" {tip text="Select project"} onchange="setNNProject();">
-				<OPTION value="-2" {if ($nodedata.invprojectid == '-2' ) } selected="selected" {/if} >{trans("None")}</OPTION>
+				<OPTION value="-2" {if ($nodedata.invprojectid == '-2' ) } selected="selected" {/if} >- {trans("none")} -</OPTION>
 				<OPTION value="-1" {if ($nodedata.invprojectid == '-1' ) } selected="selected" {/if}>{trans("New project")}</OPTION>
 				<OPTION value="1" {if ($nodedata.invprojectid == '1' ) } selected="selected" {/if}>{trans("From root device")}</OPTION>
 				{section name=project loop=$NNprojects}
@@ -179,6 +183,16 @@
 			<label for="chkmac">{trans("MAC checking")}:</label><INPUT TYPE="checkbox" NAME="nodedata[chkmac]" VALUE="1" id="chkmac" {tip text="Enable/disable MAC address checking" trigger="chkmac"}{if !isset($nodedata.chkmac) || $nodedata.chkmac} checked{/if}>&nbsp;
 			<label for="halfduplex">{trans("Half duplex")}:</label><INPUT TYPE="checkbox" NAME="nodedata[halfduplex]" VALUE="1" id="halfduplex" {if $nodedata.halfduplex} checked{/if} {tip text="Select transmission mode"}> 
 		</TD>
+		<TR>
+		<TD style="width: 1%;">
+			<IMG SRC="img/netdev.gif" ALT="">
+		</TD>
+		<TD style="width: 99%; white-space: nowrap;">
+			<label for="pppoe">{trans("PPPoE Client")}</label><INPUT TYPE="checkbox" NAME="nodeauthtype[pppoe]" value="1" id="pppoe" {tip text="Enable/disable PPPoE Server Client" trigger="pppoe"}>&nbsp;
+			<label for="dhcp">{trans("DHCP Client")}</label><INPUT TYPE="checkbox" NAME="nodeauthtype[dhcp]" value="2" id="dhcp" {tip text="Enable/disable DHCP Server Client" trigger="dhcp"}>&nbsp;
+			<label for="eap">{trans("EAP Client")}</label><INPUT TYPE="checkbox" NAME="nodeauthtype[eap]" value="4" id="eap" {tip text="Enable/disable EAP Server Client" trigger="eap"}>
+		</TD>
+		</TR>
 	</TR>
 					</TABLE>
 				</TD>
@@ -297,9 +311,35 @@
 			document.forms['nodeadd'].elements['nodedata[customerid]'].value = val;
 	}
 
+	function change_netdevice(id) {
+		if (xjx.$('linktype').value == 1) {
+			xjx.$('linktype').disabled = true;
+			xjx.$('radiosector').disabled = true;
+			xjx.$('linktechnology').disabled = true;
+			xjx.$('linkspeed').disabled = true;
+			xajax_getRadioSectors(id);
+		}
+	}
+
+	function radiosectors_received(radiosectors) {
+		var rselem = xjx.$('radiosector');
+		var options = rselem.options;
+
+		while (options.length)
+			options.remove(0);
+		options.add(new Option('- {trans("none")} -', 0));
+		for (i = 0; i < radiosectors.length; i++)
+			options.add(new Option(radiosectors[i].name, radiosectors[i].id));
+
+		xjx.$('linktype').disabled = false;
+		rselem.disabled = false;
+		xjx.$('linktechnology').disabled = false;
+		xjx.$('linkspeed').disabled = false;
+	}
+
 	function change_linktype(linktype) {
 		linktype = parseInt(linktype);
-		var options = document.getElementById('linktechnology').options;
+		var options = xjx.$('linktechnology').options;
 		while (options.length)
 			options.remove(0);
 		options.add(new Option('{trans("- unknown -")}', 0));
@@ -320,6 +360,7 @@
 				{/foreach}
 				break;
 		}
+		xjx.$('radiosector').style.display = (linktype == 1 ? '' : 'none');
 	}
 
 	check_teryt('location', true);

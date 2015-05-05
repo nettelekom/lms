@@ -38,6 +38,7 @@ DROP TABLE IF EXISTS location_districts;
 DROP TABLE IF EXISTS location_states;
 DROP TABLE IF EXISTS pna;
 DROP TABLE IF EXISTS netdevices;
+DROP TABLE IF EXISTS netradiosectors;
 DROP TABLE IF EXISTS netlinks;
 DROP TABLE IF EXISTS networks;
 DROP TABLE IF EXISTS macs;
@@ -586,8 +587,8 @@ CREATE TABLE netnodes (
 	location varchar(255) DEFAULT '',
 	location_city int(11) DEFAULT NULL,
 	location_street int(11) DEFAULT NULL,
-	location_house varchar(8) DEFAULT NULL,
-	location_flat varchar(8) DEFAULT NULL,
+	location_house varchar(32) DEFAULT NULL,
+	location_flat varchar(32) DEFAULT NULL,
 	longitude decimal(10,6) DEFAULT NULL,
 	latitude decimal(10,6) DEFAULT NULL,
 	ownership tinyint(1) DEFAULT 0,
@@ -595,7 +596,9 @@ CREATE TABLE netnodes (
 	uip tinyint(1) DEFAULT 0,
 	miar tinyint(1) DEFAULT 0,
 	PRIMARY KEY (id),
-	FOREIGN KEY (invprojectid) REFERENCES invprojects (id) ON DELETE SET NULL ON UPDATE CASCADE
+	FOREIGN KEY (invprojectid) REFERENCES invprojects (id) ON DELETE SET NULL ON UPDATE CASCADE,
+	FOREIGN KEY (location_city) REFERENCES location_cities (id) ON DELETE SET NULL ON UPDATE CASCADE,
+	FOREIGN KEY (location_street) REFERENCES location_streets (id) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=INNODB;
 
 # --------------------------------------------------------
@@ -624,6 +627,7 @@ CREATE TABLE netdevicemodels (
 	UNIQUE (name, netdeviceproducerid)
 ) ENGINE=INNODB;
 
+
 # --------------------------------------------------------
 #
 # Structure of table  netdevices
@@ -634,8 +638,8 @@ CREATE TABLE netdevices (
   location 	varchar(255) 	NOT NULL DEFAULT '',
   location_city int(11) DEFAULT NULL,
   location_street int(11) DEFAULT NULL,
-  location_house varchar(8) DEFAULT NULL,
-  location_flat varchar(8) DEFAULT NULL,
+  location_house varchar(32) DEFAULT NULL,
+  location_flat varchar(32) DEFAULT NULL,
   description 	text 		NOT NULL DEFAULT '',
   producer 	varchar(64) 	NOT NULL DEFAULT '',
   model 	varchar(32) 	NOT NULL DEFAULT '',
@@ -669,6 +673,28 @@ CREATE TABLE netdevices (
 
 # --------------------------------------------------------
 #
+# Structure of table netradiosectors
+#
+CREATE TABLE netradiosectors (
+	id int(11) NOT NULL auto_increment,
+	name varchar(64) NOT NULL,
+	azimuth decimal(9,2) DEFAULT 0 NOT NULL,
+	width decimal(9,2) DEFAULT 0 NOT NULL,
+	altitude smallint DEFAULT 0 NOT NULL,
+	rsrange int(11) DEFAULT 0 NOT NULL,
+	license varchar(64) DEFAULT NULL,
+	technology int(11) DEFAULT 0 NOT NULL,
+	frequency numeric(9,5) DEFAULT NULL,
+	frequency2 numeric(9,5) DEFAULT NULL,
+	bandwidth numeric(9,5) DEFAULT NULL,
+	netdev int(11) NOT NULL,
+	PRIMARY KEY (id),
+	INDEX netdev (netdev),
+	FOREIGN KEY (netdev) REFERENCES netdevices (id) ON DELETE CASCADE ON UPDATE CASCADE,
+	UNIQUE KEY name (name, netdev)
+) ENGINE=INNODB;
+# --------------------------------------------------------
+#
 # Structure of table  netlinks
 #
 CREATE TABLE netlinks (
@@ -680,8 +706,14 @@ CREATE TABLE netlinks (
   technology int(11) NOT NULL DEFAULT '0',
   srcport smallint NOT NULL DEFAULT '0',
   dstport smallint NOT NULL DEFAULT '0',
+  srcradiosector int(11) DEFAULT NULL,
+  dstradiosector int(11) DEFAULT NULL,
   PRIMARY KEY  (id),
-  UNIQUE KEY src (src,dst)
+  UNIQUE KEY src (src,dst),
+  INDEX srcradiosector (srcradiosector),
+  INDEX dstradiosector (dstradiosector),
+  FOREIGN KEY (srcradiosector) REFERENCES netradiosectors (id) ON DELETE SET NULL ON UPDATE CASCADE,
+  FOREIGN KEY (dstradiosector) REFERENCES netradiosectors (id) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
 # --------------------------------------------------------
@@ -741,11 +773,13 @@ CREATE TABLE nodes (
   modid int(11) NOT NULL DEFAULT '0',
   netdev int(11) NOT NULL DEFAULT '0',
   linktype tinyint(1) NOT NULL DEFAULT '0',
+  linkradiosector int(11) DEFAULT NULL,
   linkspeed int(11) NOT NULL DEFAULT '100000',
   linktechnology int(11) NOT NULL DEFAULT '0',
   port smallint NOT NULL DEFAULT '0',
   access tinyint(1) NOT NULL DEFAULT '1',
   warning tinyint(1) NOT NULL DEFAULT '0',
+  authtype tinyint(1) NOT NULL DEFAULT '0',
   chkmac tinyint(1) NOT NULL DEFAULT '1',
   halfduplex tinyint(1) NOT NULL DEFAULT '0',
   lastonline int(11) NOT NULL DEFAULT '0',
@@ -753,8 +787,8 @@ CREATE TABLE nodes (
   location varchar(255) DEFAULT NULL,
   location_city int(11) DEFAULT NULL,
   location_street int(11) DEFAULT NULL,
-  location_house varchar(8) DEFAULT NULL,
-  location_flat varchar(8) DEFAULT NULL,
+  location_house varchar(32) DEFAULT NULL,
+  location_flat varchar(32) DEFAULT NULL,
   nas tinyint(1) NOT NULL DEFAULT '0',
   longitude decimal(10, 6) DEFAULT NULL,
   latitude decimal(10, 6) DEFAULT NULL,
@@ -768,10 +802,13 @@ CREATE TABLE nodes (
   INDEX ipaddr_pub (ipaddr_pub),
   INDEX location_city (location_city, location_street, location_house, location_flat),
   INDEX location_street (location_street),
+  INDEX linkradiosector (linkradiosector),
+  INDEX authtype (authtype),
   FOREIGN KEY (location_city) REFERENCES location_cities (id) ON DELETE SET NULL ON UPDATE CASCADE,
   FOREIGN KEY (location_street) REFERENCES location_streets (id) ON DELETE SET NULL ON UPDATE CASCADE,
   FOREIGN KEY (netid) REFERENCES networks (id) ON DELETE CASCADE ON UPDATE CASCADE,
-  FOREIGN KEY (invprojectid) REFERENCES invprojects(id) ON DELETE SET NULL ON UPDATE CASCADE
+  FOREIGN KEY (invprojectid) REFERENCES invprojects(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  FOREIGN KEY (linkradiosector) REFERENCES netradiosectors (id) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
 # --------------------------------------------------------
@@ -1036,6 +1073,7 @@ CREATE TABLE nodesessions (
 	download bigint		DEFAULT '0',
 	upload bigint		DEFAULT '0',
 	tag varchar(32)		NOT NULL DEFAULT '',
+	terminatecause varchar(32) NOT NULL DEFAULT '',
 	PRIMARY KEY (id),
 	INDEX customerid (customerid),
 	INDEX nodeid (nodeid),
@@ -2368,4 +2406,4 @@ INSERT INTO netdevicemodels (name, alternative_name, netdeviceproducerid) VALUES
 ('XR7', 'XR7 MINI PCI PCBA', 2),
 ('XR9', 'MINI PCI 600MW 900MHZ', 2);
 
-INSERT INTO dbinfo (keytype, keyvalue) VALUES ('dbversion', '2015030300');
+INSERT INTO dbinfo (keytype, keyvalue) VALUES ('dbversion', '2015042100');

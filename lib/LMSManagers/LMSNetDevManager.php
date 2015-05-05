@@ -34,31 +34,48 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
 
     public function GetNetDevLinkedNodes($id)
     {
-        return $this->db->GetAll('SELECT n.id AS id, n.name AS name, linktype, linktechnology, linkspeed,
+        return $this->db->GetAll('SELECT n.id AS id, n.name AS name, linktype, rs.name AS radiosector,
+        		linktechnology, linkspeed,
 			ipaddr, inet_ntoa(ipaddr) AS ip, ipaddr_pub, inet_ntoa(ipaddr_pub) AS ip_pub, 
-			netdev, port, ownerid,
+			n.netdev, port, ownerid,
 			' . $this->db->Concat('c.lastname', "' '", 'c.name') . ' AS owner,
 			net.name AS netname
 			FROM nodes n
 			JOIN customersview c ON c.id = ownerid
 			JOIN networks net ON net.id = n.netid
-			WHERE netdev = ? AND ownerid > 0 
+			LEFT JOIN netradiosectors rs ON rs.id = n.linkradiosector
+			WHERE n.netdev = ? AND ownerid > 0 
 			ORDER BY n.name ASC', array($id));
     }
 
-    public function NetDevLinkNode($id, $devid, $type = 0, $technology = 0, $speed = 100000, $port = 0)
+    public function NetDevLinkNode($id, $devid, $link = NULL)
     {
         global $SYSLOG_RESOURCE_KEYS;
 
+	if (empty($link)) {
+		$type = 0;
+		$technology = 0;
+		$radiosector = NULL;
+		$speed = 100000;
+		$port = 0;
+	} else {
+		$type = isset($link['type']) ? intval($link['type']) : 0;
+		$radiosector = isset($link['radiosector']) ? intval($link['radiosector']) : NULL;
+		$technology = isset($link['technology']) ? intval($link['technology']) : 0;
+		$speed = isset($link['speed']) ? intval($link['speed']) : 100000;
+		$port = isset($link['port']) ? intval($link['port']) : 0;
+	}
+
         $args = array(
             $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETDEV] => $devid,
-            'linktype' => intval($type),
-            'linktechnology' => intval($technology),
-            'linkspeed' => intval($speed),
+            'linktype' => $type,
+            'linkradiosector' => $radiosector,
+            'linktechnology' => $technology,
+            'linkspeed' => $speed,
             'port' => intval($port),
             $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NODE] => $id,
         );
-        $res = $this->db->Execute('UPDATE nodes SET netdev=?, linktype=?,
+        $res = $this->db->Execute('UPDATE nodes SET netdev=?, linktype=?, linkradiosector=?,
 			linktechnology=?, linkspeed=?, port=?
 			WHERE id=?', array_values($args));
         if ($this->syslog && $res) {
@@ -70,25 +87,59 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
         return $res;
     }
 
-    public function SetNetDevLinkType($dev1, $dev2, $type = 0, $technology = 0, $speed = 100000)
+    public function SetNetDevLinkType($dev1, $dev2, $link = NULL)
     {
-        global $SYSLOG_RESOURCE_KEYS;
+	global $SYSLOG_RESOURCE_KEYS;
 
-        $res = $this->db->Execute('UPDATE netlinks SET type=?, technology=?, speed=? WHERE (src=? AND dst=?) OR (dst=? AND src=?)', array($type, $technology, $speed, $dev1, $dev2, $dev1, $dev2));
-        if ($this->syslog && $res) {
-            $netlink = $this->db->GetRow('SELECT id, src, dst FROM netlinks WHERE (src=? AND dst=?) OR (dst=? AND src=?)', array($dev1, $dev2, $dev1, $dev2));
-            $args = array(
-                $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETLINK] => $netlink['id'],
-                'src_' . $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETDEV] => $netlink['src'],
-                'dst_' . $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETDEV] => $netlink['dst'],
-                'type' => $type,
-                'speed' => $speed,
-            );
-            $this->syslog->AddMessage(SYSLOG_RES_NETLINK, SYSLOG_OPER_UPDATE, $args, array($SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETLINK],
-                'src_' . $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETDEV],
-                'dst_' . $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETDEV]));
-        }
-        return $res;
+	if (empty($link)) {
+		$type = 0;
+		$srcradiosector = null;
+		$dstradiosector = null;
+		$technology = 0;
+		$speed = 100000;
+	} else {
+		$type = isset($link['type']) ? $link['type'] : 0;
+		$srcradiosector = isset($link['srcradiosector']) ? (intval($link['srcradiosector']) ? intval($link['srcradiosector']) : null) : null;
+		$dstradiosector = isset($link['dstradiosector']) ? (intval($link['dstradiosector']) ? intval($link['dstradiosector']) : null) : null;
+		$technology = isset($link['technology']) ? $link['technology'] : 0;
+		$speed = isset($link['speed']) ? $link['speed'] : 100000;
+	}
+
+	$args = array(
+		'type' => $type,
+		'src_' . $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_RADIOSECTOR] => $srcradiosector,
+		'dst_' . $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_RADIOSECTOR] => $dstradiosector,
+		'technology' => $technology,
+		'speed' => $speed,
+		'src_' . $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETDEV] => $dev2,
+		'dst_' . $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETDEV] => $dev1,
+	);
+	$res = $this->db->Execute('UPDATE netlinks SET type=?, srcradiosector=?, dstradiosector=?, technology=?, speed=?
+		WHERE src=? AND dst=?', array_values($args));
+	if (!$res) {
+		$args = array(
+			'type' => $type,
+			'src_' . $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_RADIOSECTOR] => $srcradiosector,
+			'dst_' . $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_RADIOSECTOR] => $dstradiosector,
+			'technology' => $technology,
+			'speed' => $speed,
+			'src_' . $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETDEV] => $dev1,
+			'dst_' . $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETDEV] => $dev2,
+		);
+		$res = $this->db->Execute('UPDATE netlinks SET type=?, dstradiosector=?, srcradiosector=?, technology=?, speed=?
+			WHERE src=? AND dst=?', array_values($args));
+	}
+	if ($this->syslog && $res) {
+		$args[$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETLINK]] =
+			$this->db->GetOne('SELECT id FROM netlinks WHERE (src=? AND dst=?) OR (dst=? AND src=?)', array($dev1, $dev2, $dev1, $dev2));
+		$this->syslog->AddMessage(SYSLOG_RES_NETLINK, SYSLOG_OPER_UPDATE, $args, array($SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETLINK],
+			'src_' . $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETDEV],
+			'dst_' . $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETDEV],
+			'src_' . $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_RADIOSECTOR],
+			'dst_' . $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_RADIOSECTOR],
+		));
+	}
+	return $res;
     }
 
     public function IsNetDevLink($dev1, $dev2)
@@ -97,9 +148,19 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
 			WHERE (src=? AND dst=?) OR (dst=? AND src=?)', array($dev1, $dev2, $dev1, $dev2));
     }
 
-    public function NetDevLink($dev1, $dev2, $type = 0, $technology = 0, $speed = 100000, $sport = 0, $dport = 0)
+    public function NetDevLink($dev1, $dev2, $link)
     {
         global $SYSLOG_RESOURCE_KEYS;
+
+	$type = $link['type'];
+	$srcradiosector = ($type == 1 ?
+		(isset($link['srcradiosector']) && intval($link['srcradiosector']) ? intval($link['srcradiosector']) : null) : null);
+	$dstradiosector = ($type == 1 ?
+		(isset($link['dstradiosector']) && intval($link['dstradiosector']) ? intval($link['dstradiosector']) : null) : null);
+	$technology = $link['technology'];
+	$speed = $link['speed'];
+	$sport = $link['srcport'];
+	$dport = $link['dstport'];
 
         if ($dev1 != $dev2)
             if (!$this->IsNetDevLink($dev1, $dev2)) {
@@ -107,19 +168,23 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
                     'src_' . $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETDEV] => $dev1,
                     'dst_' . $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETDEV] => $dev2,
                     'type' => $type,
+                    'src_' . $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_RADIOSECTOR] => $srcradiosector,
+                    'dst_' . $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_RADIOSECTOR] => $dstradiosector,
                     'technology' => $technology,
                     'speed' => $speed,
                     'srcport' => intval($sport),
-                    'dstport' => intval($dport)
+                    'dstport' => intval($dport),
                 );
                 $res = $this->db->Execute('INSERT INTO netlinks 
-					(src, dst, type, technology, speed, srcport, dstport) 
-					VALUES (?, ?, ?, ?, ?, ?, ?)', array_values($args));
+					(src, dst, type, srcradiosector, dstradiosector, technology, speed, srcport, dstport) 
+					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', array_values($args));
                 if ($this->syslog && $res) {
                     $args[$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETLINK]] = $this->db->GetLastInsertID('netlinks');
                     $this->syslog->AddMessage(SYSLOG_RES_NETLINK, SYSLOG_OPER_ADD, $args, array($SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETLINK],
                         'src_' . $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETDEV],
-                        'dst_' . $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETDEV]));
+                        'dst_' . $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NETDEV],
+                        'src_' . $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_RADIOSECTOR],
+                        'dst_' . $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_RADIOSECTOR]));
                 }
                 return $res;
             }
@@ -272,8 +337,9 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
 
     public function GetNetDevLinkType($dev1, $dev2)
     {
-        return $this->db->GetRow('SELECT type, technology, speed FROM netlinks 
-			WHERE (src=? AND dst=?) OR (dst=? AND src=?)', array($dev1, $dev2, $dev1, $dev2));
+        return $this->db->GetRow('SELECT type, technology, speed FROM netlinks
+			WHERE (src=? AND dst=?) OR (dst=? AND src=?)',
+			array($dev1, $dev2, $dev1, $dev2));
     }
 
     public function GetNetDevConnectedNames($id)
@@ -281,20 +347,31 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
         return $this->db->GetAll('SELECT d.id, d.name, d.description,
 			d.location, d.producer, d.ports, l.type AS linktype,
 			l.technology AS linktechnology, l.speed AS linkspeed, l.srcport, l.dstport,
+			srcrs.name AS srcradiosector, dstrs.name AS dstradiosector,
 			(SELECT COUNT(*) FROM netlinks WHERE src = d.id OR dst = d.id) 
 			+ (SELECT COUNT(*) FROM nodes WHERE netdev = d.id AND ownerid > 0)
-			AS takenports 
+			AS takenports,
+			lc.name AS city_name, lb.name AS borough_name, lb.type AS borough_type,
+			ld.name AS district_name, ls.name AS state_name
 			FROM netdevices d
 			JOIN (SELECT DISTINCT type, technology, speed, 
 				(CASE src WHEN ? THEN dst ELSE src END) AS dev, 
 				(CASE src WHEN ? THEN dstport ELSE srcport END) AS srcport, 
-				(CASE src WHEN ? THEN srcport ELSE dstport END) AS dstport 
+				(CASE src WHEN ? THEN srcport ELSE dstport END) AS dstport, 
+				(CASE src WHEN ? THEN dstradiosector ELSE srcradiosector END) AS srcradiosector,
+				(CASE src WHEN ? THEN srcradiosector ELSE dstradiosector END) AS dstradiosector
 				FROM netlinks WHERE src = ? OR dst = ?
 			) l ON (d.id = l.dev)
-			ORDER BY name', array($id, $id, $id, $id, $id));
+			LEFT JOIN location_cities lc ON lc.id = d.location_city
+			LEFT JOIN location_boroughs lb ON lb.id = lc.boroughid
+			LEFT JOIN location_districts ld ON ld.id = lb.districtid
+			LEFT JOIN location_states ls ON ls.id = ld.stateid
+			LEFT JOIN netradiosectors srcrs ON srcrs.id = l.srcradiosector
+			LEFT JOIN netradiosectors dstrs ON dstrs.id = l.dstradiosector
+			ORDER BY name', array($id, $id, $id, $id, $id, $id, $id));
     }
 
-    public function GetNetDevList($order = 'name,asc')
+    public function GetNetDevList($order = 'name,asc', $search = array())
     {
         list($order, $direction) = sscanf($order, '%[^,],%s');
 
@@ -322,17 +399,58 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
             case 'location':
                 $sqlord = ' ORDER BY location';
                 break;
+            case 'netnode':
+                $sqlord = ' ORDER BY netnode';
+                break;
             default:
                 $sqlord = ' ORDER BY name';
                 break;
         }
 
-        $netdevlist = $this->db->GetAll('SELECT d.id, d.name, d.location,
+	$where = array();
+	foreach ($search as $key => $value)
+		switch ($key) {
+			case 'status':
+				if ($value != -1)
+					$where[] = 'd.status = ' . intval($value);
+				break;
+			case 'project':
+				if ($value > 0)
+					$where[] = '(d.invprojectid = ' . intval($value)
+						. ' OR (d.invprojectid = ' . INV_PROJECT_SYSTEM . ' AND (n.invprojectid = ' . intval($value) . ' OR n.invprojectid IS NULL)))';
+				elseif ($value == -2)
+					$where[] = '(d.invprojectid IS NULL OR (d.invprojectid = ' . INV_PROJECT_SYSTEM . ' AND n.invprojectid IS NULL))';
+				break;
+			case 'netnode':
+				if ($value > 0)
+					$where[] = 'd.netnodeid = ' . intval($value);
+				elseif ($value == -2)
+					$where[] = 'd.netnodeid IS NULL';
+				break;
+			case 'producer':
+			case 'model':
+				if (!preg_match('/^-[0-9]+$/', $value))
+					$where[] = "UPPER(TRIM(d.$key)) = UPPER(" . $this->db->Escape($value) . ")";
+				elseif ($value == -2)
+					$where[] = "d.$key = ''";
+				break;
+		}
+
+	$netdevlist = $this->db->GetAll('SELECT d.id, d.name, d.location,
 			d.description, d.producer, d.model, d.serialnumber, d.ports,
 			(SELECT COUNT(*) FROM nodes WHERE netdev=d.id AND ownerid > 0)
 			+ (SELECT COUNT(*) FROM netlinks WHERE src = d.id OR dst = d.id)
-			AS takenports
-			FROM netdevices d '
+			AS takenports, d.netnodeid, n.name AS netnode,
+			lb.name AS borough_name, lb.type AS borough_type,
+			ld.name AS district_name, ls.name AS state_name
+			FROM netdevices d
+			LEFT JOIN invprojects p ON p.id = d.invprojectid
+			LEFT JOIN netnodes n ON n.id = d.netnodeid
+			LEFT JOIN location_cities lc ON lc.id = d.location_city
+			LEFT JOIN location_boroughs lb ON lb.id = lc.boroughid
+			LEFT JOIN location_districts ld ON ld.id = lb.districtid
+			LEFT JOIN location_states ls ON ls.id = ld.stateid '
+			. (!empty($where) ? ' WHERE ' . implode(' AND ', $where) : '')
                 . ($sqlord != '' ? $sqlord . ' ' . $direction : ''));
 
         $netdevlist['total'] = sizeof($netdevlist);
@@ -364,17 +482,24 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
     public function GetNetDev($id)
     {
         $result = $this->db->GetRow('SELECT d.*, t.name AS nastypename, c.name AS channel,
-		        lc.name AS city_name,
-				(CASE WHEN ls.name2 IS NOT NULL THEN ' . $this->db->Concat('ls.name2', "' '", 'ls.name') . ' ELSE ls.name END) AS street_name, lt.name AS street_type
+				(CASE WHEN lst.name2 IS NOT NULL THEN ' . $this->db->Concat('lst.name2', "' '", 'lst.name') . ' ELSE lst.name END) AS street_name,
+				lt.name AS street_type,
+				lc.name AS city_name,
+				lb.name AS borough_name, lb.type AS borough_type,
+				ld.name AS district_name, ls.name AS state_name
 			FROM netdevices d
 			LEFT JOIN nastypes t ON (t.id = d.nastype)
 			LEFT JOIN ewx_channels c ON (d.channelid = c.id)
 			LEFT JOIN location_cities lc ON (lc.id = d.location_city)
-			LEFT JOIN location_streets ls ON (ls.id = d.location_street)
-			LEFT JOIN location_street_types lt ON (lt.id = ls.typeid)
+			LEFT JOIN location_streets lst ON (lst.id = d.location_street)
+			LEFT JOIN location_street_types lt ON (lt.id = lst.typeid)
+			LEFT JOIN location_boroughs lb ON (lb.id = lc.boroughid)
+			LEFT JOIN location_districts ld ON (ld.id = lb.districtid)
+			LEFT JOIN location_states ls ON (ls.id = ld.stateid)
 			WHERE d.id = ?', array($id));
 
         $result['takenports'] = $this->CountNetDevLinks($id);
+	$result['radiosectors'] = $this->db->GetAll('SELECT * FROM netradiosectors WHERE netdev = ? ORDER BY name', array($id));
 
         if ($result['guaranteeperiod'] != NULL && $result['guaranteeperiod'] != 0)
             $result['guaranteetime'] = strtotime('+' . $result['guaranteeperiod'] . ' month', $result['purchasetime']); // transform to UNIX timestamp

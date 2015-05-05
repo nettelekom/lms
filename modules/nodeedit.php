@@ -40,11 +40,12 @@ switch ($action) {
 		if (empty($_GET['devid']) || !($netdev = $LMS->GetNetDev($_GET['devid']))) {
 			$SESSION->redirect('?m=nodeinfo&id=' . $nodeid);
 		} else if ($netdev['ports'] > $netdev['takenports']) {
-			$LMS->NetDevLinkNode($nodeid, $_GET['devid'],
-				isset($_GET['linktype']) ? intval($_GET['linktype']) : 0,
-				isset($_GET['linktechnology']) ? intval($_GET['linktechnology']) : 0,
-				isset($_GET['linkspeed']) ? intval($_GET['linkspeed']) : 100000,
-				intval($_GET['port']));
+			$LMS->NetDevLinkNode($nodeid, $_GET['devid'], array(
+				'type' => isset($_GET['linktype']) ? intval($_GET['linktype']) : 0,
+				'technology' => isset($_GET['linktechnology']) ? intval($_GET['linktechnology']) : 0,
+				'speed' => isset($_GET['linkspeed']) ? intval($_GET['linkspeed']) : 100000,
+				'port' => intval($_GET['port']),
+			));
 			$SESSION->redirect('?m=nodeinfo&id=' . $nodeid);
 		} else {
 			$SESSION->redirect('?m=nodeinfo&id=' . $nodeid . '&devid=' . $_GET['devid']);
@@ -76,6 +77,19 @@ switch ($action) {
 		}
 		$SESSION->redirect('?m=nodeinfo&id=' . $nodeid);
 		break;
+	case 'authtype':
+		$DB->Execute('UPDATE nodes SET authtype=? WHERE id=?', array(intval($_GET['authtype']), $nodeid));
+		if ($SYSLOG) {
+			$args = array(
+				$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NODE] => $nodeid,
+				$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_CUST] => $customerid,
+				'authtype' => intval($_GET['authtype']),
+			);
+			$SYSLOG->AddMessage(SYSLOG_RES_NODE, SYSLOG_OPER_UPDATE, $args,
+				array($SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NODE], $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_CUST]));
+		}
+		$SESSION->redirect('?m=nodeinfo&id=' . $nodeid);
+		break;
 }
 
 $nodeinfo = $LMS->GetNode($nodeid);
@@ -92,6 +106,13 @@ else
 
 $layout['pagetitle'] = trans('Node Edit: $a', $nodeinfo['name']);
 
+$nodeauthtype = array();
+$authtype = $nodeinfo['authtype'];
+if ($authtype != 0) {
+	$nodeauthtype['pppoe'] = ($authtype & 1);
+	$nodeauthtype['dhcp'] = ($authtype & 2);
+	$nodeauthtype['eap'] = ($authtype & 4);
+}
 if (isset($_POST['nodeedit'])) {
 	$nodeedit = $_POST['nodeedit'];
 
@@ -224,8 +245,16 @@ if (isset($_POST['nodeedit'])) {
 			array($nodeedit['projectname'], INV_PROJECT_SYSTEM)))
 			$error['projectname'] = trans('Project with that name already exists');
 	}
-
-
+	$nodeedit['authtype'] = 0;
+	if(isset($_POST['nodeauthtype'])) {
+		$authtype = $_POST['nodeauthtype'];
+		if (!empty($authtype)) {
+			foreach ($authtype as $op) {
+				$op = (int)$op;
+				$nodeedit['authtype'] |= $op;
+			}
+		}
+	}
 	if (!$error) {
 		if (empty($nodeedit['teryt'])) {
 			$nodeedit['location_city'] = null;
@@ -318,6 +347,7 @@ $SMARTY->assign('othernodegroups', $LMS->GetNodeGroupNamesWithoutNode($nodeid));
 $SMARTY->assign('error', $error);
 $SMARTY->assign('nodeinfo', $nodeinfo);
 $SMARTY->assign('objectid', $nodeinfo['id']);
+$SMARTY->assign('nodeauthtype', $nodeauthtype);
 $SMARTY->display('node/nodeedit.html');
 
 ?>

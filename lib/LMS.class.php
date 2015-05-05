@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2014 LMS Developers
+ *  (C) Copyright 2001-2015 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -92,7 +92,7 @@ class LMS
     public function InitXajax()
     {
         if (!$this->xajax) {
-            require(LIB_DIR . '/xajax/xajax_core/xajax.inc.php');
+            require(LIB_DIR . DIRECTORY_SEPARATOR . 'xajax' . DIRECTORY_SEPARATOR . 'xajax_core' . DIRECTORY_SEPARATOR . 'xajax.inc.php');
             $this->xajax = new xajax();
             $this->xajax->configure('errorHandler', true);
             $this->xajax->configure('javascript URI', 'img');
@@ -273,10 +273,10 @@ class LMS
         $basename = 'lms-' . time() . '-' . DBVERSION;
         if (($gzipped) && (extension_loaded('zlib'))) {
             $filename = $basename . '.sql.gz';
-            $res = $this->DBDump(ConfigHelper::getConfig('directories.backup_dir') . '/' . $filename, TRUE, $stats);
+            $res = $this->DBDump(ConfigHelper::getConfig('directories.backup_dir') . DIRECTORY_SEPARATOR . $filename, TRUE, $stats);
         } else {
             $filename = $basename . '.sql';
-            $res = $this->DBDump(ConfigHelper::getConfig('directories.backup_dir') . '/' . $filename, FALSE, $stats);
+            $res = $this->DBDump(ConfigHelper::getConfig('directories.backup_dir') . DIRECTORY_SEPARATOR . $filename, FALSE, $stats);
         }
         if ($this->SYSLOG)
             $this->SYSLOG->AddMessage(SYSLOG_RES_DBBACKUP, SYSLOG_OPER_ADD, array('filename' => $filename), null);
@@ -632,6 +632,11 @@ class LMS
         return $manager->GetNodeIDByMAC($mac);
     }
 
+    public function GetNodeConnType($id)
+    {
+        $manager = $this->getNodeManager();
+        return $manager->GetNodeConnType($id);
+    }
     public function GetNodeIDByName($name)
     {
         $manager = $this->getNodeManager();
@@ -782,22 +787,22 @@ class LMS
         return $manager->GetNetDevLinkedNodes($id);
     }
 
-    public function NetDevLinkNode($id, $devid, $type = 0, $technology = 0, $speed = 100000, $port = 0)
+    public function NetDevLinkNode($id, $devid, $link = NULL)
     {
         $manager = $this->getNetDevManager();
-        return $manager->NetDevLinkNode($id, $devid, $type, $technology, $speed, $port);
+        return $manager->NetDevLinkNode($id, $devid, $link);
     }
 
-    public function SetNetDevLinkType($dev1, $dev2, $type = 0, $technology = 0, $speed = 100000)
+    public function SetNetDevLinkType($dev1, $dev2, $link)
     {
         $manager = $this->getNetDevManager();
-        return $manager->SetNetDevLinkType($dev1, $dev2, $type, $technology, $speed);
+        return $manager->SetNetDevLinkType($dev1, $dev2, $link);
     }
 
-    public function SetNodeLinkType($node, $type = 0, $technology = 0, $speed = 100000)
+    public function SetNodeLinkType($node, $link)
     {
         $manager = $this->getNodeManager();
-        return $manager->SetNodeLinkType($node, $type, $technology, $speed);
+        return $manager->SetNodeLinkType($node, $link);
     }
 
     /*
@@ -1146,10 +1151,10 @@ class LMS
         return $manager->GetNetDevConnectedNames($id);
     }
 
-    public function GetNetDevList($order = 'name,asc')
+    public function GetNetDevList($order = 'name,asc', $search = array())
     {
         $manager = $this->getNetDevManager();
-        return $manager->GetNetDevList($order);
+        return $manager->GetNetDevList($order, $search);
     }
 
     public function GetNetDevNames()
@@ -1200,10 +1205,10 @@ class LMS
         return $manager->IsNetDevLink($dev1, $dev2);
     }
 
-    public function NetDevLink($dev1, $dev2, $type = 0, $technology = 0, $speed = 100000, $sport = 0, $dport = 0)
+    public function NetDevLink($dev1, $dev2, $link)
     {
         $manager = $this->getNetDevManager();
-        return $manager->NetDevLink($dev1, $dev2, $type, $technology, $speed, $sport, $dport);
+        return $manager->NetDevLink($dev1, $dev2, $link);
     }
 
     public function NetDevUnLink($dev1, $dev2)
@@ -1804,7 +1809,7 @@ class LMS
                 }
                 break;
             case 'smstools':
-                $dir = ConfigHelper::getConfig('sms.smstools_outdir', '/var/spool/sms/outgoing');
+                $dir = ConfigHelper::getConfig('sms.smstools_outdir', DIRECTORY_SEPARATOR . 'var' . DIRECTORY_SEPARATOR . 'spool' . DIRECTORY_SEPARATOR . 'sms' . DIRECTORY_SEPARATOR . 'outgoing');
 
                 if (!file_exists($dir)) {
                     $errors[] = trans('SMSTools outgoing directory not exists ($a)!', $dir);
@@ -1815,7 +1820,7 @@ class LMS
                     continue 2;
                 }
 
-                $filename = $dir . '/lms-' . $messageid . '-' . $number;
+                $filename = $dir . DIRECTORY_SEPARATOR . 'lms-' . $messageid . '-' . $number;
                 $latin1 = iconv('UTF-8', 'ISO-8859-15', $message);
                 $alphabet = '';
                 if (strlen($latin1) != mb_strlen($message, 'UTF-8')) {
@@ -2017,7 +2022,7 @@ class LMS
     public function CalcAt($period, $date)
     {
         $manager = $this->getFinanaceManager();
-        $manager->CalcAt($period, $date);
+        return $manager->CalcAt($period, $date);
     }
 
     /**
@@ -2109,8 +2114,9 @@ class LMS
 
     public function GetNodeSessions($nodeid)
     {
-        $nodesessions = $this->DB->GetAll('SELECT INET_NTOA(ipaddr) AS ipaddr, mac, start, stop, download, upload
-			FROM nodesessions WHERE nodeid = ? ORDER BY stop DESC LIMIT 10', array($nodeid));
+        $nodesessions = $this->DB->GetAll('SELECT INET_NTOA(ipaddr) AS ipaddr, mac, start, stop,
+		download, upload, terminatecause
+		FROM nodesessions WHERE nodeid = ? ORDER BY stop DESC LIMIT 10', array($nodeid));
         if (!empty($nodesessions))
             foreach ($nodesessions as $idx => $session) {
                 list ($number, $unit) = setunits($session['download']);

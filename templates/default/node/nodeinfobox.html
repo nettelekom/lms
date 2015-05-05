@@ -4,7 +4,7 @@
 <!--
 	function chkmac_change()
 	{
-		if (document.getElementById('chkmac').checked)
+		if (xjx.$('chkmac').checked)
 			location.href = '?m=nodeedit&id={$nodeinfo.id}&action=chkmac&chkmac=1';
 		else
 			location.href = '?m=nodeedit&id={$nodeinfo.id}&action=chkmac&chkmac=0';
@@ -12,15 +12,33 @@
 
 	function duplex_change()
 	{
-		if (document.getElementById('duplex').checked)
+		if (xjx.$('duplex').checked)
 			location.href = '?m=nodeedit&id={$nodeinfo.id}&action=duplex&duplex=1';
 		else
 			location.href = '?m=nodeedit&id={$nodeinfo.id}&action=duplex&duplex=0';
 	}
 
+	function change_authtype() {
+		var authtype = 0;
+		authtype |= (xjx.$('authtype_pppoe').checked == true) * 1;
+		authtype |= (xjx.$('authtype_dhcp').checked == true) * 2;
+		authtype |= (xjx.$('authtype_eap').checked == true) * 4;
+		location.href = '?m=nodeedit&id={$nodeinfo.id}&action=authtype&authtype=' + authtype;
+	}
+
+	function change_netdevice(id) {
+		if (xjx.$('linktype').value == 1) {
+			xjx.$('linktype').disabled = true;
+			xjx.$('radiosector').disabled = true;
+			xjx.$('linktechnology').disabled = true;
+			xjx.$('linkspeed').disabled = true;
+			xajax_getRadioSectors(id, xjx.$('linktechnology').value);
+		}
+	}
+
 	function change_linktype(linktype) {
 		linktype = parseInt(linktype);
-		var options = document.getElementById('linktechnology').options;
+		var options = xjx.$('linktechnology').options;
 		while (options.length)
 			options.remove(0);
 		options.add(new Option('{trans("- unknown -")}', 0));
@@ -41,7 +59,51 @@
 				{/foreach}
 				break;
 		}
+		xjx.$('radiosector').style.display = (linktype == 1 ? '' : 'none');
+
+		if (linktype == 1) {
+			var selected = xjx.$('netdev').selectedIndex;
+			if (selected) {
+				netdev = xjx.$('netdev').options[selected].value;
+				xjx.$('radiosector').disabled = true;
+				xajax_getRadioSectors(netdev);
+			}
+		}
 	}
+
+	function change_linktechnology(technology) {
+		technology = parseInt(technology);
+		var linktype = xjx.$('linktype').options[xjx.$('linktype').selectedIndex].value;
+		if (linktype != 1)
+			return;
+		var netdev = xjx.$('netdev').options[xjx.$('netdev').selectedIndex].value;
+		if (netdev !== undefined) {
+			xjx.$('radiosector').disabled = true;
+			xajax_getRadioSectors(netdev, technology);
+		}
+	}
+
+	function radio_sectors_received(radiosectors) {
+		var options = xjx.$('radiosector').options;
+		var oldvalue = options[xjx.$('radiosector').selectedIndex].value;
+		while (options.length)
+			options.remove(0);
+		options.add(new Option('- {trans("none")} -', 0));
+		if (radiosectors !== null) {
+			radiosectors.forEach(function(elem) {
+				var option = new Option(elem.name, elem.id);
+				if (elem.id == oldvalue)
+					option.selected = true;
+				options.add(option);
+			});
+		}
+		xjx.$('linktype').disabled = false;
+		xjx.$('radiosector').disabled = false;
+		xjx.$('linktechnology').disabled = false;
+		xjx.$('linkspeed').disabled = false;
+	}
+
+	xajax_getRadioSectors({$nodeinfo.netdev}, {$nodeinfo.linktechnology});
 //-->
 </SCRIPT>
 <TABLE class="lmsbox">
@@ -116,7 +178,7 @@
 			<IMG SRC="img/home.gif" ALT="{trans("Location:")}">
 		</TD>
 		<TD style="width: 99%;" COLSPAN="2">
-			{$nodeinfo.location}
+			{$nodeinfo.location}{if $nodeinfo.borough_name} ({$nodeinfo.state_name} / {$nodeinfo.district_name} / {$_BOROUGHTYPES[$nodeinfo.borough_type]} {$nodeinfo.borough_name}){/if}
 		</TD>
 	</TR>
 {/if}
@@ -138,10 +200,10 @@
 				<A HREF="?m=netdevinfo&id={$netdevices.id}">{$netdevices.name} {$netdevices.producer}{if $netdevices.location} / {$netdevices.location}{/if}</A>
 				</span>
 				{if $nodeinfo.port}[{$nodeinfo.port}]{/if}
-				<IMG src="img/{if $nodeinfo.linktype == 1}wireless.gif{elseif $nodeinfo.linktype == 2}netdev_takenports.gif{else}netdev_takenports.gif{/if}" alt="{$_LINKTYPES[$nodeinfo.linktype]}" {tip text="{if $nodeinfo.linktechnology}{$_LINKTECHNOLOGIES[$nodeinfo.linktype][$nodeinfo.linktechnology]} / {/if}{$_LINKSPEEDS[$nodeinfo.linkspeed]}"}>
+				<IMG src="img/{if $nodeinfo.linktype == 1}wireless.gif{elseif $nodeinfo.linktype == 2}netdev_takenports.gif{else}netdev_takenports.gif{/if}" alt="{$_LINKTYPES[$nodeinfo.linktype]}" {tip text="{if $nodeinfo.linktechnology}{$_LINKTECHNOLOGIES[$nodeinfo.linktype][$nodeinfo.linktechnology]} / {/if}{if $nodeinfo.linkradiosector}{$nodeinfo.linkradiosectorname} / {/if}{$_LINKSPEEDS[$nodeinfo.linkspeed]}"}>
 			{else}
 				{if $netdevices}
-				<SELECT SIZE="1" style="width: 300px;" NAME="devid" {tip trigger="netdev"}>
+				<SELECT SIZE="1" style="width: 300px;" NAME="devid" id="netdev" {tip trigger="netdev"} onchange="change_netdevice(this.options[this.selectedIndex].value)">
 				<OPTION VALUE="0" {if !$netdevice}SELECTED{/if}>- {trans("no device")} -</OPTION>
 					{section name=netdev loop=$netdevices}
 					{assign var=netdevname value=$netdevices[netdev].name}
@@ -150,6 +212,7 @@
 					<OPTION VALUE="{$netdevices[netdev].id}" {if $netdevices[netdev].id==$netdevice}SELECTED{/if}>{$netdevname|truncate:120:"...":true}</OPTION>
 					{/section}
 				</SELECT>
+				<a href="javascript: void(0);" onClick="return netdevfrommapchoosewin(document.nodelink.elements['devid']);" {tip text="Click to select network device from map"}>&raquo;&raquo;&raquo;</A>
 				<INPUT type="text" name="port" value="{if $nodeinfo.port}{$nodeinfo.port}{/if}" size="2" {tip text="Enter port number in device (optional)" trigger="port"}>
 				<BR>
 				<SELECT name="linktype" id="linktype" {tip trigger="linktype" text="Select link type"} onchange="change_linktype(this.options[this.selectedIndex].value)">
@@ -157,7 +220,10 @@
 					<OPTION VAlUE="{$key}">{$item}</OPTION>
 					{/foreach}
 				</SELECT>
-				<SELECT NAME="linktechnology" id="linktechnology" {tip trigger="linktechnology" text="Select link technology"}>
+				<SELECT NAME="radiosector" id="radiosector" {tip trigger="radiosector" text="Select radio sector"} style="display: none;">
+					<OPTION value="0">- {trans("none")} -</OPTION>
+				</SELECT>
+				<SELECT NAME="linktechnology" id="linktechnology" {tip trigger="linktechnology" text="Select link technology"} onchange="change_linktechnology(this.options[this.selectedIndex].value)">
 					<OPTION value="0">{trans("- unknown -")}</OPTION>
 					{foreach $_LINKTECHNOLOGIES[0] as $linktechnologyidx => $linktechnology}
 					<OPTION value="{$linktechnologyidx}">{$linktechnology}</OPTION>
@@ -194,6 +260,16 @@
 			<label for="duplex">{trans("Half duplex")}:</label><INPUT TYPE="checkbox" NAME="duplex" ID="duplex" VALUE="1" {if $nodeinfo.halfduplex} checked{/if} onchange="duplex_change();">
 		</TD>
 	</TR>
+		<TR>
+		<TD style="width: 1%;">
+			<IMG SRC="img/netdev.gif" ALT="">
+		</TD>
+		<TD style="width: 99%; white-space: nowrap;" COLSPAN="2">
+			<label for="authtype_pppoe">{trans("PPPoE Client")}</label><INPUT TYPE="checkbox" NAME="nodeauthtype[pppoe]" value="1" id="authtype_pppoe" {if $nodeauthtype.pppoe} checked {/if} {tip text="Enable/disable PPPoE Server Client" trigger="pppoe"} onchange="change_authtype()">&nbsp;
+			<label for="authtype_dhcp">{trans("DHCP Client")}</label><INPUT TYPE="checkbox" NAME="nodeauthtype[dhcp]" value="2" id="authtype_dhcp" {if $nodeauthtype.dhcp} checked{/if} {tip text="Enable/disable DHCP Server Client" trigger="dhcp"} onchange="change_authtype()">&nbsp;
+			<label for="authtype_eap">{trans("EAP Client")}</label><INPUT TYPE="checkbox" NAME="nodeauthtype[eap]" value="4" id="authtype_eap" {if $nodeauthtype.eap} checked {/if} {tip text="Enable/disable EAP Server Client" trigger="eap"} onchange="change_authtype()">
+		</TD>
+		</TR>
 					</TABLE>
 				</TD>
 				<TD style="width: 50%; vertical-align: top;">
