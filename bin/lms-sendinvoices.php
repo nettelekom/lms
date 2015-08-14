@@ -230,15 +230,17 @@ $ch = curl_init();
 if (!$ch)
 	die("Fatal error: Can't init curl library!" . PHP_EOL);
 
-$query = "SELECT d.id, d.number, d.cdate, c.email, d.name, d.customerid, n.template 
+$query = "SELECT d.id, d.number, d.cdate, d.name, d.customerid, n.template, m.email
 		FROM documents d 
 		LEFT JOIN customers c ON c.id = d.customerid 
+		JOIN (SELECT customerid, " . $DB->GroupConcat('contact') . " AS email
+			FROM customercontacts WHERE type = ? GROUP BY customerid) m ON m.customerid = c.id
 		LEFT JOIN numberplans n ON n.id = d.numberplanid 
-		WHERE c.deleted = 0 AND d.type IN (1,3) AND c.email <> '' AND c.invoicenotice = 1 "
+		WHERE c.deleted = 0 AND d.type IN (1,3) AND c.invoicenotice = 1"
 			. (!empty($invoiceid) ? "AND d.id = " . $invoiceid : "AND d.cdate >= $daystart AND d.cdate <= $dayend")
 			. (!empty($groupnames) ? $customergroups : "")
 		. " ORDER BY d.number";
-$docs = $DB->GetAll($query);
+$docs = $DB->GetAll($query, array(CONTACT_EMAIL));
 
 if (!empty($docs)) {
 	foreach ($docs as $doc) {
@@ -250,7 +252,7 @@ if (!empty($docs)) {
 			CURLOPT_RETURNTRANSFER => TRUE,
 			CURLOPT_COOKIEJAR => COOKIE_FILE,
 			CURLOPT_COOKIEFILE => COOKIE_FILE,
-			CURLOPT_SSLVERSION => 3,
+			//CURLOPT_SSLVERSION => 3,
 			CURLOPT_SSL_VERIFYHOST => 2,
 			CURLOPT_SSL_VERIFYPEER => FALSE,
 			CURLOPT_USERAGENT => USER_AGENT
@@ -274,11 +276,20 @@ if (!empty($docs)) {
 			$filename = preg_replace('/%docid/', $doc['id'], $invoice_filename);
 			$doc['name'] = '"' . $doc['name'] . '"';
 
+			$mailto = array();
+			$mailto_qp_encoded = array();
+			foreach (explode(',', $custemail) as $email) {
+				$mailto[] = $doc['name'] . " <$email>";
+				$mailto_qp_encoded[] = qp_encode($doc['name']) . " <$email>";
+			}
+			$mailto = implode(', ', $mailto);
+			$mailto_qp_encoded = implode(', ', $mailto_qp_encoded);
+
 			if (!$quiet || $test)
-				printf("Invoice No. $invoice_number for " . $doc['name'] . " <$custemail>" . PHP_EOL);
+				printf("Invoice No. $invoice_number for $mailto" . PHP_EOL);
 
 			if (!$test) {
-				$headers = array('From' => $from, 'To' => qp_encode($doc['name']) . ' <' . $custemail . '>',
+				$headers = array('From' => $from, 'To' => $mailto_qp_encoded,
 					'Subject' => $subject);
 				if (!empty($notify_email))
 					$headers['Cc'] = $notify_email;

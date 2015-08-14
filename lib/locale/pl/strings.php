@@ -2962,7 +2962,7 @@ $_LANG['Radio sector altitude cannot be empty!'] = 'Wysokość sektora radiowego
 $_LANG['Radio sector altitude has invalid format!'] = 'Wysokość sektora radiowego zawiera niepoprawne znaki!';
 $_LANG['Radio sector range cannot be empty!'] = 'Zasięg sektora radiowego nie może być pusty!';
 $_LANG['Radio sector range has invalid format!'] = 'Zasięg sektora radiowego zawiera niepoprawne znaki!';
-$_LANG['Radio sector frequency has invalid format!'] = 'Częstotliwość sektora radiowa zawiera niepoprawne znaki!';
+$_LANG['Radio sector frequency has invalid format!'] = 'Częstotliwość sektora radiowego zawiera niepoprawne znaki!';
 $_LANG['Radio sector second frequency should be also empty if first frequency is empty!'] = 'Druga częstotliwość sektora radiowego powinna również pozostać pusta, w przypadku gdy pierwsza częstotliwość jest pusta!';
 $_LANG['Radio sector bandwidth has invalid format!'] = 'Szerokość pasma sektora radiowego zawiera niepoprawne znaki!';
 $_LANG['Radio sector:'] = 'Sektor radiowy:';
@@ -2979,5 +2979,20 @@ $_LANG['Enable/disable EAP Server Client'] = 'Włącza/Wyłącza komputer jako k
 $_LANG['Select network device:'] = 'Wybierz urządzenie sieciowe:';
 $_LANG['Click to select network device from map'] = 'Kliknij w celu wybrania urządzenia sieciowego z mapy';
 $_LANG['Replace'] = 'Wymień';
+
+$_LANG['Plugin Name:'] = 'Nazwa wtyczki:';
+$_LANG['Plugin List'] = 'Lista wtyczek';
+$_LANG['Enabled:'] = 'Włączone:';
+$_LANG['Plugin Management'] = 'Zarządzanie wtyczkami';
+$_LANG['Plugins'] = 'Wtyczki';
+$_LANG['Modern:'] = 'Nowoczesna:';
+$_LANG['Current DB Schema Version:'] = 'Bieżąca wersja schematu bazy danych:';
+$_LANG['DB Schema Version:'] = 'Wersja schematu bazy danych:';
+$_LANG['minimal'] = 'minimalny';
+$_LANG['Author:'] = 'Autor:';
+
+$_LANG['Contact phones'] = 'Telefony kontaktowe';
+$_LANG['Email addresses'] = 'Adresy email';
+$_LANG['Email address is required!'] = 'Adres email jest wymagany!';
 
 ?>

@@ -105,29 +105,31 @@ function module_updateusersave()
     )
 	foreach(array_diff_assoc($userdata, $userinfo) as $field => $val) 
 	{
-	    if($field == 'phone')
+	    if($field == 'phone' || $field == 'email')
 	    {
+		    $type = $field == 'phone' ? 'contacts' : 'emails';
 		    foreach($val as $i => $v)
 		    {
 		        $v = trim(htmlspecialchars($v, ENT_NOQUOTES));
 			if(isset($right['edit_contact']))
 			{
-			    if(isset($userinfo['contacts'][$i]) && $userinfo['contacts'][$i]['phone'] != $v)
+			    if(isset($userinfo[$type][$i]) && $userinfo[$type][$i][$field] != $v)
 			    {
 				    if($v)
-					    $LMS->DB->Execute('UPDATE customercontacts SET phone = ? WHERE id = ? AND customerid = ?', array($v, $i, $id));
+					    $LMS->DB->Execute('UPDATE customercontacts SET contact = ? WHERE id = ? AND customerid = ?', array($v, $i, $id));
 				    else
 					    $LMS->DB->Execute('DELETE FROM customercontacts WHERE id = ? AND customerid = ?', array($i, $id));
 			    }
-			    elseif(!isset($userinfo['contacts'][$i])  && $v)
-			    	    $LMS->DB->Execute('INSERT INTO customercontacts (customerid, phone) VALUES (?,?)', array($id, $v));
+			    elseif(!isset($userinfo[$type][$i])  && $v)
+			    	    $LMS->DB->Execute('INSERT INTO customercontacts (customerid, contact, type) VALUES (?, ?, ?)',
+					array($id, $v, CONTACT_LANDLINE));
 			    
-			    $userinfo['contacts'][$i]['phone'] = $v;
+			    $userinfo[$type][$i][$field] = $v;
 			}
 			elseif(isset($right['edit_contact_ack']) && ($v || isset($userinfo['contacts'][$i])))
-				if(!isset($userinfo['contacts'][$i]) || $userinfo['contacts'][$i]['phone'] != $v)
+				if(!isset($userinfo[$type][$i]) || $userinfo[$type][$i][$field] != $v)
 					$LMS->DB->Execute('INSERT INTO up_info_changes(customerid, fieldname, fieldvalue) 
-						VALUES(?, ?, ?)', array($id, 'phone'.$i, $v));
+						VALUES(?, ?, ?)', array($id, $field.$i, $v));
 		    }
 		    continue;
 	    }
@@ -265,10 +267,12 @@ if(defined('USERPANEL_SETUPMODE'))
 		if(isset($userchanges))
 			foreach($userchanges as $key => $change)
 			{
-				if(preg_match('/phone([0-9]+)/', $change['fieldname'], $matches))
-				{
-					$old = $DB->GetOne('SELECT phone FROM customercontacts WHERE id = ?', array($matches[1]));
-				}
+				if (preg_match('/phone([0-9]+)/', $change['fieldname'], $matches))
+					$old = $DB->GetOne('SELECT contact AS phone FROM customercontacts WHERE id = ? AND type < ?',
+						array($matches[1], CONTACT_EMAIL));
+				elseif (preg_match('/email([0-9]+)/', $change['fieldname'], $matches))
+					$old = $DB->GetOne('SELECT contact AS email FROM customercontacts WHERE id = ? AND type = ?',
+						array($matches[1], CONTACT_EMAIL));
 				else
 					switch($change['fieldname'])
 					{
@@ -306,19 +310,16 @@ if(defined('USERPANEL_SETUPMODE'))
 				$changes = $DB->GetRow('SELECT customerid, fieldname, fieldvalue FROM up_info_changes
 					WHERE id = ?', array($changeid));
 				
-				if(preg_match('/phone([0-9]+)/', $changes['fieldname'], $matches))
-				{
-					if($matches[1])
-					{
+				if (preg_match('/(phone|email)([0-9]+)/', $changes['fieldname'], $matches)) {
+					if ($matches[2]) {
 						if($changes['fieldvalue'])
-							$DB->Execute('UPDATE customercontacts SET phone = ? WHERE id = ?', array($changes['fieldvalue'], $matches[1]));
+							$DB->Execute('UPDATE customercontacts SET contact = ? WHERE id = ?', array($changes['fieldvalue'], $matches[2]));
 						else
-							$DB->Execute('DELETE FROM customercontacts WHERE id = ?', array($matches[1]));
-					}
-					else // new phone
-						$DB->Execute('INSERT INTO customercontacts (phone, customerid) VALUES(?,?)', array($changes['fieldvalue'], $changes['customerid']));
-				}
-				else
+							$DB->Execute('DELETE FROM customercontacts WHERE id = ?', array($matches[2]));
+					} else // new phone or email
+						$DB->Execute('INSERT INTO customercontacts (contact, customerid, type) VALUES(?, ?, ?)',
+							array($changes['fieldvalue'], $changes['customerid'], $matches[1] == 'phone' ? CONTACT_LANDLINE : CONTACT_EMAIL));
+				} else
 				switch($changes['fieldname'])
 				{
 					case 'im':
@@ -344,12 +345,11 @@ if(defined('USERPANEL_SETUPMODE'))
 					case 'address':
 					case 'zip':
 					case 'city':
-					case 'email':
 					case 'ssn':
 					case 'ten':
 						$DB->Execute('UPDATE customers SET '.$changes['fieldname'].' = ? WHERE id = ?',
 							array($changes['fieldvalue'], $changes['customerid']));
-					break;
+						break;
 				}
 			
 				$DB->Execute('DELETE FROM up_info_changes WHERE id = ?', array($changeid));

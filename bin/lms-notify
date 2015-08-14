@@ -356,11 +356,13 @@ if ($debtors_file)
 
 	# @TODO: check 'messages' table and don't send notifies to often
 	my $dbq = $dbase->prepare("SELECT c.id, c.pin, c.lastname, c.name,
-			SUM(value) AS balance, c.email
+			SUM(value) AS balance,
+			(SELECT contact FROM customercontacts WHERE customerid = c.id AND type = 8
+				ORDER BY id LIMIT 1) AS email
 		FROM customers c
 		JOIN cash ON (c.id = cash.customerid)
-		WHERE c.deleted = 0 AND c.email != ''
-		GROUP BY c.id, c.pin, c.lastname, c.name, c.email
+		WHERE c.deleted = 0 AND email IS NOT NULL
+		GROUP BY c.id, c.pin, c.lastname, c.name, email
 		HAVING SUM(value) < $limit");
 	$dbq->execute();
 
@@ -397,8 +399,10 @@ if ($invoices_file)
 	close MAILFILE;
 
 	my $dbq = $dbase->prepare("SELECT d.id AS docid, c.id, c.pin, d.name,
-		d.number, n.template, d.cdate, d.paytime, c.email,
-		COALESCE(ca.balance, 0) AS balance, v.value
+			d.number, n.template, d.cdate, d.paytime,
+			COALESCE(ca.balance, 0) AS balance, v.value,
+			(SELECT contact FROM customercontacts WHERE customerid = c.id AND type = 8
+				ORDER BY id LIMIT 1) AS email
 		FROM documents d
 		JOIN customers c ON (c.id = d.customerid)
 		JOIN (SELECT SUM(value) * -1 AS value, docid
@@ -410,9 +414,8 @@ if ($invoices_file)
 			FROM cash
 			GROUP BY customerid
 		) ca ON (ca.customerid = d.customerid)
-		WHERE d.type = 1
-	    		AND d.cdate > $utsfmt - 86400
-			AND c.email != ''
+		WHERE d.type = 1 AND email IS NOT NULL
+			AND d.cdate > $utsfmt - 86400
 		");
 	$dbq->execute();
 
@@ -453,8 +456,10 @@ if ($deadline_file)
 	close MAILFILE;
 
 	my $dbq = $dbase->prepare("SELECT d.id AS docid, c.id, c.pin, d.name,
-		d.number, n.template, d.cdate, d.paytime, c.email,
-		COALESCE(ca.balance, 0) AS balance, v.value
+			d.number, n.template, d.cdate, d.paytime,
+			COALESCE(ca.balance, 0) AS balance, v.value,
+			(SELECT contact FROM customercontacts WHERE customerid = c.id AND type = 8
+				ORDER BY id LIMIT 1) AS email
 		FROM documents d
 		JOIN (SELECT SUM(value) AS balance, customerid
 			FROM cash
@@ -467,8 +472,7 @@ if ($deadline_file)
 			GROUP BY docid
 		) v ON (v.docid = d.id)
 		LEFT JOIN numberplans n ON (d.numberplanid = n.id)
-		WHERE d.type = 1 AND d.closed = 0
-			AND c.email != ''
+		WHERE d.type = 1 AND d.closed = 0 AND email IS NOT NULL
 			AND d.cdate > $utsfmt - ((d.paytime + 1) * 86400)
 			AND d.cdate < $utsfmt - (d.paytime * 86400)
 		");
@@ -511,8 +515,10 @@ if ($notes_file)
 	close MAILFILE;
 
 	my $dbq = $dbase->prepare("SELECT d.id AS docid, c.id, c.pin, d.name,
-		d.number, n.template, d.cdate, c.email,
-		COALESCE(ca.balance, 0) AS balance, v.value
+			d.number, n.template, d.cdate,
+			COALESCE(ca.balance, 0) AS balance, v.value,
+			(SELECT contact FROM customercontacts WHERE customerid = c.id AND type = 8
+				ORDER BY id LIMIT 1) AS email
 		FROM documents d
 		JOIN customers c ON (c.id = d.customerid)
 		JOIN (SELECT SUM(value) * -1 AS value, docid
@@ -524,9 +530,8 @@ if ($notes_file)
 			FROM cash
 			GROUP BY customerid
 		) ca ON (ca.customerid = d.customerid)
-		WHERE d.type = 5
-	    		AND d.cdate > $utsfmt - 86400
-			AND c.email != ''
+		WHERE d.type = 5 AND email IS NOT NULL
+			AND d.cdate > $utsfmt - 86400
 		");
 	$dbq->execute();
 

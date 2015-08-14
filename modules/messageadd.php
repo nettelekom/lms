@@ -75,20 +75,26 @@ function GetRecipients($filter, $type = MSG_MAIL) {
 	$disabled = ($group == 5) ? 1 : 0;
 	$indebted = ($group == 6) ? 1 : 0;
 	$notindebted = ($group == 7) ? 1 : 0;
+	$indebted2 = ($group == 11) ? 1 : 0;
+	$indebted3 = ($group == 12) ? 1 : 0;
 
 	if($group>3) $group = 0;
 
 	if($network)
 		$net = $LMS->GetNetworkParams($network);
 
-	if($type == MSG_SMS)
-	{
-		$smstable = 'JOIN (SELECT ' . $LMS->DB->GroupConcat('phone') . ' AS phone, customerid
+	if ($type == MSG_SMS)
+		$smstable = 'JOIN (SELECT ' . $LMS->DB->GroupConcat('contact') . ' AS phone, customerid
 				FROM customercontacts
-				WHERE (type & '.CONTACT_MOBILE.') = '.CONTACT_MOBILE.'
+				WHERE (type & ' . CONTACT_MOBILE . ') = ' . CONTACT_MOBILE . '
 				GROUP BY customerid
 			) x ON (x.customerid = c.id) ';
-	}
+	else
+		$mailtable = 'JOIN (SELECT ' . $LMS->DB->GroupConcat('contact') . ' AS email, customerid
+				FROM customercontacts
+				WHERE customerid = ' . $customerid . ' AND type = ' . CONTACT_EMAIL . '
+				GROUP BY customerid
+			) cc ON (cc.customerid = c.id) ';
 
 	if ($tarifftype) {
 		$tarifftable = 'JOIN (
@@ -101,20 +107,46 @@ function GetRecipients($filter, $type = MSG_MAIL) {
 		) a ON a.customerid = c.id ';
 	}
 
-	$recipients = $LMS->DB->GetAll('SELECT c.id, email, pin, '
-		.($type==MSG_SMS ? 'x.phone, ': '')
-		.$LMS->DB->Concat('c.lastname', "' '", 'c.name').' AS customername,
+	$suspension_percentage = f_round(ConfigHelper::getConfig('finances.suspension_percentage'));
+
+	$recipients = $LMS->DB->GetAll('SELECT c.id, pin, '
+		. ($type == MSG_MAIL ? 'cc.email, ' : '')
+		. ($type == MSG_SMS ? 'x.phone, ' : '')
+		. $LMS->DB->Concat('c.lastname', "' '", 'c.name') . ' AS customername,
 		COALESCE(b.value, 0) AS balance
 		FROM customersview c 
 		LEFT JOIN (
 			SELECT SUM(value) AS value, customerid
 			FROM cash GROUP BY customerid
-		) b ON (b.customerid = c.id) '
-		.(!empty($smstable) ? $smstable : '')
+		) b ON (b.customerid = c.id)
+		LEFT JOIN (SELECT a.customerid,
+			SUM((CASE a.suspended
+				WHEN 0 THEN (((100 - a.pdiscount) * (CASE WHEN t.value IS null THEN l.value ELSE t.value END) / 100) - a.vdiscount)
+				ELSE ((((100 - a.pdiscount) * (CASE WHEN t.value IS null THEN l.value ELSE t.value END) / 100) - a.vdiscount) * ' . $suspension_percentage . ' / 100) END)
+			* (CASE t.period
+				WHEN ' . MONTHLY . ' THEN 1
+				WHEN ' . YEARLY . ' THEN 1/12.0
+				WHEN ' . HALFYEARLY . ' THEN 1/6.0
+				WHEN ' . QUARTERLY . ' THEN 1/3.0
+				ELSE (CASE a.period
+					WHEN ' . MONTHLY . ' THEN 1
+					WHEN ' . YEARLY . ' THEN 1/12.0
+					WHEN ' . HALFYEARLY . ' THEN 1/6.0
+					WHEN ' . QUARTERLY . ' THEN 1/3.0
+					ELSE 0 END)
+				END)
+			) AS value 
+			FROM assignments a
+			LEFT JOIN tariffs t ON (t.id = a.tariffid)
+			LEFT JOIN liabilities l ON (l.id = a.liabilityid AND a.period != ' . DISPOSABLE . ')
+			WHERE (a.datefrom <= ?NOW? OR a.datefrom = 0) AND (a.dateto > ?NOW? OR a.dateto = 0) 
+			GROUP BY a.customerid
+		) t ON (t.customerid = c.id) '
+		. (isset($mailtable) ? $mailtable : '')
+		. (isset($smstable) ? $smstable : '')
 		. ($tarifftype ? $tarifftable : '')
 		.'WHERE deleted = ' . $deleted
 		. ($consent ? ' AND c.mailingnotice = 1' : '')
-		.($type == MSG_MAIL ? ' AND email != \'\'' : '')
 		.($group!=0 ? ' AND status = '.$group : '')
 		.($network ? ' AND c.id IN (SELECT ownerid FROM nodes WHERE 
 			(netid = ' . $net['id'] . ' AND ipaddr > ' . $net['address'] . ' AND ipaddr < ' . $net['broadcast'] . ')
@@ -129,6 +161,8 @@ function GetRecipients($filter, $type = MSG_MAIL) {
 		.($disabled ? ' AND EXISTS (SELECT 1 FROM nodes WHERE ownerid = c.id
 			GROUP BY ownerid HAVING (SUM(access) != COUNT(access)))' : '')
 		.($indebted ? ' AND COALESCE(b.value, 0) < 0' : '')
+		. ($indebted2 ? ' AND COALESCE(b.value, 0) < -t.value' : '')
+		. ($indebted3 ? ' AND COALESCE(b.value, 0) < -t.value * 2' : '')
 		.($notindebted ? ' AND COALESCE(b.value, 0) >= 0' : '')
 		. ($tarifftype ? ' AND NOT EXISTS (SELECT id FROM assignments
 			WHERE customerid = c.id AND tariffid = 0 AND liabilityid = 0
@@ -139,28 +173,32 @@ function GetRecipients($filter, $type = MSG_MAIL) {
 	return $recipients;
 }
 
-function GetRecipient($customerid, $type=MSG_MAIL)
-{
+function GetRecipient($customerid, $type=MSG_MAIL) {
 	global $LMS;
 
-	if($type == MSG_SMS)
-	{
-		$smstable = 'JOIN (SELECT ' . $LMS->DB->GroupConcat('phone') . ' AS phone, customerid
+	if ($type == MSG_SMS)
+		$smstable = 'JOIN (SELECT ' . $LMS->DB->GroupConcat('contact') . ' AS phone, customerid
 				FROM customercontacts 
 				WHERE customerid = '.$customerid.'
-					AND (type & '.CONTACT_MOBILE.') = '.CONTACT_MOBILE.'
+					AND (type & ' . CONTACT_MOBILE . ') = ' . CONTACT_MOBILE . '
 				GROUP BY customerid
 			) x ON (x.customerid = c.id) ';
-	}
+	else
+		$mailtable = 'JOIN (SELECT ' . $LMS->DB->GroupConcat('contact') . ' AS email, customerid
+				FROM customercontacts
+				WHERE customerid = ' . $customerid . ' AND type = ' . CONTACT_EMAIL . '
+				GROUP BY customerid
+			) cc ON (cc.customerid = c.id) ';
 
-	return $LMS->DB->GetAll('SELECT c.id, email, pin, '
-		.($type==MSG_SMS ? 'x.phone, ': '')
-		.$LMS->DB->Concat('c.lastname', "' '", 'c.name').' AS customername,
+	return $LMS->DB->GetAll('SELECT c.id, pin, '
+		. ($type == MSG_MAIL ? 'cc.email, ' : '')
+		. ($type == MSG_SMS ? 'x.phone, ': '')
+		. $LMS->DB->Concat('c.lastname', "' '", 'c.name') . ' AS customername,
 		COALESCE((SELECT SUM(value) FROM cash WHERE customerid = c.id), 0) AS balance
 		FROM customersview c '
-		.(!empty($smstable) ? $smstable : '')
-		.'WHERE c.id = '.$customerid
-		.($type == MSG_MAIL ? ' AND email != \'\'' : ''));
+		. (isset($mailtable) ? $mailtable : '')
+		. (isset($smstable) ? $smstable : '')
+		. 'WHERE c.id = ' . $customerid);
 }
 
 function BodyVars(&$body, $data)
@@ -211,7 +249,7 @@ if(isset($_POST['message']))
 	else
 		$message['type'] == MSG_USERPANEL_URGENT;
 
-	if(empty($message['customerid']) && ($message['group'] < 0 || $message['group'] > 7))
+	if(empty($message['customerid']) && ($message['group'] < 0 || $message['group'] > 12))
 		$error['group'] = trans('Incorrect customers group!');
 
 	if ($message['type'] == MSG_MAIL) {

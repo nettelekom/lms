@@ -194,6 +194,16 @@ if (isset($_POST['nodedata']))
 		}
 	}
 	if(!isset($nodedata['authtype'])) $nodedata['authtype'] = 0;
+
+	$hook_data = $LMS->executeHook('nodeadd_validation_before_submit',
+		array(
+			'nodeadd' => $nodedata,
+			'error' => $error,
+		)
+	);
+	$nodedata = $hook_data['nodeadd'];
+	$error = $hook_data['error'];
+
 	if(!$error)
 	{
         if (empty($nodedata['teryt'])) {
@@ -228,6 +238,13 @@ if (isset($_POST['nodedata']))
 
         $nodedata['id'] = $nodeid;
         $nodedata = $LMS->ExecHook('node_add_after', $nodedata);
+
+		$hook_data = $LMS->executeHook('nodeadd_after_submit',
+			array(
+				'nodeadd' => $nodedata,
+			)
+		);
+		$nodedata = $hook_data['nodeadd'];
 
 		if(!isset($nodedata['reuse']))
 		{
@@ -264,16 +281,23 @@ if (!ConfigHelper::checkValue(ConfigHelper::getConfig('phpui.big_networks', fals
     $SMARTY->assign('customers', $LMS->GetCustomerNames());
 }
 
-include(MODULES_DIR . '/nodexajax.inc.php');
-
-$SMARTY->assign('xajax', $LMS->RunXajax());
-
 $nprojects = $DB->GetAll("SELECT * FROM invprojects WHERE type<>? ORDER BY name",
 	array(INV_PROJECT_SYSTEM));
 $SMARTY->assign('NNprojects',$nprojects);
 
+include(MODULES_DIR . '/nodexajax.inc.php');
 
 $nodedata = $LMS->ExecHook('node_add_init', $nodedata);
+
+$hook_data = $LMS->executeHook('nodeadd_before_display',
+	array(
+		'nodeadd' => $nodedata,
+		'smarty' => $SMARTY,
+	)
+);
+$nodedata = $hook_data['nodeadd'];
+
+$SMARTY->assign('xajax', $LMS->RunXajax());
 
 $SMARTY->assign('networks', $LMS->GetNetworks(true));
 $SMARTY->assign('netdevices', $LMS->GetNetDevNames());

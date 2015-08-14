@@ -235,6 +235,8 @@ sub in_array {
 
 my $row;
 my $dbq;
+my $nrow;
+my $dbqn;
 my $fh;
 my $where = '';
 my @ids_arr = map(int, split(/,/, $list));
@@ -746,6 +748,8 @@ if ($merge)
 		location_house = ?, location_flat = ?, location = ? WHERE id = ?");
 	my $dev_update = $dbase->prepare("UPDATE netdevices SET location_city = ?, location_street = ?,
 		location_house = ?, location_flat = ?, location = ? WHERE id = ?");
+	my $voipaccount_update = $dbase->prepare("UPDATE voipaccounts SET location_city = ?, location_street = ?,
+		location_house = ?, location_flat = ?, location = ? WHERE id = ?");
 	my $street_get = $dbase->prepare("SELECT s.id, s.cityid, (CASE WHEN s.name2 IS NULL THEN s.name ELSE s.name2 || ' ' || s.name END) AS name 
 		FROM location_streets s
 		JOIN location_cities c ON (s.cityid = c.id)
@@ -782,8 +786,43 @@ if ($merge)
 		location_update($row, $street_get, $city_get, $city_count, $dev_update);
 	}
 
+	# voipaccounts
+	$dbq = $dbase->prepare("SELECT va.id, va.phone, va.ownerid,
+			COUNT(*) AS locationcount FROM voipaccounts va
+		LEFT JOIN (SELECT DISTINCT ownerid, location_city, location_street, location_house, location_flat FROM nodes) l
+			ON l.ownerid = va.ownerid
+		WHERE va.location_city IS NULL and va.location_street IS NULL
+		GROUP BY va.id, va.phone, va.ownerid");
+	$dbq->execute();
+	while ($row = $dbq->fetchrow_hashref()) {
+		printf("%s (%04d): ", $row->{'phone'}, $row->{'id'}) if not $quiet;
+		if ($row->{'locationcount'}) {
+			print "found " if not $quiet;
+			if ($row->{'locationcount'} == 1) {
+				my $dbqn = $dbase->prepare("SELECT location_city, location_street, location_house, location_flat, location
+					FROM nodes WHERE location_city IS NOT NULL AND location_street IS NOT NULL
+						AND ownerid = ? LIMIT 1");
+				$dbqn->execute($row->{'ownerid'});
+				$nrow = $dbqn->fetchrow_hashref();
+				if ($nrow) {
+					print "single non-empty location\n" if not $quiet;
+					$voipaccount_update->execute($nrow->{'location_city'}, $nrow->{'location_street'},
+						$nrow->{'location_house'}, $nrow->{'location_flat'}, $nrow->{'location'}, $row->{'id'});
+				} else {
+					print "single empty location\n" if not $quiet;
+				}
+				$dbqn->finish();
+			} else {
+				print "many locations\n" if not $quiet;
+			}
+		} else {
+			print "not found\n" if not $quiet;
+		}
+	}
+
 	$node_update->finish();
 	$dev_update->finish();
+	$voipaccount_update->finish();
 	$street_get->finish();
 	$city_get->finish();
 	$city_count->finish();

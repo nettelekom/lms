@@ -1998,8 +1998,10 @@ if(isset($_GET['l']) && sprintf('%d',$_GET['l']) > 0 && sprintf('%d',$_GET['l'])
 			'settlement' => 0, 
 			'nodes' => NULL
 		));
-		$DB->Execute('INSERT INTO customercontacts (customerid, phone)
-		    VALUES (?, ?)', array($id, $customeradd['phone']));
+		$DB->Execute('INSERT INTO customercontacts (customerid, contact, type)
+			VALUES (?, ?, ?)', array($id, $customeradd['email'], CONTACT_EMAIL));
+		$DB->Execute('INSERT INTO customercontacts (customerid, contact, type)
+			VALUES (?, ?, ?)', array($id, $customeradd['phone'], CONTACT_LANDLINE));
 
 		$nodes = mt_rand(1,2);
 		for($j = 0; $j < $nodes; $j++)

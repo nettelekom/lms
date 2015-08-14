@@ -5,52 +5,56 @@
 <h1>{$layout.pagetitle}</h1>
 <table class="lmsbox">
     <colgroup>
-        <col style="width: 96%;"/>
-        <col style="width: 1%;"/>
-        <col style="width: 1%;"/>
-        <col style="width: 1%;"/>
-        <col style="width: 1%;"/>
+        {block name="voipaccountlist-list-columns"}
+        <col style="width: 96%;">
+        <col style="width: 1%;" span="4">
+        {assign var='number_of_table_columns' value='5'}
+        {/block}
     </colgroup>
     <thead>
+        {block name="voipaccountlist-list-header"}
         <tr {tip text="Click on column name to change sorting order"}>
             <th nowrap>
                 <img src="img/voip.gif" alt=""> 
-                <a href="?m=voipaccountlist&o=login{if $listdata.direction eq "asc" && $listdata.order eq "login"},desc{/if}">{trans("Login:")}</a> 
-                {if $listdata.order eq "login"}
-                <img src="img/{if $listdata.direction eq "desc"}asc{else}desc{/if}_order.gif" alt="">
+                <a href="?m=voipaccountlist&o=login{if $listdata.direction == "asc" && $listdata.order == "login"},desc{/if}">{trans("Login:")}</a> 
+                {if $listdata.order == "login"}
+                <img src="img/{if $listdata.direction == "desc"}asc{else}desc{/if}_order.gif" alt="">
                 {/if}
+		/ {trans("Location:")}
                 <br>
                 <img src="img/customer.gif" alt=""> 
-                <a href="?m=voipaccountlist&o=owner{if $listdata.direction eq "asc" && $listdata.order eq "owner"},desc{/if}">{trans("Customer:")}</a> 
-                {if $listdata.order eq "owner"}
-                <img src="img/{if $listdata.direction eq "desc"}asc{else}desc{/if}_order.gif" alt="">
+                <a href="?m=voipaccountlist&o=owner{if $listdata.direction == "asc" && $listdata.order == "owner"},desc{/if}">{trans("Customer:")}</a> 
+                {if $listdata.order == "owner"}
+                <img src="img/{if $listdata.direction == "desc"}asc{else}desc{/if}_order.gif" alt="">
                 {/if}
             </th>
             <th nowrap>
-                <a href="?m=voipaccountlist&o=id{if $listdata.direction eq "asc" && $listdata.order eq "id"},desc{/if}">{trans("ID:")}</a> 
-                {if $listdata.order eq "id"}
-                <img src="img/{if $listdata.direction eq "desc"}asc{else}desc{/if}_order.gif" alt="">
+                <a href="?m=voipaccountlist&o=id{if $listdata.direction == "asc" && $listdata.order == "id"},desc{/if}">{trans("ID:")}</a> 
+                {if $listdata.order == "id"}
+                <img src="img/{if $listdata.direction == "desc"}asc{else}desc{/if}_order.gif" alt="">
                 {/if}
             </th>
             <th nowrap>
-                <a href="?m=voipaccountlist&o=phone{if $listdata.direction eq "asc" && $listdata.order eq "phone"},desc{/if}">{trans("Phone number:")}</a> 
-                {if $listdata.order eq "phone"}
-                <img src="img/{if $listdata.direction eq "desc"}asc{else}desc{/if}_order.gif" alt="">
+                <a href="?m=voipaccountlist&o=phone{if $listdata.direction == "asc" && $listdata.order == "phone"},desc{/if}">{trans("Phone number:")}</a> 
+                {if $listdata.order == "phone"}
+                <img src="img/{if $listdata.direction == "desc"}asc{else}desc{/if}_order.gif" alt="">
                 {/if}
             </th>
             <th nowrap>
-                <a href="?m=voipaccountlist&o=passwd{if $listdata.direction eq "asc" && $listdata.order eq "passwd"},desc{/if}">{trans("Password:")}</a> 
-                {if $listdata.order eq "passwd"}
-                <img src="img/{if $listdata.direction eq "desc"}asc{else}desc{/if}_order.gif" alt="">
+                <a href="?m=voipaccountlist&o=passwd{if $listdata.direction == "asc" && $listdata.order == "passwd"},desc{/if}">{trans("Password:")}</a> 
+                {if $listdata.order == "passwd"}
+                <img src="img/{if $listdata.direction == "desc"}asc{else}desc{/if}_order.gif" alt="">
                 {/if}
             </th>
             <th align="right">
                 <nobr>{t a=$listdata.total}Total: $a{/t}</nobr>
             </th>
         </tr>
+        {/block}
+        {block name="voipaccountlist-list-filters"}
         {*
         <tr>
-            <th colspan="5">
+            <th colspan="{$number_of_table_columns}">
                 <form method="get" action="?m={$layout.module}" name="choosefilter">
                     <input type="submit" class="hiddenbtn">
                     <input type="hidden" name="m" value="voipaccountlist">
@@ -60,7 +64,7 @@
                         <select size="1" name="g" onchange="document.choosefilter.submit();">
                             <option value="" {if !$listdata.customergroup} selected {/if}>{trans("- all groups -")}</option>
                             {section name=customergroups loop=$customergroups}
-                            <option value="{$customergroups[customergroups].id}" {if $listdata.customergroup eq $customergroups[customergroups].id} selected {/if}>
+                            <option value="{$customergroups[customergroups].id}" {if $listdata.customergroup == $customergroups[customergroups].id} selected {/if}>
                                 {$customergroups[customergroups].name|truncate:30:"...":true}
                             </option>
                             {/section}
@@ -70,21 +74,27 @@
             </th>
         </tr>
         *}
+        {/block}
+        {block name="voipaccountlist-list-header-pagination"}
         {if $listdata.total != 0}
         <tr>
-            <th class="pagination" colspan="5">
+            <th class="pagination" colspan="{$number_of_table_columns}">
                 {include file="scroller.html" loop=$voipaccountlist}
             </th>
         </tr>
         {/if}
+        {/block}
     </thead>
     <tbody>
         {cycle values="light,lucid" print=false}
         {section name=voipaccountlist loop=$voipaccountlist start=$start max=$pagelimit}
+        {block name="voipaccountlist-list-row"}
         <tr class="highlight {cycle}">
             <td onClick="return self.location.href = '?m=voipaccountinfo&id={$voipaccountlist[voipaccountlist].id}';" nowrap>
                 <img src="img/voip.gif" alt="">
-                <strong>{$voipaccountlist[voipaccountlist].login}</strong><br>
+                <strong>{$voipaccountlist[voipaccountlist].login}</strong>
+		{if $voipaccountlist[voipaccountlist].location} / {$voipaccountlist[voipaccountlist].location}{if $voipaccountlist[voipaccountlist].borough_name} ({$voipaccountlist[voipaccountlist].state_name} / {$voipaccountlist[voipaccountlist].district_name} / {$_BOROUGHTYPES[$voipaccountlist[voipaccountlist].borough_type]} {$voipaccountlist[voipaccountlist].borough_name}){/if}{/if}
+		<br>
                 <img src="img/customer.gif" alt="">&nbsp;
                 <a href="?m=customerinfo&id={$voipaccountlist[voipaccountlist].ownerid}" {tip a=$voipaccountlist[voipaccountlist].ownerid dynpopup='?m=customerinfoshort&id=$a'}>
                     {$voipaccountlist[voipaccountlist].owner|truncate:40:"...":true|replace:" ":"&nbsp;"} ({$voipaccountlist[voipaccountlist].ownerid|string_format:"%04d"})
@@ -117,31 +127,38 @@
                 </nobr>
             </td>
         </tr>
-        {if $voipaccountlist[voipaccountlist.index_next].ownerid eq $voipaccountlist[voipaccountlist].ownerid && $listdata.order eq "owner"}{cycle print=false}{/if}
+        {if $voipaccountlist[voipaccountlist.index_next].ownerid == $voipaccountlist[voipaccountlist].ownerid && $listdata.order == "owner"}{cycle print=false}{/if}
+        {/block}
         {sectionelse}
+        {block name="voipaccountlist-list-empty-row"}
         <tr>
-            <td class="empty-table" colspan="5">
+            <td class="empty-table" colspan="{$number_of_table_columns}">
                 {trans("No such voip accounts in database.")}
             </td>
         </tr>
+        {/block}
         {/section}
     </tbody>
     <tfoot>
+        {block name="voipaccountlist-list-footer-pagination"}
         {if $listdata.total != 0}
         <tr>
-            <td class="pagination" colspan="5">
+            <td class="pagination" colspan="{$number_of_table_columns}">
                 {include file="scroller.html" loop=$voipaccountlist}
             </td>
         </tr>
         {/if}
+        {/block}
+        {block name="voipaccountlist-list-footer"}
         <tr>
-            <td class="bold text-right" colspan="2">
+            <td class="bold text-right" colspan="{$number_of_table_columns - 1}">
                 {trans("Total:")}
             </td>
-            <td colspan="3">
+            <td>
                 {if $listdata.total}{$listdata.total}{else}0{/if}
             </td>				
         </tr>
+        {/block}
     </tfoot>
 </table>
 {/block}

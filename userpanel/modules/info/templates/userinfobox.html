@@ -16,13 +16,15 @@
 			<b>{$userinfo.customername} ({$userinfo.id|string_format:"%04d"})</b>
 		</td>
 	</tr>
-{if $userinfo.email}
+{if $userinfo.emails}
 	<tr>
 		<td width="1%">
 			{img src="mail.gif" alt=""}
 		</td>
 		<td width="99%" colspan="2">
-			{$userinfo.email}
+			{foreach $userinfo.emails as $email}
+				{$email.email}{if !$email@last}<BR />{/if}
+			{/foreach}
 		</td>
 	</tr>
 {/if}
@@ -47,7 +49,7 @@
 		</td>
 	</tr>
 {/if}
-{if $userinfo.im neq "" && $userinfo.im neq 0}
+{if $userinfo.im != "" && $userinfo.im != 0}
 	<tr>
 		<td width="1%">
 			{img src="gg.gif" alt=""}
@@ -73,7 +75,7 @@
 		</td>
 	</tr>
 {/foreach}
-{if $userinfo.ten neq ""}
+{if $userinfo.ten != ""}
 	<tr>
 		<td width="1%" align="center">
 			<b>{trans("TEN")}</b>
@@ -83,7 +85,7 @@
 		</td>
 	</tr>
 {/if}
-{if $userinfo.ssn neq ""}
+{if $userinfo.ssn != ""}
 	<tr>
 		<td width="1%" align="center">
 			<b>{trans("SSN")}</b>

@@ -59,24 +59,10 @@ function macformat($mac, $escape=false)
 
 $mode = '';
 
-if(!empty($_POST['qscustomer'])) {
-	$mode = 'customer'; 
-	$search = urldecode(trim($_POST['qscustomer']));
-} elseif(!empty($_POST['qsnode'])) {
-	$mode = 'node'; 
-	$search = urldecode(trim($_POST['qsnode']));
-} elseif(!empty($_POST['qsticket'])) {
-	$mode = 'ticket'; 
-	$search = urldecode(trim($_POST['qsticket']));
-} elseif(!empty($_POST['qsaccount'])) {
-	$mode = 'account'; 
-	$search = urldecode(trim($_POST['qsaccount']));
-} elseif(!empty($_POST['qssip'])) {
-	$mode = 'sip'; 
-	$search = urldecode(trim($_POST['qssip']));
-} elseif(!empty($_POST['qsdocument'])) {
-	$mode = 'document'; 
-	$search = urldecode(trim($_POST['qsdocument']));
+if (!empty($_POST['qs'])) {
+	reset($_POST['qs']);
+	list ($mode, $search) = each($_POST['qs']);
+	$search = urldecode(trim($search));
 } elseif(!empty($_GET['what'])) {
 	$search = urldecode(trim($_GET['what']));
 	$mode = $_GET['mode'];
@@ -84,21 +70,21 @@ if(!empty($_POST['qscustomer'])) {
 
 $sql_search = $DB->Escape("%$search%");
 
-switch($mode)
-{
+switch ($mode) {
 	case 'customer':
 		if(isset($_GET['ajax'])) // support for AutoSuggest
 		{
-			$candidates = $DB->GetAll("SELECT id, email, address, post_name, post_address, deleted,
-			    ".$DB->Concat('UPPER(lastname)',"' '",'name')." AS username
-				FROM customersview
-				WHERE ".(preg_match('/^[0-9]+$/', $search) ? 'id = '.intval($search).' OR ' : '')."
-					LOWER(".$DB->Concat('lastname',"' '",'name').") ?LIKE? LOWER($sql_search)
+			$candidates = $DB->GetAll("SELECT c.id, cc.contact AS email, address, post_name, post_address, deleted,
+			    ".$DB->Concat('UPPER(lastname)',"' '",'c.name')." AS username
+				FROM customersview c
+				LEFT JOIN customercontacts cc ON cc.customerid = c.id AND cc.type = " . CONTACT_EMAIL . "
+				WHERE ".(preg_match('/^[0-9]+$/', $search) ? 'c.id = '.intval($search).' OR ' : '')."
+					LOWER(".$DB->Concat('lastname',"' '",'c.name').") ?LIKE? LOWER($sql_search)
 					OR LOWER(address) ?LIKE? LOWER($sql_search)
 					OR LOWER(post_name) ?LIKE? LOWER($sql_search)
 					OR LOWER(post_address) ?LIKE? LOWER($sql_search)
-					OR LOWER(email) ?LIKE? LOWER($sql_search)
-				ORDER by deleted, username, email, address
+					OR LOWER(cc.contact) ?LIKE? LOWER($sql_search)
+				ORDER by deleted, username, cc.contact, address
 				LIMIT 15");
 
 			$eglible=array(); $actions=array(); $descriptions=array();
@@ -142,6 +128,8 @@ switch($mode)
 			} else {
 				print "false;\n";
 			}
+                        $SESSION->close();
+                        $DB->Destroy();
 			exit;
 		}
 
@@ -251,6 +239,8 @@ switch($mode)
 			} else {
 				print "false;\n";
 			}
+                        $SESSION->close();
+                        $DB->Destroy();
 			exit;
 		}
 
@@ -315,6 +305,8 @@ switch($mode)
 			} else {
 				print "false;\n";
 			}
+                        $SESSION->close();
+                        $DB->Destroy();
 			exit;
 		}
 
@@ -372,6 +364,8 @@ switch($mode)
 			} else {
 				print "false;\n";
 			}
+                        $SESSION->close();
+                        $DB->Destroy();
 			exit;
 		}
 
@@ -458,6 +452,8 @@ switch($mode)
 			} else {
 				print "false;\n";
 			}
+                        $SESSION->close();
+                        $DB->Destroy();
 			exit;
 		}
 
@@ -488,6 +484,17 @@ switch($mode)
 		}
 	break;
 }
+
+$quicksearch = $LMS->executeHook('quicksearch_after_submit',
+	array(
+		'mode' => $mode,
+		'search' => $search,
+		'sql_search' => $sql_search,
+		'session' => $SESSION,
+		'target' => '',
+	)
+);
+$target = $quicksearch['target'];
 
 $SESSION->redirect(!empty($target) ? $target : '?'.$SESSION->get('backto'));
 

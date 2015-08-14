@@ -26,6 +26,8 @@
 
 $customerid = intval($_GET['id']);
 
+$LMS->InitXajax();
+
 include(MODULES_DIR.'/customer.inc.php');
 include(MODULES_DIR.'/customer.voip.inc.php');
 
@@ -36,6 +38,16 @@ $SESSION->save('backto', $_SERVER['QUERY_STRING']);
 
 $layout['pagetitle'] = trans('Customer Info: $a',$customerinfo['customername']);
 
+$hook_data = $LMS->executeHook(
+	'customerinfo_before_display',
+	array(
+		'customerinfo' => $customerinfo,
+		'smarty' => $SMARTY,
+	)
+);
+$customerinfo = $hook_data['customerinfo'];
+
+$SMARTY->assign('xajax', $LMS->RunXajax());
 $SMARTY->display('customer/customerinfo.html');
 
 ?>

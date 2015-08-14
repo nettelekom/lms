@@ -153,7 +153,6 @@ CREATE TABLE customers (
   name varchar(128) 	NOT NULL DEFAULT '',
   status smallint 	NOT NULL DEFAULT '0',
   type smallint		NOT NULL DEFAULT '0',
-  email varchar(255) 	NOT NULL DEFAULT '',
   address varchar(255) 	NOT NULL DEFAULT '',
   zip varchar(10) 	NOT NULL DEFAULT '',
   city varchar(32) 	NOT NULL DEFAULT '',
@@ -1514,11 +1513,11 @@ CREATE TABLE customercontacts (
 	id 		int(11) 	NOT NULL auto_increment,
 	customerid 	int(11) 	NOT NULL,
 	name 		varchar(255) 	NOT NULL DEFAULT '',
-	phone 		varchar(255) 	NOT NULL DEFAULT '',
+	contact		varchar(255) 	NOT NULL DEFAULT '',
 	type        smallint        DEFAULT NULL,
 	PRIMARY KEY (id),
 	INDEX customerid (customerid),
-	INDEX phone (phone),
+	INDEX contact (contact),
 	FOREIGN KEY (customerid) REFERENCES customers (id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
@@ -1614,7 +1613,29 @@ CREATE TABLE voipaccounts (
 	moddate		int(11)		NOT NULL DEFAULT 0,
 	creatorid	int(11)		NOT NULL DEFAULT 0,
 	modid		int(11)		NOT NULL DEFAULT 0,
-	PRIMARY KEY (id)
+	location	varchar(255)	DEFAULT NULL,
+	location_city	int(11)		DEFAULT NULL,
+	location_street	int(11)		DEFAULT NULL,
+	location_house	varchar(32)	DEFAULT NULL,
+	location_flat	varchar(32)	DEFAULT NULL,
+	PRIMARY KEY (id),
+	INDEX location_city (location_city, location_street, location_house, location_flat),
+	INDEX location_street (location_street),
+	FOREIGN KEY (location_city) REFERENCES location_cities (id) ON DELETE SET NULL ON UPDATE CASCADE,
+	FOREIGN KEY (location_street) REFERENCES location_streets (id) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+# --------------------------------------------------------
+#
+# Structure of table plicbdlocalisation
+#
+CREATE TABLE plicbdlocalisation (
+	phone varchar(255) NOT NULL,
+	owner varchar(256) NOT NULL,
+	location varchar(255) NOT NULL,
+	location_city int(11) NOT NULL,
+	KEY location_city (location_city),
+	FOREIGN KEY (location_city) REFERENCES location_cities (id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
 # --------------------------------------------------------
@@ -2406,4 +2427,4 @@ INSERT INTO netdevicemodels (name, alternative_name, netdeviceproducerid) VALUES
 ('XR7', 'XR7 MINI PCI PCBA', 2),
 ('XR9', 'MINI PCI 600MW 900MHZ', 2);
 
-INSERT INTO dbinfo (keytype, keyvalue) VALUES ('dbversion', '2015042100');
+INSERT INTO dbinfo (keytype, keyvalue) VALUES ('dbversion', '2015080700');

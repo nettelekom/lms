@@ -38,7 +38,7 @@ elseif (isset($_POST['customerdata']))
 {
 	$customerdata = $_POST['customerdata'];
 	foreach($customerdata as $key=>$value)
-		if($key != 'uid' && $key != 'contacts')
+		if($key != 'uid' && $key != 'contacts' && $key != 'emails')
 			$customerdata[$key] = trim($value);
 
 	if($customerdata['lastname'] == '')
@@ -79,9 +79,6 @@ elseif (isset($_POST['customerdata']))
 		$post_zipwarning = 1;
 	}
 
-	if($customerdata['email']!='' && !check_emails($customerdata['email']))
-		$error['email'] = trans('Incorrect email!');
-
 	if($customerdata['pin'] == '')
 		$error['pin'] = trans('PIN code is required!');
 	elseif(!preg_match('/^[0-9]{4,6}$/',$customerdata['pin']))
@@ -112,18 +109,31 @@ elseif (isset($_POST['customerdata']))
 		if($val) $im[$idx] = $val;
 	}
 
-	foreach($customerdata['contacts'] as $idx => $val)
-    {
-	        $phone = trim($val['phone']);
-	        $name = trim($val['name']);
-            $type = !empty($val['type']) ? array_sum($val['type']) : NULL;
+	$contacts = array();
 
-            $customerdata['contacts'][$idx]['type'] = $type;
+	foreach ($customerdata['emails'] as $idx => $val) {
+		$email = trim($val['email']);
+		$name = trim($val['name']);
 
-	        if($name && !$phone)
-	                $error['contact'.$idx] = trans('Phone number is required!');
-	        elseif($phone)
-	                $contacts[] = array('name' => $name, 'phone' => $phone, 'type' => $type);
+		if ($email != '' && !check_emails($email))
+			$error['email' . $idx] = trans('Incorrect email!');
+		elseif ($name && !$email)
+			$error['email' . $idx] = trans('Email address is required!');
+		elseif ($email)
+			$contacts[] = array('name' => $name, 'contact' => $email, 'type' => CONTACT_EMAIL);
+	}
+
+	foreach ($customerdata['contacts'] as $idx => $val) {
+		$phone = trim($val['phone']);
+		$name = trim($val['name']);
+		$type = !empty($val['type']) ? array_sum($val['type']) : NULL;
+
+		$customerdata['contacts'][$idx]['type'] = $type;
+
+		if ($name && !$phone)
+			$error['contact' . $idx] = trans('Phone number is required!');
+		elseif ($phone)
+			$contacts[] = array('name' => $name, 'contact' => $phone, 'type' => empty($type) ? CONTACT_LANDLINE : $type);
 	}
 
 	if($customerdata['isvoip'] == 1)
@@ -224,19 +234,20 @@ elseif (isset($_POST['customerdata']))
 					$SYSLOG->AddMessage(SYSLOG_RES_CUSTCONTACT, SYSLOG_OPER_DELETE, $args, array_keys($args));
 				}
 		}
+
 		$DB->Execute('DELETE FROM customercontacts WHERE customerid = ?', array($customerdata['id']));
-		if(isset($contacts))
-			foreach($contacts as $contact) {
-				$DB->Execute('INSERT INTO customercontacts (customerid, phone, name, type)
-					VALUES(?, ?, ?, ?)', array($customerdata['id'], $contact['phone'], $contact['name'], $contact['type']));
+		if (!empty($contacts))
+			foreach ($contacts as $contact) {
+				$DB->Execute('INSERT INTO customercontacts (customerid, contact, name, type) VALUES (?, ?, ?, ?)',
+					array($customerdata['id'], $contact['contact'], $contact['name'], $contact['type']));
 				if ($SYSLOG) {
 					$contactid = $DB->GetLastInsertID('customercontacts');
 					$args = array(
 						$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_CUSTCONTACT] => $contactid,
 						$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_CUST] => $customerdata['id'],
-						'phone' => $contact['phone'],
+						'contact' => $contact['contact'],
 						'name' => $contact['name'],
-						'type' => $contact['type']
+						'type' => $contact['type'],
 					);
 					$SYSLOG->AddMessage(SYSLOG_RES_CUSTCONTACT, SYSLOG_OPER_ADD, $args,
 						array($SYSLOG_RESOURCE_KEYS[SYSLOG_RES_CUSTCONTACT],
@@ -283,6 +294,9 @@ else
 
 	if (empty($customerinfo['contacts']))
 		$customerinfo['contacts'][] = array();
+
+	if (empty($customerinfo['emails']))
+		$customerinfo['emails'][] = array();
 }
 
 $layout['pagetitle'] = trans('Customer Edit: $a',$customerinfo['customername']);
@@ -290,6 +304,9 @@ $layout['pagetitle'] = trans('Customer Edit: $a',$customerinfo['customername']);
 $SESSION->save('backto', $_SERVER['QUERY_STRING']);
 
 $customerid = $customerinfo['id'];
+
+$LMS->InitXajax();
+
 include(MODULES_DIR.'/customer.inc.php');
 include(MODULES_DIR.'/customer.voip.inc.php');
 
@@ -302,6 +319,7 @@ $hook_data = $LMS->executeHook(
 );
 $customerinfo = $hook_data['customerinfo'];
 
+$SMARTY->assign('xajax', $LMS->RunXajax());
 $SMARTY->assign('customerinfo',$customerinfo);
 $SMARTY->assign('cstateslist',$LMS->GetCountryStates());
 $SMARTY->assign('countrieslist',$LMS->GetCountries());

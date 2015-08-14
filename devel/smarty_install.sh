@@ -3,12 +3,15 @@
 # Smarty templates library quick installation (with sources download)
 #
 
-URL="http://www.smarty.net/files/Smarty-stable.tar.gz"
-
 set -e
 
-LIB_DIR="`dirname $0`/../lib/"
+LIB_DIR="$(dirname $0)/../lib/"
 TMP=`mktemp -d`
+
+# checking out latest smarty version
+wget -q -O $TMP/tags https://api.github.com/repos/smarty-php/smarty/tags
+LATEST_VERSION=$(grep "name" $TMP/tags |head -1 |awk '{print $2;}' |sed -e 's/[",]//g')
+URL="https://github.com/smarty-php/smarty/archive/${LATEST_VERSION}.tar.gz"
 
 # download
 echo -n "Downloading Smarty sources... "
@@ -30,6 +33,9 @@ fi
 cp -r $TMP/${SMARTY_DIR}/libs/*		${LIB_DIR}/Smarty/
 cp -r $TMP/${SMARTY_DIR}/libs/plugins/*	${LIB_DIR}/Smarty/plugins/
 echo "done."
+if [ "$LATEST_VERSION" = "v3.1.27" ]; then
+	patch -p0 -d ${LIB_DIR}/Smarty <$(dirname $0)/smarty-3.1.27.patch
+fi
 
 
 # cleanup

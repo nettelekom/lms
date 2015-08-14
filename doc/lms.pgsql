@@ -44,7 +44,6 @@ CREATE TABLE customers (
 	name varchar(128)	DEFAULT '' NOT NULL,
 	status smallint 	DEFAULT 0 NOT NULL,
 	type smallint		DEFAULT 0 NOT NULL,
-	email varchar(255) 	DEFAULT '' NOT NULL,
 	address varchar(255) 	DEFAULT '' NOT NULL,
 	zip varchar(10)		DEFAULT '' NOT NULL,
 	city varchar(32) 	DEFAULT '' NOT NULL,
@@ -1605,7 +1604,7 @@ CREATE TABLE customercontacts (
     customerid 	integer 	NOT NULL
 	    REFERENCES customers (id) ON DELETE CASCADE ON UPDATE CASCADE,
     name 	varchar(255) 	NOT NULL DEFAULT '',
-    phone 	varchar(255) 	NOT NULL DEFAULT '',
+    contact	varchar(255) 	NOT NULL DEFAULT '',
     type    smallint        DEFAULT NULL,
     PRIMARY KEY (id)
 );
@@ -1716,8 +1715,29 @@ CREATE TABLE voipaccounts (
 	moddate		integer		NOT NULL DEFAULT 0,
 	creatorid	integer		NOT NULL DEFAULT 0,
 	modid		integer		NOT NULL DEFAULT 0,
+	location varchar(255) DEFAULT NULL,
+	location_city integer
+		REFERENCES location_cities (id) ON DELETE SET NULL ON UPDATE CASCADE,
+	location_street integer
+		REFERENCES location_streets (id) ON DELETE SET NULL ON UPDATE CASCADE,
+	location_house varchar(32) DEFAULT NULL,
+	location_flat varchar(32) DEFAULT NULL,
 	PRIMARY KEY (id)
 );
+CREATE INDEX voipaccounts_location_street_idx ON voipaccounts (location_street);
+CREATE INDEX voipaccounts_location_city_idx ON voipaccounts (location_city, location_street, location_house, location_flat);
+
+/* ---------------------------------------------------
+ Structure of table "plicbdlocalisation"
+------------------------------------------------------*/
+CREATE TABLE plicbdlocalisation (
+	phone varchar(255) NOT NULL,
+	owner varchar(256) NOT NULL,
+	location varchar(255) NOT NULL,
+	location_city integer NOT NULL
+		REFERENCES location_cities (id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+CREATE INDEX plicbdlocalisation_location_city_idx ON plicbdlocalisation (location_city);
 
 /* ---------------------------------------------------
  Structure of table "messages"
@@ -2502,4 +2522,4 @@ INSERT INTO netdevicemodels (name, alternative_name, netdeviceproducerid) VALUES
 ('XR7', 'XR7 MINI PCI PCBA', 2),
 ('XR9', 'MINI PCI 600MW 900MHZ', 2);
 
-INSERT INTO dbinfo (keytype, keyvalue) VALUES ('dbversion', '2015042100');
+INSERT INTO dbinfo (keytype, keyvalue) VALUES ('dbversion', '2015080700');

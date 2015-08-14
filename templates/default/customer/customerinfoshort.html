@@ -24,14 +24,14 @@
     <TBODY>
 	<TR>
 		<TD WIDTH="1%">
-			{if $customerinfo.status eq "3"}<IMG src="img/customer.gif" alt="">{/if}
-			{if $customerinfo.status eq "2"}<IMG src="img/wait.gif" alt="">{/if}
-			{if $customerinfo.status eq "1"}<IMG src="img/unk.gif" alt="">{/if}
+			{if $customerinfo.status == "3"}<IMG src="img/customer.gif" alt="">{/if}
+			{if $customerinfo.status == "2"}<IMG src="img/wait.gif" alt="">{/if}
+			{if $customerinfo.status == "1"}<IMG src="img/unk.gif" alt="">{/if}
 		</TD>
 		<TD WIDTH="99%">
-			{if $customerinfo.status eq "3"}<B>{trans("connected<!singular>")}</B>{/if}
-			{if $customerinfo.status eq "2"}<B>{trans("waiting")}</B>{/if}
-			{if $customerinfo.status eq "1"}<B>{trans("interested<!singular>")}</B>{/if}
+			{if $customerinfo.status == "3"}<B>{trans("connected<!singular>")}</B>{/if}
+			{if $customerinfo.status == "2"}<B>{trans("waiting")}</B>{/if}
+			{if $customerinfo.status == "1"}<B>{trans("interested<!singular>")}</B>{/if}
 		</TD>
 	</TR>
 	<TR>
@@ -43,37 +43,41 @@
 			{$customerinfo.zip} {$customerinfo.city}
 		</TD>
 	</TR>
-{if $customerinfo.post_name neq "" || $customerinfo.post_address neq ""}
+{if $customerinfo.post_name != "" || $customerinfo.post_address != ""}
 	<TR>
 		<TD WIDTH="1%" >
 			<IMG SRC="img/post.gif" ALT="">
 		</TD>
 		<TD WIDTH="99%" NOWRAP>
-			{if $customerinfo.post_name neq ""}{$customerinfo.post_name}{/if}
-			{if $customerinfo.post_address neq ""}<BR>{$customerinfo.post_address}{/if}
+			{if $customerinfo.post_name != ""}{$customerinfo.post_name}{/if}
+			{if $customerinfo.post_address != ""}<BR>{$customerinfo.post_address}{/if}
 			<BR>{$customerinfo.post_zip} {$customerinfo.post_city}
 		</TD>
 	</TR>
 {/if}
-{foreach from=$customerinfo.contacts item=item}
+{foreach $customerinfo.contacts as $item}
 	<TR>
-		<TD WIDTH="1%">
+		<TD style="width: 1%;">
 			<IMG SRC="img/phone.gif" ALT="">
 		</TD>
-		<TD WIDTH="99%" NOWRAP>
+		<TD style="width: 99%;" class="nobr">
 		    {$item.phone}
 		    {if $item.typestr}[{$item.typestr}]{/if}
 		    {if $item.name} ({$item.name|truncate:"40":"...":true}){/if}
 		</TD>
 	</TR>
 {/foreach}
-{if $customerinfo.email neq ""}
+{if !empty($customerinfo.emails)}
 	<TR>
-		<TD WIDTH="1%" >
+		<TD style="width: 1%;">
 			<IMG SRC="img/mail.gif" ALT="">
 		</TD>
-		<TD WIDTH="99%">
-			<A HREF="mailto:{$customerinfo.email}">{$customerinfo.email}</A>
+		<TD style="width: 99%;" class="nobr">
+			{foreach $customerinfo.emails as $email}
+			<A HREF="mailto:{$email.email}">{$email.email}</A>
+			{if $email.name} ({$email.name|truncate:"40":"...":true}){/if}
+			{if !$email@last}<br>{/if}
+			{/foreach}
 		</TD>
 	</TR>
 {/if}
@@ -103,7 +107,7 @@
 		</TD>
 	</TR>
 {/foreach}
-{if $customerinfo.icn neq ""}
+{if $customerinfo.icn != ""}
 	<TR>
 		<TD WIDTH="1%">
 			<IMG SRC="img/serialnumber.gif" ALT="">
@@ -113,7 +117,7 @@
 		</TD>
 	</TR>
 {/if}
-{if $customerinfo.ssn neq ""}
+{if $customerinfo.ssn != ""}
 	<TR">
 		<TD WIDTH="1%">
 			<IMG SRC="img/serialnumber.gif" ALT="">
@@ -123,7 +127,7 @@
 		</TD>
 	</TR>
 {/if}
-{if $customerinfo.ten neq ""}
+{if $customerinfo.ten != ""}
 	<TR>
 		<TD WIDTH="1%">
 			<IMG SRC="img/serialnumber.gif" ALT="">
@@ -133,7 +137,7 @@
 		</TD>
 	</TR>
 {/if}
-{if $customerinfo.regon neq ""}
+{if $customerinfo.regon != ""}
 	<TR>
 		<TD WIDTH="1%">
 			<IMG SRC="img/serialnumber.gif" ALT="">
@@ -143,7 +147,7 @@
 		</TD>
 	</TR>
 {/if}
-{if $customerinfo.rbe neq ""}
+{if $customerinfo.rbe != ""}
 	<TR>
 		<TD WIDTH="1%">
 			<IMG SRC="img/serialnumber.gif" ALT="">

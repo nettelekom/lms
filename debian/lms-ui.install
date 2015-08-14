@@ -40,6 +40,7 @@ lib/LMSDB.php                   /usr/share/lms/lib/
 lib/LMSDBDriverInterface.php    /usr/share/lms/lib/
 lib/LMSDBInterface.php          /usr/share/lms/lib/
 lib/LMSCache.php                /usr/share/lms/lib/
+lib/LMSSmarty.php               /usr/share/lms/lib/
 
 lib/menu.php                    /usr/share/lms/lib/
 lib/Session.class.php           /usr/share/lms/lib/
@@ -47,7 +48,6 @@ lib/Sysinfo.class.php           /usr/share/lms/lib/
 lib/SYSLOG.class.php            /usr/share/lms/lib/
 lib/tcpdf.php                   /usr/share/lms/lib/
 lib/unstrip.php                 /usr/share/lms/lib/
-lib/upgradedb.php               /usr/share/lms/lib/
 lib/ethercodes.txt              /usr/share/lms/lib/
 
 doc/html                        /usr/share/lms/doc/

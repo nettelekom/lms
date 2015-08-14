@@ -97,14 +97,14 @@ $SMARTY = new Smarty;
 // test for proper version of Smarty
 
 if (constant('Smarty::SMARTY_VERSION'))
-	$ver_chunks = preg_split('/[- ]/', Smarty::SMARTY_VERSION);
+	$ver_chunks = preg_split('/[- ]/', preg_replace('/^smarty-/i', '', Smarty::SMARTY_VERSION), -1, PREG_SPLIT_NO_EMPTY);
 else
 	$ver_chunks = NULL;
 
-if (count($ver_chunks) < 2 || version_compare('3.1', $ver_chunks[1]) > 0)
+if (count($ver_chunks) < 1 || version_compare('3.1', $ver_chunks[0]) > 0)
 	die('<B>Wrong version of Smarty engine! We support only Smarty-3.x greater than 3.0.</B>');
 
-define('SMARTY_VERSION', $ver_chunks[1]);
+define('SMARTY_VERSION', $ver_chunks[0]);
 
 // add LMS's custom plugins directory
 $SMARTY->addPluginsDir(LIB_DIR . DIRECTORY_SEPARATOR . 'SmartyPlugins');
@@ -146,12 +146,15 @@ unset($LMS); // reset LMS class to enable wrappers for LMS older versions
 
 $LMS = new ULMS($DB, $AUTH, $SYSLOG);
 
+$plugin_manager = new LMSPluginManager();
+$LMS->setPluginManager($plugin_manager);
+
 // Load plugin files and register hook callbacks
-$plugins = preg_split('/[;,\s\t\n]+/', ConfigHelper::getConfig('phpui.plugins', ''), -1, PREG_SPLIT_NO_EMPTY);
+$plugins = $plugin_manager->getAllPluginInfo(LMSPluginManager::OLD_STYLE);
 if (!empty($plugins))
-	foreach ($plugins as $plugin_name)
-		if(is_readable(LIB_DIR . DIRECTORY_SEPARATOR . 'plugins' . DIRECTORY_SEPARATOR . $plugin_name . '.php'))
-			require LIB_DIR . DIRECTORY_SEPARATOR . 'plugins' . DIRECTORY_SEPARATOR . $plugin_name . '.php';
+	foreach ($plugins as $plugin_name => $plugin)
+		if ($plugin['enabled'])
+			require(LIB_DIR . DIRECTORY_SEPARATOR . 'plugins' . DIRECTORY_SEPARATOR . $plugin_name . '.php');
 
 $SESSION = new Session($DB, $_TIMEOUT);
 $USERPANEL = new USERPANEL($DB, $SESSION);
@@ -167,34 +170,38 @@ if($CONFIG['voip']['enabled'] == 1)
 $enabled_modules = ConfigHelper::getConfig('userpanel.enabled_modules', null, true);
 if (!is_null($enabled_modules))
 	$enabled_modules = explode(',', $enabled_modules);
-$dh  = opendir(USERPANEL_MODULES_DIR);
-while (false !== ($filename = readdir($dh))) {
-    if ((is_null($enabled_modules) || in_array($filename, $enabled_modules)) && (preg_match('/^[a-zA-Z0-9]/',$filename))
-	&& (is_dir(USERPANEL_MODULES_DIR.$filename)) && file_exists(USERPANEL_MODULES_DIR.$filename . DIRECTORY_SEPARATOR . 'configuration.php'))
-    {
-	if($filename == 'voip')
-        {
-        if($CONFIG['voip']['enabled'] == 1 and $voip->CustomerExists($SESSION->id))
-        {
-		@include(USERPANEL_MODULES_DIR.$filename . DIRECTORY_SEPARATOR . 'locale' . DIRECTORY_SEPARATOR . $_ui_language . DIRECTORY_SEPARATOR . 'strings.php');
-		include(USERPANEL_MODULES_DIR.$filename . DIRECTORY_SEPARATOR . 'configuration.php');
-        }
-        }
-        else
-        {
-		@include(USERPANEL_MODULES_DIR.$filename . DIRECTORY_SEPARATOR . 'locale' . DIRECTORY_SEPARATOR . $_ui_language . DIRECTORY_SEPARATOR . 'strings.php');
-		include(USERPANEL_MODULES_DIR.$filename . DIRECTORY_SEPARATOR . 'configuration.php');
-		if (is_dir(USERPANEL_MODULES_DIR.$filename . DIRECTORY_SEPARATOR . 'plugins' . DIRECTORY_SEPARATOR))
-		{
-			$plugins = glob(USERPANEL_MODULES_DIR.$filename . DIRECTORY_SEPARATOR . 'plugins' . DIRECTORY_SEPARATOR . '*.php');
-			if (!empty($plugins))
-				foreach ($plugins as $plugin_name)
-					if(is_readable($plugin_name))
-						include($plugin_name);
+
+$modules_dirs = array(USERPANEL_MODULES_DIR);
+$modules_dirs = $plugin_manager->executeHook('userpanel_modules_dir_initialized', $modules_dirs);
+
+foreach ($modules_dirs as $suspected_module_dir) {
+	$dh  = opendir($suspected_module_dir);
+	while (false !== ($filename = readdir($dh))) {
+		if ((is_null($enabled_modules) || in_array($filename, $enabled_modules)) && (preg_match('/^[a-zA-Z0-9]/',$filename))
+			&& (is_dir($suspected_module_dir . $filename)) && file_exists($suspected_module_dir . $filename . DIRECTORY_SEPARATOR . 'configuration.php')) {
+				if($filename == 'voip')
+				{
+				if($CONFIG['voip']['enabled'] == 1 and $voip->CustomerExists($SESSION->id))
+				{
+					@include(USERPANEL_MODULES_DIR.$filename . DIRECTORY_SEPARATOR . 'locale' . DIRECTORY_SEPARATOR . $_ui_language . DIRECTORY_SEPARATOR . 'strings.php');
+					include(USERPANEL_MODULES_DIR.$filename . DIRECTORY_SEPARATOR . 'configuration.php');
+				}
+				}
+				else
+				{
+				@include($suspected_module_dir . $filename . DIRECTORY_SEPARATOR . 'locale' . DIRECTORY_SEPARATOR . $_ui_language . DIRECTORY_SEPARATOR . 'strings.php');
+				include($suspected_module_dir . $filename . DIRECTORY_SEPARATOR . 'configuration.php');
+				if (is_dir($suspected_module_dir . $filename . DIRECTORY_SEPARATOR . 'plugins' . DIRECTORY_SEPARATOR)) {
+					$plugins = glob($suspected_module_dir . $filename . DIRECTORY_SEPARATOR . 'plugins' . DIRECTORY_SEPARATOR . '*.php');
+					if (!empty($plugins))
+						foreach ($plugins as $plugin_name)
+							if (is_readable($plugin_name))
+								include($plugin_name);
+				}
+				}
 		}
 	}
-    }
-};
+}
 
 $SMARTY->assignByRef('LANGDEFS', $LANGDEFS);
 $SMARTY->assignByRef('_ui_language', $LMS->ui_lang);
@@ -209,9 +216,9 @@ $SMARTY->setCompileDir(SMARTY_COMPILE_DIR);
 $SMARTY->debugging = ConfigHelper::checkConfig('phpui.smarty_debug');
 require_once(USERPANEL_LIB_DIR . DIRECTORY_SEPARATOR . 'smarty_addons.php');
 
-$layout['upv'] = $USERPANEL->_version.' ('.$USERPANEL->_revision.'/'.$SESSION->_revision.')';
 $layout['lmsdbv'] = $DB->GetVersion();
 $layout['lmsv'] = $LMS->_version;
+$layout['lmsvr'] = $LMS->_revision;
 $layout['smarty_version'] = SMARTY_VERSION;
 $layout['hostname'] = hostname();
 $layout['dberrors'] =& $DB->GetErrors();
@@ -220,6 +227,10 @@ $SMARTY->assignByRef('modules', $USERPANEL->MODULES);
 $SMARTY->assignByRef('layout', $layout);
 
 header('X-Powered-By: LMS/'.$layout['lmsv']);
+
+$plugin_manager->executeHook('userpanel_lms_initialized', $LMS);
+
+$plugin_manager->executeHook('userpanel_smarty_initialized', $SMARTY);
 
 if($SESSION->islogged)
 {
@@ -243,10 +254,18 @@ if($SESSION->islogged)
 	// Userpanel popup for urgent notice
 	$res = $LMS->ExecHook('userpanel_module_call_before', array('module' => $USERPANEL->MODULES['notices']));
 
-	if( file_exists(USERPANEL_MODULES_DIR.$module . DIRECTORY_SEPARATOR . 'functions.php')
-	    && isset($USERPANEL->MODULES[$module]) )
-        {
-    		include(USERPANEL_MODULES_DIR.$module . DIRECTORY_SEPARATOR . 'functions.php');
+	$LMS->executeHook('userpanel_' . $module . '_on_load');
+
+	$module_dir = null;
+	foreach ($modules_dirs as $suspected_module_dir)
+		if (file_exists($suspected_module_dir . $module . DIRECTORY_SEPARATOR . 'functions.php')
+			&& isset($USERPANEL->MODULES[$module])) {
+			$module_dir = $suspected_module_dir;
+			break;
+		}
+
+	if ($module_dir !== null) {
+    		include($module_dir . $module . DIRECTORY_SEPARATOR . 'functions.php');
 
 		$function = isset($_GET['f']) && $_GET['f']!='' ? $_GET['f'] : 'main';
 		if (function_exists('module_'.$function)) 
