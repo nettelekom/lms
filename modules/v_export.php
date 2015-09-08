@@ -1,5 +1,8 @@
 <?php
-$mail = $LMS->GetCustomerEmail($_GET['id']);
+$mailarray = $LMS->GetCustomerEmail($_GET['id']);
+$mail = '';
+if(is_array($mailarray))
+	$mail = $mailarray[0];
 if($mail and !$voip->wsdl->login_exists($mail)) 
 {
 	if($voip->CustomerExists($_GET['id']))

@@ -151,7 +151,8 @@ return $tslist;
 
 function update_user($d)
 {
-$u = $this->lmsdb->GetRow('SELECT lastname, name, email, address, zip, city, ten, pin FROM customers WHERE id = ?', array($d['id']));
+$u = $this->lmsdb->GetRow('SELECT c.lastname, c.name, cs.contact as email, c.address, c.zip, c.city, c.ten, c.pin FROM customers c 
+	LEFT JOIN customercontacts cs ON c.id = cs.customerid AND cs.type = ? WHERE c.id = ? LIMIT 1', array(CONTACT_EMAIL, $d['id']));
 $u['password'] = md5($u['pin']);
 $d['type'] = 'postpaid';
 $this->wsdl->_update_user($d, $u);
@@ -419,7 +420,8 @@ if(isset($this->config['voip_timeswitch']) and $this->config['voip_timeswitch'] 
 
 function export_user($lmsid, $type = 'postpaid')
 {
-$u = $this->lmsdb->GetRow('SELECT lastname, name, email, address, zip, city, ten, pin FROM customers WHERE id = ?',array($lmsid));
+$u = $this->lmsdb->GetRow('SELECT c.lastname, c.name, cs.contact as email, c.address, c.zip, c.city, c.ten, c.pin FROM customers c 
+	LEFT JOIN customercontacts cs ON c.id = cs.customerid AND cs.type = ? WHERE c.id = ? LIMIT 1', array(CONTACT_EMAIL, $lmsid));
 $u['password'] = md5($u['pin']);
 $this->wsdl->_export_user($lmsid, $type, $u);
 $this->lmsdb->Execute('INSERT INTO v_exportedusers VALUES (?)', array($lmsid));
