@@ -30,35 +30,51 @@ function setgroup(act)
 </SCRIPT>
 {$lastonline_limit=ConfigHelper::getConfig('phpui.lastonline_limit')}
 {if ConfigHelper::checkConfig('phpui.ewx_support')}{assign var=ewx value=1}{else}{assign var=ewx value=0}{/if}
-<TABLE class="lmsbox">
+<TABLE class="lmsbox lms-ui-sortable" id="customernodesbox">
+	<COLGROUP>
+		<COL style="width: 99%;">
+		<COL style="width: 1%;">
+	</COLGROUP>
 	<THEAD>
-	<TR>
-		<TD style="width: 99%;" class="hand bold" onclick="showOrHide('nodespanel-{$layout.module}');">
+	<TR class="hand lmsbox-titlebar" data-lmsbox-content="nodespanel-{$layout.module}">
+		<TD class="bold">
 			<IMG src="img/node.gif" alt="">
 			{t a=$customernodes|@count|default:"0"}Customer Nodes ($a):{/t}
 		</TD>
-		<TD style="width: 1%;" class="text-right nobr">
-			{if $customerinfo.status != "1" and ! $customerinfo.deleted}<A href="?m=nodeadd&amp;ownerid={$customerinfo.id}">{trans("New Node")} &raquo;</A>&nbsp;{/if}
+		<TD class="text-right nobr">
+			{if $customerinfo.status != $smarty.const.CSTATUS_INTERESTED && ! $customerinfo.deleted}<A href="?m=nodeadd&amp;ownerid={$customerinfo.id}">{trans("New Node")} &raquo;</A>&nbsp;{/if}
 		</TD>
 	</TR>
 	</THEAD>
 	<TBODY>
 	<TR id="nodespanel-{$layout.module}" style="display:none;">
-		<TD style="width: 100%;" colspan="2">
+		<TD colspan="2">
 			<FORM method="post" action="" name="custnodeslist">
 			<TABLE class="lmsbox-inner">
+				<COLGROUP>
+					<COL style="width: {math equation="x-y" x=95 y=$ewx}%;">
+					<COL style="width: 1%;">
+					{if $ewx}
+					<COL style="width: 1%;">
+					{/if}
+					<COL style="width: 1%;">
+					<COL style="width: 1%;">
+					<COL style="width: 1%;">
+					<COL style="width: 1%;">
+					<COL style="width: 1%;">
+				</COLGROUP>
 				<THEAD>
 					<TR>
-						<TD style="width: {math equation="x-y" x=95 y=$ewx}%;" class="bold">{trans("Name:")}</TD>
-						<TD style="width: 1%;" class="text-right">{trans("ID:")}</TD>
+						<TD class="bold">{trans("Name:")}</TD>
+						<TD class="text-right">{trans("ID:")}</TD>
 						{if $ewx}
-						<TD style="width: 1%;" class="text-right">{trans("Channel:")}</TD>
+						<TD class="text-right">{trans("Channel:")}</TD>
 						{/if}
-						<TD style="width: 1%;" class="text-right">{trans("Address:")}</TD>
-						<TD style="width: 1%;" class="text-right">{trans("MAC:")}</TD>
-						<TD style="width: 1%;" class="text-right">{trans("Groups:")}</TD>
-						<TD style="width: 1%;" class="text-right">{trans("Network:")}</TD>
-						<TD style="width: 1%;">&nbsp;</TD>
+						<TD class="text-right">{trans("Address:")}</TD>
+						<TD class="text-right">{trans("MAC:")}</TD>
+						<TD class="text-right">{trans("Groups:")}</TD>
+						<TD class="text-right">{trans("Network:")}</TD>
+						<TD>&nbsp;</TD>
 					</TR>
 				</THEAD>
 				<TBODY>
@@ -108,11 +124,11 @@ function setgroup(act)
 						</TD>
 						<TD class="text-right nobr">
 							{if $customernodes[customernodes].gcount}
-							<img src="img/nodegroup.gif" alt="" {tip a=$customernodes[customernodes].id dynpopup='?m=nodeinfo&id=$a&nodegroups=1' sticky=1}>
+							<img src="img/nodegroup.gif" alt="" class="lms-ui-tooltip-nodegroupinfo" data-resourceid="{$customernodes[customernodes].id}">
 							{/if}
 						</TD>
 						<TD class="text-right bold nobr">
-							<A href="?m=netinfo&amp;id={$customernodes[customernodes].netid}">{$customernodes[customernodes].netname|truncate:"20":"...":true}</A> {if $customernodes[customernodes].network_pub} (<A href="?m=netinfo&id={$customernodes[customernodes].network_pub.id}">{$customernodes[customernodes].network_pub.name|truncate:"20":"...":true}</A>){/if}
+							<A href="?m=netinfo&amp;id={$customernodes[customernodes].netid}">{$customernodes[customernodes].netname|truncate:"20":"...":true}</A> {if $customernodes[customernodes].network_pub} (<A href="?m=netinfo&amp;id={$customernodes[customernodes].network_pub.id}">{$customernodes[customernodes].network_pub.name|truncate:"20":"...":true}</A>){/if}
 						</TD>
 						<TD class="nobr">
 							<A href="?m=nodeset&amp;id={$customernodes[customernodes].id}"><IMG src="img/{if ! $customernodes[customernodes].access}no{/if}access.gif" alt="[ {if ! $customernodes[customernodes].access}{trans("Connect")}{else}{trans("Disconnect")}{/if} ]" title="[ {if ! $customernodes[customernodes].access}{trans("Connect")}{else}{trans("Disconnect")}{/if} ]"></A>
@@ -125,22 +141,20 @@ function setgroup(act)
 					</TR>
 					{sectionelse}
 					<TR>
-						<TD class="empty-table" colspan="{math equation="x+y" x=6 y=$ewx}">
-							<P>&nbsp;</P>
+						<TD class="empty-table" colspan="{math equation="x+y" x=7 y=$ewx}">
 							<P>{if $customerinfo.deleted}<span class="red">{trans("That customer has been deleted.")}</span>{else}{trans("That customer hasn't got any node.")}{/if}</P>
-							<P>&nbsp;</P>
 						</TD>
 					</TR>
 					{/section}
 					<TR>
 						<TD colspan="{math equation="x+y" x=4 y=$ewx}" class="ftop">
 							<IMG src="img/access.gif" alt="">
-							<A href="javascript: setstatus(1)"> {trans("Connect")}</A>/<A href="javascript: setstatus(0)">{trans("Disconnect")}</A>
+							<A href="javascript:setstatus(1)"> {trans("Connect")}</A>/<A href="javascript:setstatus(0)">{trans("Disconnect")}</A>
 							<IMG src="img/warningon.gif" alt="">
-							<A href="javascript: setwarning(1)"> {trans("Enable")}</A>/<A href="javascript: setwarning(0)">{trans("Disable")}</A>
+							<A href="javascript:setwarning(1)"> {trans("Enable")}</A>/<A href="javascript:setwarning(0)">{trans("Disable")}</A>
 							{if $allnodegroups}
 							<IMG src="img/nodegroup.gif" alt="">
-							<A href="javascript: setgroup('setgroup')"> {trans("Add")}</A>/<A href="javascript: setgroup('unsetgroup')">{trans("Remove Group")}</A>:
+							<A href="javascript:setgroup('setgroup')"> {trans("Add")}</A>/<A href="javascript:setgroup('unsetgroup')">{trans("Remove Group")}</A>:
 							<SELECT SIZE="1" id="groupselect">
 								{foreach from=$allnodegroups item=nodegroup}
 								<OPTION value="{$nodegroup.id}" {if $listdata.nodegroup == $nodegroup.id} SELECTED {/if}>{$nodegroup.name|truncate:30:"...":true}</OPTION>
@@ -160,9 +174,7 @@ function setgroup(act)
 </TABLE>
 <SCRIPT type="text/javascript">
 <!--
-if (getCookie('nodespanel-{$layout.module}') == '1')
-{
-	document.getElementById('nodespanel-{$layout.module}').style.display = '';
-}
+	if (getCookie('nodespanel-{$layout.module}') == '1')
+		document.getElementById('nodespanel-{$layout.module}').style.display = '';
 //-->
 </SCRIPT>

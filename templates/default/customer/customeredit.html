@@ -4,12 +4,15 @@
 <!--// $Id$ //-->
 <script type="text/javascript" src="img/tinymce3/tiny_mce.js"> </script>
 <H1>{$layout.pagetitle}</H1>
-{include file="calendar_js.html"}
+<div id="customeredit-sortable" class="lms-ui-sortable-persistent">
 {block name="customereditbox"}
 	{include file="customer/customereditbox.html"}
 {/block}
 {block name="customernodesbox"}
 	{include file="customer/customernodesbox.html"}
+{/block}
+{block name="customernetworksbox"}
+	{include file="customer/customernetworksbox.html"}
 {/block}
 {block name="transactions"}
 	{if ConfigHelper::checkConfig('phpui.logging') && (ConfigHelper::checkConfig('privileges.superuser') || ConfigHelper::checkConfig('privileges.transaction_logs'))}
@@ -34,4 +37,10 @@
 {block name="customerbalancebox"}
 	{include file="customer/customerbalancebox.html" limit=-10}
 {/block}
+</div>
+<script type="text/javascript">
+<!--
+	restoreSortable('customeredit-sortable', '{$customeredit_sortable_order}');
+//-->
+</script>
 {/block}

@@ -1,0 +1,19 @@
+{
+    "name": "kyob/blcean",
+    "description": "LMS userpanel theme",
+    "authors": [
+        {
+	    "name": "Łukasz Kopiszka",
+	    "email": "lukasz@alfa-system.pl",
+	    "homepage": "http://www.alfa-system.pl"
+        }
+    ],
+    "support": {
+        "email": "lukasz@alfa-system.pl"
+    },
+    "require": {
+        "twbs/bootstrap": "@alpha",
+        "bordercloud/tether": "^1.1"
+    },
+    "license": "MIT"
+}

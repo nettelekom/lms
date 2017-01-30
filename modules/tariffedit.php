@@ -101,22 +101,19 @@ if(isset($_POST['tariff']))
 	if(!isset($tariff['taxid']))
 		$tariff['taxid'] = 0;
 
-	$items = array('domain_limit', 'alias_limit',
-                        'sh_limit', 'mail_limit', 'www_limit', 'ftp_limit', 'sql_limit',
-	                'quota_sh_limit', 'quota_mail_limit', 'quota_www_limit',
-	                'quota_ftp_limit', 'quota_sql_limit',
-	);
+    $items = array('domain_limit', 'alias_limit', 'sh_limit', 'mail_limit',
+                   'www_limit', 'ftp_limit', 'sql_limit', 'quota_sh_limit',
+                   'quota_mail_limit', 'quota_www_limit', 'quota_ftp_limit',
+                   'quota_sql_limit');
 
-	foreach($items as $item)
-	{
-	        if(isset($limit[$item]))
-		        $tariff[$item] = NULL;
-	        elseif(!preg_match('/^[0-9]+$/', $tariff[$item]))
-	                $error[$item] = trans('Integer value expected!');
+	foreach ($items as $item) {
+	    if(isset($limit[$item]))
+		    $tariff[$item] = NULL;
+	    elseif(!preg_match('/^[0-9]+$/', $tariff[$item]))
+	        $error[$item] = trans('Integer value expected!');
 	}
 
-	if(!$error)
-	{
+	if (!$error) {
 		$LMS->TariffUpdate($tariff);
 		$SESSION->redirect('?m=tariffinfo&id='.$tariff['id']);
 	}
@@ -126,9 +123,12 @@ else
 
 $layout['pagetitle'] = trans('Subscription Edit: $a',$tariff['name']);
 
-$SMARTY->assign('tariff',$tariff);
-$SMARTY->assign('taxeslist',$LMS->GetTaxes());
-$SMARTY->assign('error',$error);
+$SMARTY->assign('voip_tariffs'    , $LMS->getVoipTariffs());
+$SMARTY->assign('voip_tariffrules', $LMS->getVoipTariffRuleGroups());
+$SMARTY->assign('tariff'          , $tariff);
+$SMARTY->assign('taxeslist'       , $LMS->GetTaxes());
+$SMARTY->assign('numberplanlist'  , $LMS->GetNumberPlans(DOC_INVOICE));
+$SMARTY->assign('error'           , $error);
 $SMARTY->display('tariff/tariffedit.html');
 
 ?>

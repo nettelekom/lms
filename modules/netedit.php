@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2013 LMS Developers
+ *  (C) Copyright 2001-2016 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -49,8 +49,9 @@ if(isset($_POST['networkdata']))
 	$networkdata = $_POST['networkdata'];
 
 	foreach($networkdata as $key => $value)
-		$networkdata[$key] = trim($value);
-		
+		if ($key != 'authtype')
+			$networkdata[$key] = trim($value);
+
 	$networkdata['id'] = $_GET['id'];
 	$networkdata['size'] = pow(2,32-$networkdata['prefix']);
 	$networkdata['addresslong'] = ip_long($networkdata['address']);
@@ -110,6 +111,12 @@ if(isset($_POST['networkdata']))
 	if($networkdata['interface'] != '' && !preg_match('/^[a-z0-9:.]+$/', $networkdata['interface']))
 		$error['interface'] = trans('Incorrect interface name!');
 
+	if ($networkdata['vlanid'] != '')
+		if (!is_numeric($networkdata['vlanid']))
+			$error['vlanid'] = trans('Vlan ID must be integer!');
+		elseif ($networkdata['vlanid'] < 1 || $networkdata['vlanid'] > 4094)
+			$error['vlanid'] = trans('Vlan ID must be between 1 and 4094!');
+
 	if($networkdata['name']=='')
 		$error['name'] = trans('Network name is required!');
 	elseif(!preg_match('/^[._a-z0-9-]+$/i', $networkdata['name']))
@@ -156,9 +163,29 @@ if(isset($_POST['networkdata']))
 			$error['dhcpend'] = trans('End of DHCP range has to be equal or greater than start!');
 	}
 
+	if (!empty($networkdata['ownerid']) && !$LMS->CustomerExists($networkdata['ownerid']))
+		$error['ownerid'] = trans('Customer with the specified ID does not exist');
+
+	$authtype = 0;
+	if (isset($networkdata['authtype']))
+		foreach ($networkdata['authtype'] as $idx)
+			$authtype |= intval($idx);
+	$networkdata['authtype'] = $authtype;
+
 	if (!$error) {
 		if (isset($networkdata['needshft']) && $networkdata['needshft'])
 			$LMS->NetworkShift($network['hostid'], $network['address'], $network['mask'], $networkdata['addresslong'] - $network['addresslong']);
+
+		if($networkdata['ownerid'] != $network['ownerid']) {
+			$vnetwork = $DB->GetRow('SELECT nodeid, ownerid FROM vnetworks WHERE id = ?', array($networkdata['id']));
+			if($networkdata['ownerid'] == '' && $vnetwork) {
+				$DB->Execute('DELETE FROM nodes WHERE id = ?', array($vnetwork['nodeid']));
+			} elseif($vnetwork) {
+				$DB->Execute('UPDATE nodes SET ownerid = ? WHERE id = ?', array($networkdata['ownerid'], $vnetwork['nodeid']));
+			} else {
+				$DB->Execute('INSERT INTO nodes (name, ownerid, netid) VALUES(?, ?, ?)', array($networkdata['name'], $networkdata['ownerid'], $networkdata['id']));
+			}
+		}
 
 		$LMS->NetworkUpdate($networkdata);
 		$SESSION->redirect('?m=netinfo&id=' . $networkdata['id']);
@@ -166,6 +193,7 @@ if(isset($_POST['networkdata']))
 
 	$network['name'] = $networkdata['name'];
 	$network['interface'] = $networkdata['interface'];
+	$network['vlanid'] = $networkdata['vlanid'];
 	$network['prefix'] = $networkdata['prefix'];
 	$network['address'] = $networkdata['address'];
 	$network['size'] = $networkdata['size'];
@@ -178,9 +206,14 @@ if(isset($_POST['networkdata']))
 	$network['dns2'] = $networkdata['dns2'];
 	$network['notes'] = $networkdata['notes'];
 	$network['hostid'] = $networkdata['hostid'];
+	$network['ownerid'] = $networkdata['ownerid'];
+	$network['authtype'] = $networkdata['authtype'];
 }
 
 $networks = $LMS->GetNetworks();
+
+if (!ConfigHelper::checkConfig('phpui.big_networks'))
+	$SMARTY->assign('customers', $LMS->GetCustomerNames());
 
 $layout['pagetitle'] = trans('Network Edit: $a',$network['name']);
 

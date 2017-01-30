@@ -60,8 +60,11 @@ function macformat($mac, $escape=false)
 $mode = '';
 
 if (!empty($_POST['qs'])) {
-	reset($_POST['qs']);
-	list ($mode, $search) = each($_POST['qs']);
+        foreach($_POST['qs'] as $key => $value)
+                if(!empty($value)){
+                        $mode = $key;
+                        $search = $value;
+                }
 	$search = urldecode(trim($search));
 } elseif(!empty($_GET['what'])) {
 	$search = urldecode(trim($_GET['what']));
@@ -76,8 +79,8 @@ switch ($mode) {
 		{
 			$candidates = $DB->GetAll("SELECT c.id, cc.contact AS email, address, post_name, post_address, deleted,
 			    ".$DB->Concat('UPPER(lastname)',"' '",'c.name')." AS username
-				FROM customersview c
-				LEFT JOIN customercontacts cc ON cc.customerid = c.id AND cc.type = " . CONTACT_EMAIL . "
+				FROM customerview c
+				LEFT JOIN customercontacts cc ON cc.customerid = c.id AND (cc.type & " . CONTACT_EMAIL . " = " . CONTACT_EMAIL . ")    
 				WHERE ".(preg_match('/^[0-9]+$/', $search) ? 'c.id = '.intval($search).' OR ' : '')."
 					LOWER(".$DB->Concat('lastname',"' '",'c.name').") ?LIKE? LOWER($sql_search)
 					OR LOWER(address) ?LIKE? LOWER($sql_search)
@@ -85,7 +88,7 @@ switch ($mode) {
 					OR LOWER(post_address) ?LIKE? LOWER($sql_search)
 					OR LOWER(cc.contact) ?LIKE? LOWER($sql_search)
 				ORDER by deleted, username, cc.contact, address
-				LIMIT 15");
+				LIMIT ?", array(intval(ConfigHelper::getConfig('phpui.quicksearch_limit', 15))));
 
 			$eglible=array(); $actions=array(); $descriptions=array();
 			if ($candidates)
@@ -135,7 +138,7 @@ switch ($mode) {
 
 		if(is_numeric($search)) // maybe it's customer ID
 		{
-			if($customerid = $DB->GetOne('SELECT id FROM customersview WHERE id = '.$search))
+			if($customerid = $DB->GetOne('SELECT id FROM customerview WHERE id = '.$search))
 			{
 				$target = '?m=customerinfo&id='.$customerid;
 				break;
@@ -160,6 +163,54 @@ switch ($mode) {
 		$target = '?m=customersearch&search=1';
 	break;
 
+	case 'phone':
+		if(isset($_GET['ajax'])) // support for AutoSuggest
+		{
+			$candidates = $DB->GetAll("SELECT c.id, cc.contact AS phone, address, post_name, post_address, deleted,
+			    ".$DB->Concat('UPPER(lastname)',"' '",'c.name')." AS username
+				FROM customerview c
+				LEFT JOIN customercontacts cc ON cc.customerid = c.id AND (cc.type & " . (CONTACT_LANDLINE | CONTACT_MOBILE | CONTACT_FAX) . " > 0)
+				WHERE REPLACE(REPLACE(cc.contact, '-', ''), ' ', '') ?LIKE? $sql_search
+				ORDER by deleted, username, cc.contact, address
+				LIMIT ?", array(intval(ConfigHelper::getConfig('phpui.quicksearch_limit', 15))));
+
+			$eglible=array(); $actions=array(); $descriptions=array();
+			if ($candidates)
+			foreach($candidates as $idx => $row) {
+				$actions[$row['id']] = '?m=customerinfo&id='.$row['id'];
+				$eglible[$row['id']] = escape_js(($row['deleted'] ? '<font class="blend">' : '')
+				    .truncate_str($row['username'], 50).($row['deleted'] ? '</font>' : ''));
+
+				$descriptions[$row['id']] = escape_js(trans('Phone:').' '.$row['phone']);
+			}
+			header('Content-type: text/plain');
+			if ($eglible) {
+				print "this.eligible = [\"".implode('","',$eglible)."\"];\n";
+				print "this.descriptions = [\"".implode('","',$descriptions)."\"];\n";
+				print "this.actions = [\"".implode('","',$actions)."\"];\n";
+			} else {
+				print "false;\n";
+			}
+			$SESSION->close();
+			$DB->Destroy();
+			exit;
+		}
+
+		// use customersearch module to find all customers
+		$s['phone'] = $search;
+
+		$SESSION->save('customersearch', $s);
+		$SESSION->save('cslk', 'OR');
+
+		$SESSION->remove('cslp');
+		$SESSION->remove('csln');
+		$SESSION->remove('cslg');
+		$SESSION->remove('csls');
+
+		$target = '?m=customersearch&search=1';
+	break;
+
+
 	case 'node':
 		if(isset($_GET['ajax'])) // support for AutoSuggest
 		{
@@ -170,7 +221,7 @@ switch ($mode) {
 			        INET_NTOA(ipaddr_pub) AS ip_pub, mac
 				    FROM vnodes n
 				    WHERE %where
-    				ORDER BY n.name LIMIT 15';
+    				ORDER BY n.name LIMIT ?';
             else
 			    $sql_query = 'SELECT n.id, n.name, INET_NTOA(ipaddr) as ip,
 			        INET_NTOA(ipaddr_pub) AS ip_pub, mac
@@ -181,7 +232,7 @@ switch ($mode) {
                         GROUP BY nodeid
                     ) m ON (n.id = m.nodeid)
 				    WHERE %where
-    				ORDER BY n.name LIMIT 15';
+    				ORDER BY n.name LIMIT ?';
 
             $sql_where = '('.(preg_match('/^[0-9]+$/',$search) ? "n.id = $search OR " : '')."
 				LOWER(n.name) ?LIKE? LOWER($sql_search)
@@ -193,7 +244,8 @@ switch ($mode) {
                     JOIN excludedgroups e ON (a.customergroupid = e.customergroupid)
 			        WHERE e.userid = lms_current_user() AND a.customerid = n.ownerid)";
 
-			$candidates = $DB->GetAll(str_replace('%where', $sql_where,	$sql_query));
+			$candidates = $DB->GetAll(str_replace('%where', $sql_where,	$sql_query),
+				array(intval(ConfigHelper::getConfig('phpui.quicksearch_limit', 15))));
 
 			$eglible=array(); $actions=array(); $descriptions=array();
 			if ($candidates)
@@ -246,7 +298,7 @@ switch ($mode) {
 
 		if(is_numeric($search) && !strstr($search, '.')) // maybe it's node ID
 		{
-			if($nodeid = $DB->GetOne('SELECT id FROM nodes WHERE id = '.$search))
+			if($nodeid = $DB->GetOne('SELECT id FROM vnodes WHERE id = '.$search))
 			{
 				$target = '?m=nodeinfo&id='.$nodeid;
 				break;
@@ -275,7 +327,7 @@ switch ($mode) {
 			$candidates = $DB->GetAll("SELECT t.id, t.subject, t.requestor, c.name, c.lastname 
 				FROM rttickets t
 				LEFT JOIN rtticketcategories tc ON t.id = tc.ticketid
-				LEFT JOIN customersview c on (t.customerid = c.id)
+				LEFT JOIN customerview c on (t.customerid = c.id)
 				WHERE ".(is_array($catids) ? "tc.categoryid IN (".implode(',', $catids).")" : "tc.categoryid IS NULL")
 					." AND (".(preg_match('/^[0-9]+$/',$search) ? 't.id = '.intval($search).' OR ' : '')."
 					LOWER(t.subject) ?LIKE? LOWER($sql_search)
@@ -283,7 +335,7 @@ switch ($mode) {
 					OR LOWER(c.name) ?LIKE? LOWER($sql_search)
 					OR LOWER(c.lastname) ?LIKE? LOWER($sql_search))
 					ORDER BY t.subject, t.id, c.lastname, c.name, t.requestor
-					LIMIT 15");
+					LIMIT ?", array(intval(ConfigHelper::getConfig('phpui.quicksearch_limit', 15))));
 
 			$eglible=array(); $actions=array(); $descriptions=array();
 			if ($candidates)
@@ -342,7 +394,7 @@ switch ($mode) {
 					WHERE a.login ?LIKE? LOWER($username)
 					".($domain ? "AND d.name ?LIKE? LOWER($domain)" : '').")
 					ORDER BY login, domain
-					LIMIT 15");
+					LIMIT ?", array(intval(ConfigHelper::getConfig('phpui.quicksearch_limit', 15))));
 
 			$eglible=array(); $actions=array(); $descriptions=array();
 
@@ -415,11 +467,11 @@ switch ($mode) {
 			$candidates = $DB->GetAll("SELECT d.id, d.type, d.fullnumber,
 					d.customerid AS cid, d.name AS customername
 				FROM documents d
-				JOIN customersview c on d.customerid = c.id
+				JOIN customerview c on d.customerid = c.id
 				WHERE (LOWER(d.fullnumber) ?LIKE? LOWER($sql_search)
 					OR 1 = 0)
 					ORDER BY d.fullnumber
-					LIMIT 15");
+					LIMIT ?", array(intval(ConfigHelper::getConfig('phpui.quicksearch_limit', 15))));
 
 			$eglible = array(); $actions = array(); $descriptions = array();
 			if ($candidates)
@@ -459,7 +511,7 @@ switch ($mode) {
 
 		$docs = $DB->GetAll("SELECT d.id, d.type, d.customerid AS cid, d.name AS customername
 			FROM documents d
-			JOIN customersview c ON c.id = d.customerid
+			JOIN customerview c ON c.id = d.customerid
 			WHERE LOWER(fullnumber) ?LIKE? LOWER($sql_search)");
 		if (count($docs) == 1) {
 			$cid = $docs[0]['cid'];
@@ -494,7 +546,8 @@ $quicksearch = $LMS->executeHook('quicksearch_after_submit',
 		'target' => '',
 	)
 );
-$target = $quicksearch['target'];
+if (!empty($quicksearch['target']))
+	$target = $quicksearch['target'];
 
 $SESSION->redirect(!empty($target) ? $target : '?'.$SESSION->get('backto'));
 

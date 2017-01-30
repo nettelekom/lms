@@ -3,7 +3,6 @@
 {block name=module_content}
 <!--// $Id$ //-->
 {$xajax}
-<script type="text/javascript" src="img/tinymce3/tiny_mce.js"> </script>
 <SCRIPT TYPE="text/javascript">
 <!--
 	function SelectAllNodes()
@@ -50,8 +49,8 @@
 	}
 
 	function messageTemplateReceived(message) {
-		if (tinyMCE.get('message') != undefined) {
-			tinyMCE.get('message').setContent(message);
+		if (tinyMCE.editors.length) {
+			tinyMCE.editors[0].setContent(message);
 			xjx.$('message').value = message;
 		} else
 			xjx.$('message').value = message;
@@ -60,7 +59,7 @@
 //-->
 </SCRIPT>
 <H1>{$layout.pagetitle}</H1>
-<P><FORM NAME="setwarnings" METHOD="POST" ACTION="?m=nodewarn" id="setwarnings">
+<FORM NAME="setwarnings" METHOD="POST" ACTION="?m=nodewarn" id="setwarnings">
 <INPUT type="submit" class="hiddenbtn">
 <TABLE width="100%" cellpadding="3">
 	<TR>
@@ -88,23 +87,21 @@
 					<TD COLSPAN="2">
 						<table>
 							<tr>
-								<td>
-									<input type="checkbox" id="message_label" onClick="javascript:toggle_visual_editor('message');"{if ConfigHelper::getConfig('phpui.default_editor') == 'wysiwyg'} checked{/if}>
-									<label for="message_label">{trans("visual editor")}</label>
-								</td>
-								<td style="text-align: right;">
-									<label for="">{trans("Message template:")}</label>
-									<select name="setwarnings[tmplid]" id="msgtmplid" {tip trigger="msgtmplid" text="Select message template"} onChange="javascript:change_message_template(this.options[this.selectedIndex].value);">
-										<option value="0">{trans("- none -")}</option>
-										{foreach $messagetemplates as $msgtmpl}
-										<option value="{$msgtmpl.id}">{$msgtmpl.name}</option>
-										{/foreach}
-									</select>
+								<td colspan="2" class="nobr">
+									<label>
+										{trans("Message template:")}
+										<select name="setwarnings[tmplid]" id="msgtmplid" {tip trigger="msgtmplid" text="Select message template"} onChange="javascript:change_message_template(this.options[this.selectedIndex].value);">
+											<option value="0">{trans("- none -")}</option>
+											{foreach $messagetemplates as $msgtmpl}
+											<option value="{$msgtmpl.id}">{$msgtmpl.name}</option>
+											{/foreach}
+										</select>
+									</label>
 								</td>
 							</tr>
 							<tr>
 								<td colspan="2">
-									<TEXTAREA NAME="setwarnings[message]" id="message" ROWS="20" COLS="75" {tip text="Enter notice content"}>{$warnmessage}</TEXTAREA>
+									<TEXTAREA NAME="setwarnings[message]" class="lms-ui-wysiwyg-editor" ROWS="20" COLS="75" {tip text="Enter notice content"}>{$warnmessage}</TEXTAREA>
 								</td>
 							</tr>
 							<tr>
@@ -120,34 +117,26 @@
 				</TR>
 				<TR>
 					<TD WIDTH="1%" nowrap>
-						<INPUT TYPE="checkbox" NAME="nodes" OnClick="javascript:SelectAllNodes()"><A HREF="javascript:SelectAllNodes2()">{trans("Select All<!nodes>")}</A></INPUT>
+						<INPUT TYPE="checkbox" NAME="nodes" OnClick="javascript:SelectAllNodes()"><A HREF="javascript:SelectAllNodes2()">{trans("Select All<!nodes>")}</A>
 					</TD>
 					<TD ALIGN="left">
-						 <NOBR>
-						 <INPUT TYPE="checkbox" NAME="setwarnings[warnon]" ID="warnon" OnClick="switchbox(this);"{if $warnon}CHECKED{/if}><A HREF="javascript:switchbox1()">{trans("Enable")}</A></INPUT></NOBR>
-						 / <INPUT TYPE="checkbox" NAME="setwarnings[warnoff]" ID="warnoff" OnClick="switchbox(this);" {if $warnoff}CHECKED{/if}><A HREF="javascript:switchbox2()">{trans("Disable")}</A></INPUT>
-						 </NOBR>
+						 <INPUT TYPE="checkbox" NAME="setwarnings[warnon]" ID="warnon" OnClick="switchbox(this);"{if $warnon}CHECKED{/if}><A HREF="javascript:switchbox1()">{trans("Enable")}</A>
+						 / <INPUT TYPE="checkbox" NAME="setwarnings[warnoff]" ID="warnoff" OnClick="switchbox(this);" {if $warnoff}CHECKED{/if}><A HREF="javascript:switchbox2()">{trans("Disable")}</A>
 					</TD>
 					<TD ALIGN="RIGHT">
 						<A HREF="javascript:document.setwarnings.submit()">{trans("Submit")} <IMG SRC="img/save.gif" ALT=""></A>
 					</TD>
-				<TR>
+				</TR>
                             </TBODY>
 			</TABLE>
 		</TD>
 	</TR>
 </TABLE>
 </FORM>
-</P>
 
 <SCRIPT type="text/javascript">
 <!--//
-document.forms['setwarnings'].elements['setwarnings[message]'].focus();
-
-tinymce_init('{$_ui_language}');
-{if ConfigHelper::getConfig('phpui.default_editor') == 'wysiwyg'}
-toggle_visual_editor('message');
-{/if}
+	document.forms['setwarnings'].elements['setwarnings[message]'].focus();
 //-->
 </SCRIPT>
 

@@ -8,12 +8,19 @@
 	{include file="node/nodeaddbox.html"}
 {/block}
 {if $customerinfo}
-{include file="calendar_js.html"}
 {block name="customerinfobox"}
 	{include file="customer/customerinfobox.html" customerpanel=1}
 {/block}
 {block name="customernodesbox"}
 	{include file="customer/customernodesbox.html"}
+{/block}
+{if ConfigHelper::checkConfig('voip.enabled')}
+{block name="customervoipaccountsbox"}
+	{include file="customer/customersipbox.html"}
+{/block}
+{/if}
+{block name="customernetworksbox"}
+	{include file="customer/customernetworksbox.html"}
 {/block}
 {block name="customerdocuments"}
 	{include file="customer/customerdocuments.html" limit=10}

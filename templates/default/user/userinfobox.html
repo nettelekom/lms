@@ -50,17 +50,6 @@
 		</TD>
 	</TR>
 {/if}
-{if $userinfo.swekey_id}
-	<TR class="light">
-		<TD style="width: 1%;" class="fleft nobr">
-			<IMG src="img/swekey/swekey-green-8x16.png" alt="">
-		</TD>
-		<TD style="width: 1%;" class="bold">{trans("Swekey:")}</TD>
-		<TD style="width: 98%;" class="fright">
-			{$userinfo.swekey_id}
-		</TD>
-	</TR>
-{/if}
 	<TR class="light">
 		<TD style="width: 1%;" class="fleft nobr">
 			<IMG src="img/options.gif" alt="">
@@ -131,9 +120,11 @@
 		<TD style="width: 1%;" class="bold nobr">{trans("Access rights:")}</TD>
 		<TD style="width: 98%;" class="fright">
 			<ul>
-			{section name=acl loop=$accesslist}
-			<li class="acl">{$accesslist[acl]}</li>
-			{/section}
+			{foreach $accesslist as $access}
+			{if $access.enabled}
+			<li class="acl">{$access.name}</li>
+			{/if}
+			{/foreach}
 			</ul>
 		</TD>
 	</TR>
@@ -166,6 +157,8 @@
 			{$userinfo.faillogin}, {$userinfo.failedloginip} {if $userinfo.failedloginip != $userinfo.failedloginhost}({$userinfo.failedloginhost}){/if}
 		</TD>
 	</TR>
+        {block name="other-information"}
+        {/block}
 	<TR class="light">
 		<TD COLSPAN="3" class="fbottomu text-right">
 			{if $layout.logid ne $userinfo.id}

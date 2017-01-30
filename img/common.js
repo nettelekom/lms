@@ -1,4 +1,4 @@
-// $Id: common.js,v 1.2 2003/04/12 22:31:06 lukasz Exp $
+// $Id$
 
 function confirmLink(theLink, message)
 {
@@ -38,7 +38,7 @@ function autoiframe_setsize(id, width, height)
 		frame = doc.getElementById(id);
 
     if (!frame)
-        return;
+        return 0;
 
 	if (width) {
 		frame.style.width = width + 'px';
@@ -103,13 +103,9 @@ function customerchoosewin(formfield)
 	return openSelectWindow('?m=choosecustomer','choosecustomer',450,250,'true',formfield);
 }
 
-function nodechoosewin(formfield, customerid)
+function locationchoosewin(varname, formname, city, street, default_city)
 {
-	return openSelectWindow('?m=choosenode&id='+customerid,'choosenode',350,200,'true',formfield);
-}
-
-function locationchoosewin(varname, formname, city, street)
-{
+        if(city == '' && default_city) city = default_city;
 	return openSelectWindow('?m=chooselocation&name='+varname+'&form='+formname+'&city='+city+'&street='+street,'chooselocation',350,200,'true');
 }
 
@@ -130,8 +126,19 @@ function netdevfrommapchoosewin(netdevid)
 
 function netlinkpropertieschoosewin(id, devid, isnetlink)
 {
-	return openSelectWindow('?m=netlinkproperties&id=' + id + '&devid=' + devid + '&isnetlink=' + (isnetlink ? 1 : 0),
-		'netlinkproperties', 350, 100, 'true');
+	return openSelectWindow('?m=netlinkproperties&id=' + id + '&devid=' + devid + '&isnetlink=' + (isnetlink ? 1 : 0), 'netlinkproperties', 350, 100, 'true');
+}
+
+function netDevChooseWin(formfield, netdevid) {
+	return openSelectWindow('?m=choosenetdevice' + (netdevid !== undefined ? '&netdevid=' + netdevid : ''), 'choosenetdevice', 600, 250, 'true', formfield);
+}
+
+function nodeChooseWin(formfield) {
+	return openSelectWindow('?m=choosenodedevice', 'choosenodedevice', 600, 250, 'true', formfield);
+}
+
+function netDevForNetNodeChooseWin(netnodeid) {
+	return openSelectWindow('?m=choosenetdevfornetnode&id=' + netnodeid, 'choosenetdevfornetnode', 600, 250, 'true', netnodeid);
 }
 
 function sendvalue(targetfield, value)
@@ -261,130 +268,220 @@ function CheckAll(form, elem, excl)
     }
 }
 
-function get_object_pos(obj)
-{
+function get_object_pos(obj) {
 	// get old element size/position
-	var x = (document.layers) ? obj.x : obj.offsetLeft;
-	var y = (document.layers) ? obj.y : obj.offsetTop;
+	var x = obj.offsetLeft;
+	var y = obj.offsetTop;
 
 	// calculate element position
 	var elm = obj.offsetParent;
-	while (elm) {
-	    x += elm.offsetLeft;
+	while (elm && window.getComputedStyle(elm).position != 'relative') {
+		x += elm.offsetLeft;
 		y += elm.offsetTop;
 		elm = elm.offsetParent;
 	}
 
-	return {x:x, y:y};
+	return { x: x, y: y };
 }
 
-function multiselect(formid, elemid, def, selected)
-{
-	var old_element = document.getElementById(elemid);
-	var form = document.getElementById(formid);
+function multiselect(options) {
+	var elemid = options.id;
+	var def = options.defaultValue !== undefined ? options.defaultValue : '';
+	var tiny = options.type !== undefined && options.type == 'tiny';
+	var icon = options.icon !== undefined ? options.icon : 'img/settings.gif';
+	var label = options.label !== undefined ? options.label : '';
 
-	if (!old_element || !form) {
-		return;
-	}
+	var old_element = $('#' + elemid);
+	var form = old_element.closest('form');
 
-	var selected_elements = null;
-	if (selected)
-		selected_elements = '|' + selected.join('|') + '|';
+	if (!old_element.length || !form.length)
+		return 0;
 
 	// create new multiselect div
-	var new_element = document.createElement('DIV');
-	new_element.className = 'multiselect';
-	new_element.id = elemid;
-	new_element.innerHTML = def && !selected ? def : '';
+	var new_element = $('<div/>', {
+		class: 'lms-ui-multiselect' + (tiny ? '-tiny' : ''),
+		id: elemid,
+		// save title for tooltips
+		title: old_element.attr('title')
+	});
+	if (tiny)
+		new_element.html('<img src="' + icon + '">&nbsp' + label);
 
-	// save (overlib) popups
-	new_element.onmouseover = old_element.onmouseover;
-	new_element.onmouseout = old_element.onmouseout;
+	var elem = [];
+	$('option', old_element).each(function(index) {
+		elem[$(this).text().replace(' ', '&nbsp;')] =
+			$(this).prop('selected') ? 1 : 0;
+	});
+
+	var old_selected = new_selected = generateSelectedString(elem);
+	if (!tiny)
+		new_element.html(old_selected);
+
+	new_element.data('data-multiselect-object', this)
+		.prop('style', old_element.prop('style'));
+	// save onchange event handler
+	if (typeof(onchange = old_element.prop('onchange')) == 'function')
+		new_element.on('change', onchange);
+	// save onitemclick event handler
+	if (typeof(itemclick = old_element.prop('onitemclick')) == 'function')
+		new_element.on('itemclick', onchange);
 
 	// replace select with multiselect
-	old_element.parentNode.replaceChild(new_element, old_element);
+	old_element.replaceWith(new_element);
 
 	// create multiselect list div (hidden)
-	var div = document.createElement('DIV');
-	var iframe = document.createElement('IFRAME');
-	var ul = document.createElement('UL');
+	var div = $('<div/>', {
+		class: 'lms-ui-multiselectlayer',
+		id: elemid + '-layer'
+	}).hide().appendTo(form);
+	var ul = $('<ul/>').appendTo(div);
 
-	div.className = 'multiselectlayer';
-	div.id = elemid + '-layer';
-	div.style.display = 'none';
-
-	for(var i=0, len=old_element.options.length; i<len; i++)
-	{
-		var li = document.createElement('LI');
-		var box = document.createElement('INPUT');
-		var span = document.createElement('SPAN');
-
-		box.type = 'checkbox';
-		box.name = old_element.name;
-		box.value = old_element.options[i].value;
-		if (selected_elements && selected_elements.indexOf('|' + old_element.options[i].value + '|') != -1) {
-			box.checked = true;
-			addClass(li, 'selected');
-		}
-
-		span.innerHTML = old_element.options[i].text;
-
-		// add some mouse/key events handlers
-		li.onclick = function() {
-			var box = this.childNodes[0];
-			var selected = this.className.match(/selected/);
-			box.checked = selected ? false : true;
-
-			if(selected) {
-				removeClass(this, 'selected');
-				if(def) {
-					var xlen = this.parentNode.childNodes.length;
-					for(var x=0; x<xlen; x++) {
-						if(this.parentNode.childNodes[x].className.match(/selected/)) {
-							break;
-						}
-					}
-					if(x==xlen) {
-						new_element.innerHTML = def;
-					}
-				}
-			} else {
-				addClass(this, 'selected');
-				new_element.innerHTML = '';
-			}
-		};
-		// TODO: keyboard events
+	$('option', old_element).each(function(i) {
+		var li = $('<li/>').appendTo(ul);
 
 		// add elements
-		li.appendChild(box);
-		li.appendChild(span);
-		ul.appendChild(li);
-	}
+		var box = $('<input/>', {
+			type: 'checkbox',
+			name: old_element.attr('name'),
+			value: $(this).val()
+		}).appendTo(li);
 
-	// add list
-	div.appendChild(iframe);
-	div.appendChild(ul);
-	form.appendChild(div);
+		var text = $(this).text().replace(' ', '&nbsp;');
+		var span = $('<span/>').html(text)
+			.appendTo(li);
+
+		if (elem[text]) {
+			box.prop('checked', true);
+			li.addClass('selected');
+		}
+
+		// add some mouse/key events handlers
+		li.click(function(e) {
+			if ($(e.target).is('input'))
+				return;
+
+			$(this).toggleClass('selected');
+			var box = $(':checkbox', this);
+			box.prop('checked', !box.prop('checked'));
+
+			var optionValue = '';
+			if (/<span>(.*?)<\/span>/i.exec(this.innerHTML) !== null)
+				optionValue = RegExp.$1;
+
+			if (box.is(':checked'))
+				elem[optionValue] = 1; //mark option as selected
+			else
+				elem[optionValue] = 0; //mark option as unselected
+
+			new_selected = generateSelectedString(elem);
+			if (!tiny)
+				new_element.html(new_selected);
+
+			new_element.triggerHandler('itemclick', {
+				index: $(this).index(),
+				value: box.val(),
+				checked: box.is(':checked')
+			});
+		});
+		// TODO: keyboard events
+	});
 
 	// add some mouse/key event handlers
-	new_element.onclick = function() {
-		var list = document.getElementById(this.id + '-layer');
-
-		if(list.style.display == 'none') {
+	new_element.click(function() {
+		var list = $('#' + this.id + '-layer');
+		if (!list.is(':visible')) {
 			var pos = get_object_pos(this);
-
-			list.style.left = pos.x + 'px';
-			list.style.top = this.offsetHeight + pos.y + 'px';
-			list.style.display = 'block';
-			// IE max-height hack
-			if(document.all && list.childNodes[1].offsetHeight > 200) {
-				list.childNodes[1].style.height = '200px';
-			}
+			list.css('left', (pos.x + this.offsetWidth) + 'px')
+				.css('top', pos.y + 'px').show();
+/*
+			list.position({
+				my: 'left top',
+				at: 'right top',
+				of: new_element
+			});
+*/
 		} else {
-			list.style.display = 'none';
+			list.hide();
+			if (new_selected != old_selected)
+				new_element.triggerHandler('change');
+			old_selected = new_selected;
 		}
-	};
+	});
+
+	// hide combobox after click out of the window
+	$(document).click(function(e) {
+		var elem = e.target;
+		if (tiny)
+			while (elem && (elem.nodeName != 'DIV' || elem.className.match(/^lms-ui-multiselect/) === null))
+				elem = elem.parentNode;
+
+		if (!$(div).is(':visible') || (elem && elem.id == old_element.attr('id')))
+			return 0;
+
+		var parent = $(e.target).parent().html().indexOf(old_element.attr('name'));
+
+		if ($(e.target).html().indexOf("<head>") > -1 || parent == -1
+			|| (parent > -1 && e.target.nodeName != 'INPUT' && e.target.nodeName != 'LI' && e.target.nodeName != 'SPAN')) {
+			$(div).hide();
+			if (new_selected != old_selected)
+				new_element.triggerHandler('change');
+			old_selected = new_selected;
+		}
+	});
+
 	// TODO: keyboard events
+
+	function generateSelectedString(objArray) {
+		var selected = [];
+
+		for (var k in objArray)
+			if (objArray.hasOwnProperty(k) && objArray[k] == 1)
+				selected.push(k);
+
+		if (!selected.length)
+			return def;
+
+		return selected.join(', ');
+	}
+
+	this.updateSelection = function(idArray) {
+		var selected = [];
+		$('input:checkbox', div).each(function() {
+			var text = $(this).siblings('span').html();
+			if (idArray == null || idArray.indexOf($(this).val()) != -1) {
+				$(this).prop('checked', true).parent().addClass('selected');
+				selected.push(text);
+				elem[text] = 1;
+			} else {
+				$(this).prop('checked', false).parent().removeClass('selected');
+				elem[text] = 0;
+			}
+		});
+		new_selected = selected.join(', ');
+		if (!tiny)
+			new_element.html(new_selected);
+	}
+
+	this.filterSelection = function(idArray) {
+		var selected = [];
+		$('input:checkbox', div).each(function() {
+			var text = $(this).siblings('span').html();
+			if (idArray == null || idArray.indexOf($(this).val()) != -1) {
+				$(this).parent().show();
+				if ($(this).prop('checked')) {
+					elem[text] = 1;
+					selected.push(text);
+				}
+			} else {
+				$(this).prop('checked', false).parent().hide();
+				elems[i].parentNode.className = '';
+				elem[text] = 0;
+			}
+		});
+		new_selected = selected.join(', ');
+		if (!tiny)
+			new_element.html(new_selected);
+	}
 }
 
 var lms_login_timeout_value,
@@ -408,7 +505,7 @@ function reset_login_timeout()
 function popup(content, frame, sticky, offset_x, offset_y)
 {
 	if (lms_sticky_popup)
-		return;
+		return 0;
 
 	if (frame)
 		content = '<iframe id="autoiframe" width=100 height=10 frameborder=0 scrolling=no '
@@ -434,7 +531,7 @@ function popup(content, frame, sticky, offset_x, offset_y)
 function pophide()
 {
     if (lms_sticky_popup) {
-        return;
+        return 0;
     }
 
     return nd();
@@ -475,9 +572,9 @@ function ping_popup(ip, type)
 
 function changeMacFormat(id)
 {
-	if (!id) return;
+	if (!id) return 0;
 	var elem = document.getElementById(id);
-	if (!elem) return;
+	if (!elem) return 0;
 	var curmac = elem.innerHTML;
 	var macpatterns = [ /^([0-9a-f]{2}:){5}[0-9a-f]{2}$/gi, /^([0-9a-f]{2}-){5}[0-9a-f]{2}$/gi,
 		/^([0-9a-f]{4}\.){2}[0-9a-f]{4}$/gi, /^[0-9a-f]{12}$/gi ];
@@ -485,7 +582,7 @@ function changeMacFormat(id)
 		if (macpatterns[i].test(curmac))
 			break;
 	if (i >= macpatterns.length)
-		return;
+		return 0;
 	i = parseInt(i);
 	switch (i) {
 		case 0:
@@ -532,24 +629,90 @@ function tinymce_init(ui_language) {
 	});
 }
 
-function toggle_visual_editor(id) {
-	if (document.getElementById(id) == undefined)
-		return;
-	if (tinymce.get(id))
-		tinyMCE.execCommand('mceToggleEditor', false, id);
+function reset_customer(form, elemname1, elemname2) {
+	if (document.forms[form].elements[elemname1].value)
+		document.forms[form].elements[elemname2].value = document.forms[form].elements[elemname1].value;
+}
+
+function generate_random_string(length, characters) {
+	if (length === undefined)
+		length = 10;
+	if (characters === undefined)
+		characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+	charactersLength = characters.length;
+	randomString = '';
+	for (var i = 0; i < length; i++)
+		randomString += characters[Math.floor(Math.random() * charactersLength)];
+	return randomString;
+}
+
+function get_size_unit(size) {
+	if (size > 10 * 1024 * 1024 * 1024)
+		return {
+			size: (size / 1024 * 1024 * 1024).toFixed(2),
+			unit: 'GiB'
+		};
+	else if (size > 10 * 1024 * 1024)
+		return {
+			size: (size / 1024 * 1024).toFixed(2),
+			unit: 'MiB'
+		};
+	else if (size > 10 * 1024)
+		return {
+			size: (size / 1024).toFixed(2),
+			unit: 'KiB'
+		};
 	else
-		tinyMCE.execCommand('mceAddControl', true, id);
+		return {
+			size: size,
+			unit: 'B'
+		};
 }
 
-function init_links() {
-	for (i in document.links) {
-		link = document.links[i];
-		if (link.rel && link.rel.indexOf('external') != -1) {
-			link.onclick = function() { window.open(this.href); return false; }
-			link.onkeypress = function() { window.open(this.href); return false; }
+function _getCustomerNames(ids, success) {
+	$.ajax('?m=customerinfo&ajax=1', {
+		async: true,
+		method: 'POST',
+		data: {
+			id: ids
+		},
+		dataType: 'json',
+		success: success
+	});
+}
+
+function getCustomerName(elem) {
+	_getCustomerNames([ $(elem).val() ], function(data, textStatus, jqXHR) {
+		$(elem).nextAll('span').html(data.customernames[$(elem).val()] === undefined ? ''
+			: '<a href="?m=customerinfo&id=' + $(elem).val() + '">' + data.customernames[$(elem).val()] + '</a>');
+	});
+}
+
+var customerinputs = [];
+
+function getCustomerNameDeferred(elem) {
+	customerinputs.push(elem);
+}
+
+if (typeof $ != 'undefined') {
+	$(function() {
+		var cids = [];
+		$.each(customerinputs, function(index, elem) {
+			cids.push($(elem).val());
+		});
+		_getCustomerNames(cids, function(data, textStatus, jqXHR) {
+			$.each(customerinputs, function(index, elem) {
+				$(elem).nextAll('span').html(data.customernames[$(elem).val()] === undefined ?
+					'' : '<a href="?m=customerinfo&id=' + $(elem).val() + '">' + data.customernames[$(elem).val()] + '</a>');
+			});
+		});
+
+		for (i in document.links) {
+			link = document.links[i];
+			if (link.rel && link.rel.indexOf('external') != -1) {
+				link.onclick = function() { window.open(this.href); return false; }
+				link.onkeypress = function() { window.open(this.href); return false; }
+			}
 		}
-	}
+	});
 }
-
-if (window.addEventListener) window.addEventListener("load", init_links, false);
-else if (window.attachEvent) window.attachEvent("onload", init_links);

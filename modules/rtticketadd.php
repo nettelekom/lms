@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2013 LMS Developers
+ *  (C) Copyright 2001-2016 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -38,7 +38,7 @@ if(isset($_POST['ticket']))
 	}
 
 	if(empty($ticket['categories']))
-		$error = true;
+		$error['categories'] = trans('You have to select category!');
 
 	if(($LMS->GetUserRightsRT($AUTH->id, $queue) & 2) != 2)
 		$error['queue'] = trans('You have no privileges to this queue!');
@@ -67,44 +67,16 @@ if(isset($_POST['ticket']))
 	
 	$ticket['mailfrom'] = $ticket['email'] ? $ticket['email'] : '';
 
-	$files = array();
-	foreach ($_FILES['files']['name'] as $fileidx => $filename)
-		if (!empty($filename)) {
-			if (is_uploaded_file($_FILES['files']['tmp_name'][$fileidx]) && $_FILES['files']['size'][$fileidx]) {
-				$filecontents = '';
-				$fd = fopen($_FILES['files']['tmp_name'][$fileidx], 'r');
-				if ($fd) {
-					while (!feof($fd))
-						$filecontents .= fread($fd,256);
-					fclose($fd);
-				}
-				$files[] = array(
-					'name' => $filename,
-					'tmp_name' => $_FILES['files']['tmp_name'][$fileidx],
-					'type' => $_FILES['files']['type'][$fileidx],
-					'contents' => $filecontents,
-				);
-			} else { // upload errors
-				if (isset($error['files']))
-					$error['files'] .= "\n";
-				else
-					$error['files'] = '';
-				switch ($_FILES['files']['error'][$fileidx]) {
-					case 1:
-					case 2: $error['files'] .= trans('File is too large: $a', $filename); break;
-					case 3: $error['files'] .= trans('File upload has finished prematurely: $a', $filename); break;
-					case 4: $error['files'] .= trans('Path to file was not specified: $a', $filename); break;
-					default: $error['files'] .= trans('Problem during file upload: $a', $filename); break;
-				}
-			}
-		}
+	$result = handle_file_uploads('files', $error);
+	extract($result);
+	$SMARTY->assign('fileupload', $fileupload);
 
 	if (!$error)
 	{
+		$ticket['tmppath'] = $tmppath;
 		$id = $LMS->TicketAdd($ticket, $files);
 
-		if (ConfigHelper::checkValue(ConfigHelper::getConfig('phpui.newticket_notify', false)))
-		{
+		if (ConfigHelper::checkConfig('phpui.newticket_notify')) {
 			$user = $LMS->GetUserInfo($AUTH->id);
 
 			$helpdesk_sender_name = ConfigHelper::getConfig('phpui.helpdesk_sender_name');
@@ -137,25 +109,24 @@ if(isset($_POST['ticket']))
 				.substr($_SERVER['REQUEST_URI'], 0, strrpos($_SERVER['REQUEST_URI'], '/') + 1)
 				.'?m=rtticketview&id='.$id;
 
-			if (ConfigHelper::checkValue(ConfigHelper::getConfig('phpui.helpdesk_customerinfo', false)))
-				if ($ticket['customerid'])
-				{
+			if (ConfigHelper::checkConfig('phpui.helpdesk_customerinfo'))
+				if ($ticket['customerid']) {
 					$info = $DB->GetRow('SELECT id, pin, '.$DB->Concat('UPPER(lastname)',"' '",'name').' AS customername,
-							address, zip, city FROM customers
-							WHERE c.id = ?', array($ticket['customerid']));
+							address, zip, city FROM customeraddressview
+							WHERE id = ?', array($ticket['customerid']));
 
-					$info['contacts'] = $DB->GetAll('SELECT contact, name FROM customercontacts
+					$info['contacts'] = $DB->GetAll('SELECT contact, name, type FROM customercontacts
 						WHERE customerid = ?', array($ticket['customerid']));
 
 					$emails = array();
 					$phones = array();
 					if (!empty($info['contacts']))
 						foreach ($info['contacts'] as $contact) {
-							$contact = $contact['contact'] . (strlen($contact['name']) ? ' (' . $contact['name'] . ')' : '');
-							if ($contact['type'] == CONTACT_EMAIL)
-								$emails[] = $contact;
+							$target = $contact['contact'] . (strlen($contact['name']) ? ' (' . $contact['name'] . ')' : '');
+							if ($contact['type'] & CONTACT_EMAIL)
+								$emails[] = $target;
 							else
-								$phones[] = $contact;
+								$phones[] = $target;
 						}
 
 					$body .= "\n\n-- \n";
@@ -262,10 +233,8 @@ $layout['pagetitle'] = trans('New Ticket');
 
 $SESSION->save('backto', $_SERVER['QUERY_STRING']);
 
-if (!ConfigHelper::checkValue(ConfigHelper::getConfig('phpui.big_networks', false)))
-{
+if (!ConfigHelper::checkConfig('phpui.big_networks'))
 	$SMARTY->assign('customerlist', $LMS->GetAllCustomerNames());
-}
 
 if(isset($ticket['customerid']) && $ticket['customerid'])
 {

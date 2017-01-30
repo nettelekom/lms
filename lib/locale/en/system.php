@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2013 LMS Developers
+ *  (C) Copyright 2001-2016 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -44,21 +44,6 @@ function check_zip($zip)
 	return preg_match('/^[0-9]{5}$|^[0-9]{5}-[0-9]{4}$/', $zip);
 }
 
-function check_gg($im)
-{
-	return preg_match('/^[0-9]{0,32}$/', $im);
-}
-
-function check_skype($im)
-{
-	return preg_match('/^[-_.a-z0-9]{0,32}$/i', $im);
-}
-
-function check_yahoo($im)
-{
-	return preg_match('/^[-_.a-z0-9]{0,32}$/i', $im);
-}
-
 function check_regon($regon) // business registration number
 {
 	return true;
@@ -69,27 +54,20 @@ function check_icn($icn) // identity card number
 	return true;
 }
 
-function bankaccount($id, $account=NULL)
-{
-	global $DB;
-	
-	if($account === NULL)
-		$account = $DB->GetOne('SELECT account FROM divisions WHERE id IN (SELECT divisionid
-			FROM customers WHERE id = ?)', array($id));
+function bankaccount($id, $account = NULL) {
+	return iban_account('US', 26, $id, $account);
+}
 
-	// This function is for demonstration only, coz US don't support IBAN
-	if(!empty($account) && strlen($account) < 21 && strlen($account) >= 8) // mass-payments IBAN
-	{
-	        $cc = '3028';	// Country code - US
-		$account = 'US'.sprintf('%02d',98-bcmod($account.sprintf('%012d',$id).$cc.'00',97)).$account.sprintf('%012d', $id);
-	} 
+function check_bankaccount($account) {
+	return iban_check_account('US', 26, $account);
+}
 
+function format_bankaccount($account) {
 	return $account;
 }
 
-function format_bankaccount($account)
-{
-	return $account;
+function getHolidays($year = null) {
+	return array();
 }
 
 ?>

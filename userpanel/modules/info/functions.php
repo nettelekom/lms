@@ -3,7 +3,7 @@
 /*
  *  LMS version 1.11-git
  *
- *  (C) Copyright 2001-2013 LMS Developers
+ *  (C) Copyright 2001-2016 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -24,6 +24,8 @@
  *  $Id$
  */
 
+require_once(LIB_DIR . DIRECTORY_SEPARATOR . 'customercontacttypes.php');
+
 function module_main()
 {
     global $LMS,$SMARTY,$SESSION;
@@ -34,21 +36,26 @@ function module_main()
 
     $userinfo = $LMS->GetCustomer($SESSION->id);
     $usernodes = $LMS->GetCustomerNodes($SESSION->id);
-    $balancelist = $LMS->GetCustomerBalanceList($SESSION->id);
-    $documents = $LMS->DB->GetAll('SELECT c.docid, d.number, d.type, c.title, c.fromdate, c.todate, 
-	c.description, c.filename, c.md5sum, c.contenttype, n.template, d.closed, d.cdate
-	FROM documentcontents c
-	JOIN documents d ON (c.docid = d.id)
-	LEFT JOIN numberplans n ON (d.numberplanid = n.id)
-	WHERE d.customerid = ?
-	ORDER BY cdate', array($SESSION->id));
+    //$balancelist = $LMS->GetCustomerBalanceList($SESSION->id);
+	$documents = $LMS->DB->GetAll('SELECT d.id, d.number, d.type, c.title, c.fromdate, c.todate, 
+		c.description, n.template, d.closed, d.cdate
+		FROM documentcontents c
+		JOIN documents d ON (c.docid = d.id)
+		LEFT JOIN numberplans n ON (d.numberplanid = n.id)
+		WHERE d.customerid = ?
+		ORDER BY cdate', array($SESSION->id));
+
+	if (!empty($documents))
+		foreach ($documents as &$doc)
+			$doc['attachments'] = $LMS->DB->GetAllBykey('SELECT * FROM documentattachments WHERE docid = ?
+				ORDER BY main DESC, filename', 'id', array($doc['id']));
 
     $fields_changed = $LMS->DB->GetRow('SELECT id FROM up_info_changes WHERE customerid = ?', 
     	array($SESSION->id));
 
     $SMARTY->assign('userinfo',$userinfo);
     $SMARTY->assign('usernodes',$usernodes);
-    $SMARTY->assign('balancelist',$balancelist);
+    //$SMARTY->assign('balancelist',$balancelist);
     $SMARTY->assign('documents',$documents);
     $SMARTY->assign('fields_changed', $fields_changed);
     $SMARTY->display('module:info.html');
@@ -65,18 +72,19 @@ function module_updateuserform()
 
     $userinfo = $LMS->GetCustomer($SESSION->id);
     $usernodes = $LMS->GetCustomerNodes($SESSION->id);
-    $documents = $LMS->DB->GetAll('SELECT c.docid, d.number, d.type, c.title, c.fromdate, c.todate, 
-	c.description, c.filename, c.md5sum, c.contenttype, n.template, d.closed, d.cdate
-	FROM documentcontents c
-	JOIN documents d ON (c.docid = d.id)
-	LEFT JOIN numberplans n ON (d.numberplanid = n.id)
-	WHERE d.customerid = ?
-	ORDER BY cdate', array($SESSION->id));
-    
-    $userinfo['im'] = isset($userinfo['messengers'][IM_GG]) ? $userinfo['messengers'][IM_GG]['uid'] : '';
-    $userinfo['yahoo'] = isset($userinfo['messengers'][IM_YAHOO]) ? $userinfo['messengers'][IM_YAHOO]['uid'] : '';
-    $userinfo['skype'] = isset($userinfo['messengers'][IM_SKYPE]) ? $userinfo['messengers'][IM_SKYPE]['uid'] : '';
-    
+    $documents = $LMS->DB->GetAll('SELECT d.id, d.number, d.type, c.title, c.fromdate, c.todate, 
+		c.description, n.template, d.closed, d.cdate
+		FROM documentcontents c
+		JOIN documents d ON (c.docid = d.id)
+		LEFT JOIN numberplans n ON (d.numberplanid = n.id)
+		WHERE d.customerid = ?
+		ORDER BY cdate', array($SESSION->id));
+
+	if (!empty($documents))
+		foreach ($documents as &$doc)
+			$doc['attachments'] = $LMS->DB->GetAllBykey('SELECT * FROM documentattachments WHERE docid = ?
+				ORDER BY main DESC, filename', 'id', array($doc['id']));
+
     $SMARTY->assign('userinfo',$userinfo);
     $SMARTY->assign('usernodes',$usernodes);
     $SMARTY->assign('documents',$documents);
@@ -88,10 +96,6 @@ function module_updateusersave()
     global $LMS, $SMARTY, $SESSION, $rights, $error;
 
     $userinfo = $LMS->GetCustomer($SESSION->id);
-
-    $userinfo['im'] = isset($userinfo['messengers'][IM_GG]) ? $userinfo['messengers'][IM_GG]['uid'] : '';
-    $userinfo['yahoo'] = isset($userinfo['messengers'][IM_YAHOO]) ? $userinfo['messengers'][IM_YAHOO]['uid'] : '';
-    $userinfo['skype'] = isset($userinfo['messengers'][IM_SKYPE]) ? $userinfo['messengers'][IM_SKYPE]['uid'] : '';
 
     $userdata = $_POST['userdata'];
     $right = $rights['info'];
@@ -105,9 +109,9 @@ function module_updateusersave()
     )
 	foreach(array_diff_assoc($userdata, $userinfo) as $field => $val) 
 	{
-	    if($field == 'phone' || $field == 'email')
+	    if($field == 'phone' || $field == 'email' || $field == 'im')
 	    {
-		    $type = $field == 'phone' ? 'contacts' : 'emails';
+		    $type = $field == 'phone' ? 'contacts' : $field;
 		    foreach($val as $i => $v)
 		    {
 		        $v = trim(htmlspecialchars($v, ENT_NOQUOTES));
@@ -139,7 +143,9 @@ function module_updateusersave()
 	    switch($field) {
 		case 'name':
 		case 'lastname':
-		case 'address':
+		case 'street':
+		case 'building':
+		case 'apartment':
 		case 'zip':
 		case 'city':
 			if(isset($right['edit_addr'])) {
@@ -195,39 +201,6 @@ function module_updateusersave()
 						VALUES(?, ?, ?)', array($id, $field, $val));
 			}
 			break;
-		case 'im':
-			if(isset($right['edit_contact']))
-			{
-				$LMS->DB->Execute('DELETE FROM imessengers WHERE customerid = ? AND type = ?', array($id, IM_GG));
-				if($val)
-					$LMS->DB->Execute('INSERT INTO imessengers (customerid, uid, type) VALUES (?,?,?)', array($id,$val,IM_GG));
-			}
-			elseif(isset($right['edit_contact_ack']))
-				$LMS->DB->Execute('INSERT INTO up_info_changes(customerid, fieldname, fieldvalue) 
-					VALUES(?, ?, ?)', array($id, $field, $val));
-			break;
-		case 'yahoo':
-			if(isset($right['edit_contact']))
-			{
-				$LMS->DB->Execute('DELETE FROM imessengers WHERE customerid = ? AND type = ?', array($id, IM_YAHOO));
-				if($val)
-					$LMS->DB->Execute('INSERT INTO imessengers (customerid, uid, type) VALUES (?,?,?)', array($id,$val,IM_YAHOO));
-			}
-			elseif(isset($right['edit_contact_ack']))
-				$LMS->DB->Execute('INSERT INTO up_info_changes(customerid, fieldname, fieldvalue) 
-					VALUES(?, ?, ?)', array($id, $field, $val));
-			break;
-		case 'skype':
-			if(isset($right['edit_contact']))
-			{
-				$LMS->DB->Execute('DELETE FROM imessengers WHERE customerid = ? AND type = ?', array($id, IM_SKYPE));
-				if($val)
-					$LMS->DB->Execute('INSERT INTO imessengers (customerid, uid, type) VALUES (?,?,?)', array($id,$val,IM_SKYPE));
-			}
-			elseif(isset($right['edit_contact_ack']))
-				$LMS->DB->Execute('INSERT INTO up_info_changes(customerid, fieldname, fieldvalue) 
-					VALUES(?, ?, ?)', array($id, $field, $val));
-			break;
 		default:
 			break;
 	    }
@@ -262,102 +235,107 @@ if(defined('USERPANEL_SETUPMODE'))
 		$userchanges = $DB->GetAll('SELECT up_info_changes.id AS changeid, customerid, fieldname, fieldvalue AS newvalue, '.
 					$DB->Concat('UPPER(lastname)',"' '",'c.name').' AS customername, c.* 
 					FROM up_info_changes
-					JOIN customersview c ON (c.id = up_info_changes.customerid)');
+					JOIN customerview c ON (c.id = up_info_changes.customerid)');
 
 		if(isset($userchanges))
 			foreach($userchanges as $key => $change)
 			{
 				if (preg_match('/phone([0-9]+)/', $change['fieldname'], $matches))
 					$old = $DB->GetOne('SELECT contact AS phone FROM customercontacts WHERE id = ? AND type < ?',
-						array($matches[1], CONTACT_EMAIL));
+						array($matches[1], CONTACT_MOBILE));
 				elseif (preg_match('/email([0-9]+)/', $change['fieldname'], $matches))
-					$old = $DB->GetOne('SELECT contact AS email FROM customercontacts WHERE id = ? AND type = ?',
-						array($matches[1], CONTACT_EMAIL));
-				else
-					switch($change['fieldname'])
-					{
-					case 'im':
-						$old = $DB->GetOne('SELECT uid FROM imessengers WHERE customerid = ? AND type = ?', array($change['customerid'], IM_GG));
-					break;
-					case 'yahoo':
-						$old = $DB->GetOne('SELECT uid FROM imessengers WHERE customerid = ? AND type = ?', array($change['customerid'], IM_YAHOO));
-					break;
-					case 'skype':
-						$old = $DB->GetOne('SELECT uid FROM imessengers WHERE customerid = ? AND type = ?', array($change['customerid'], IM_SKYPE));
-					break;
-					}
-				
-				if(isset($old))
-				{
+					$old = $DB->GetOne('SELECT contact AS email FROM customercontacts WHERE id = ? AND type & ? > 0',
+						array($matches[1], (CONTACT_EMAIL|CONTACT_INVOICES|CONTACT_NOTIFICATIONS)));
+				elseif (preg_match('/im([0-9]+)/', $change['fieldname'], $matches))
+					$old = $DB->GetOne('SELECT contact AS im FROM customercontacts WHERE id = ? AND type & ? > 0',
+						array($matches[1], CONTACT_IM));
+
+				if (isset($old)) {
 					$userchanges[$key]['oldvalue'] = $old;
 					unset($old);
-				}
-				elseif(isset($userchanges[$key][$change['fieldname']]))
+				} elseif (isset($userchanges[$key][$change['fieldname']]))
 					$userchanges[$key]['oldvalue'] = $userchanges[$key][$change['fieldname']];
 			}
 
 		$SMARTY->assign('userchanges', $userchanges);
 		$SMARTY->display('module:info:setup_changes.html');
 	}
-	
-	function module_submit_changes_save()
-	{
-		global $DB, $LMS;
 
-		if(isset($_POST['userchanges']))
-			foreach($_POST['userchanges'] as $changeid)
-			{
+	function module_submit_changes_save() {
+		global $LMS;
+
+		$DB = LMSDB::getInstance();
+
+		if (isset($_POST['userchanges'])) {
+			$args = array();
+			foreach ($_POST['userchanges'] as $changeid) {
 				$changes = $DB->GetRow('SELECT customerid, fieldname, fieldvalue FROM up_info_changes
 					WHERE id = ?', array($changeid));
-				
-				if (preg_match('/(phone|email)([0-9]+)/', $changes['fieldname'], $matches)) {
+				if (!isset($args[$changes['customerid']]))
+					$args[$changes['customerid']] = array(
+						SYSLOG::RES_CUST => $changes['customerid'],
+						SYSLOG::RES_USER => $LMS->AUTH->id,
+					);
+
+				if (preg_match('/(phone|email|im)([0-9]+)/', $changes['fieldname'], $matches)) {
 					if ($matches[2]) {
-						if($changes['fieldvalue'])
+						$fields = array(
+							SYSLOG::RES_CUST => $changes['customerid'],
+							SYSLOG::RES_CUSTCONTACT => $matches[2],
+						);
+						if($changes['fieldvalue']) {
 							$DB->Execute('UPDATE customercontacts SET contact = ? WHERE id = ?', array($changes['fieldvalue'], $matches[2]));
-						else
+							if ($LMS->SYSLOG) {
+								$fields['contact'] = $changes['fieldvalue'];
+								$LMS->SYSLOG->AddMessage(SYSLOG::RES_CUSTCONTACT, SYSLOG::OPER_UPDATE, $fields);
+							}
+						} else {
 							$DB->Execute('DELETE FROM customercontacts WHERE id = ?', array($matches[2]));
-					} else // new phone or email
+							if ($LMS->SYSLOG) {
+								$LMS->SYSLOG->AddMessage(SYSLOG::RES_CUSTCONTACT, SYSLOG::OPER_DELETE, $fields);
+							}
+						}
+					} else { // new phone or email
 						$DB->Execute('INSERT INTO customercontacts (contact, customerid, type) VALUES(?, ?, ?)',
 							array($changes['fieldvalue'], $changes['customerid'], $matches[1] == 'phone' ? CONTACT_LANDLINE : CONTACT_EMAIL));
+						if ($LMS->SYSLOG) {
+							$fields = array(
+								SYSLOG::RES_CUST => $changes['customerid'],
+								SYSLOG::RES_CUSTCONTACT => $DB->GetLastInsertID('customercontacts'),
+								'contact' => $changes['fieldvalue'],
+								'type' => $matches[1] == 'phone' ? CONTACT_LANDLINE : CONTACT_EMAIL,
+							);
+							$LMS->SYSLOG->AddMessage(SYSLOG::RES_CUSTCONTACT, SYSLOG::OPER_ADD, $fields);
+						}
+					}
 				} else
-				switch($changes['fieldname'])
-				{
-					case 'im':
-						$DB->Execute('DELETE FROM imessengers WHERE customerid = ? AND type = ?', array($changes['customerid'], IM_GG));
-						if($changes['fieldvalue'])
-							$DB->Execute('INSERT INTO imessengers (customerid, uid, type) VALUES (?,?,?)',
-								array($changes['customerid'], $changes['fieldvalue'],IM_GG));
-					break;
-					case 'yahoo':
-						$DB->Execute('DELETE FROM imessengers WHERE customerid = ? AND type = ?', array($changes['customerid'], IM_YAHOO));
-						if($changes['fieldvalue'])
-							$DB->Execute('INSERT INTO imessengers (customerid, uid, type) VALUES (?,?,?)',
-								array($changes['customerid'], $changes['fieldvalue'],IM_YAHOO));
-					break;
-					case 'skype':
-						$DB->Execute('DELETE FROM imessengers WHERE customerid = ? AND type = ?', array($changes['customerid'], IM_SKYPE));
-						if($changes['fieldvalue'])
-							$DB->Execute('INSERT INTO imessengers (customerid, uid, type) VALUES (?,?,?)',
-								array($changes['customerid'], $changes['fieldvalue'],IM_SKYPE));
-					break;
+				switch ($changes['fieldname']) {
 					case 'name':
 					case 'lastname':
-					case 'address':
+					case 'street':
+					case 'building':
+					case 'apartment':
 					case 'zip':
 					case 'city':
 					case 'ssn':
 					case 'ten':
 						$DB->Execute('UPDATE customers SET '.$changes['fieldname'].' = ? WHERE id = ?',
 							array($changes['fieldvalue'], $changes['customerid']));
+						$args[$changes['customerid']][$changes['fieldname']] = $changes['fieldvalue'];
 						break;
 				}
-			
+
+				if ($LMS->SYSLOG && !empty($args))
+					foreach ($args as $customerid => $fields)
+						if (count($fields) > 2)
+							$LMS->SYSLOG->AddMessage(SYSLOG::RES_CUST, SYSLOG::OPER_UPDATE, $fields);
 				$DB->Execute('DELETE FROM up_info_changes WHERE id = ?', array($changeid));
 			}
+		}
 
 		module_changes();
 	}
-	
+
 	function module_submit_changes_delete()
 	{
 		global $DB;

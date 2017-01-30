@@ -1,77 +1,87 @@
 <!--// $Id$ //-->
 <SCRIPT type="text/javascript">
 <!--
-	function randomize()
-	{
+	function randomize() {
 		if (document.customeredit.elements['customerdata[pin]'].value != '')
 			if (!confirm('{trans("Are you sure, you want to generate new PIN?")}'))
 				return;
 
-		var r = 0;
-		do
-			r = Math.floor(Math.random()*1000000-1);
-		while (r<1000);
-		document.customeredit.elements['customerdata[pin]'].value = r;
+		document.customeredit.elements['customerdata[pin]'].value =
+			generate_random_string(4 + Math.floor(Math.random() * 3), '0123456789');
 	}
 
-	function newcontact()
-	{
-		var contactscountelem = document.getElementById('contactscount');
-		var nr = contactscountelem.value;
-		var lastcontactelem = document.getElementById('contact' + (nr - 1));
+	function newcontact(type) {
+		var contactcountelem = document.getElementById(type + 'count');
+		var nr = contactcountelem.value;
+		var lastcontactelem = document.getElementById(type + (nr - 1));
 		var newrow = lastcontactelem.parentNode.insertRow(lastcontactelem.rowIndex + 1);
 		newrow.className = 'light';
-		newrow.id = 'contact' + nr;
+		newrow.id = type + nr;
 		var newcell = newrow.insertCell(0);
 		newcell.style.whiteSpace = 'nowrap';
-		newcell.innerHTML = '<HR><INPUT TYPE="text" size="15" value="" name="customerdata[contacts][' + nr + '][phone]"'
-				+ ' onmouseover="popup(\'{trans("Enter contact phone")}\')" onmouseout="pophide()">'
-			+ '<INPUT TYPE="checkbox" value="{$smarty.const.CONTACT_MOBILE}"'
-				+ ' name="customerdata[contacts][' + nr + '][type][]" id="chkmobile' + nr + '"><label for="chkmobile' + nr + '">{trans("mobile")}</label>'
-			+ '<INPUT TYPE="checkbox" value="{$smarty.const.CONTACT_FAX}"'
-				+ ' name="customerdata[contacts][' + nr + '][type][]" id="chkfax' + nr + '"><label for="chkfax' + nr + '">{trans("fax")}</label>'
-			+ '<BR><INPUT TYPE="text" size="38" value="" name="customerdata[contacts][' + nr + '][name]"'
-				+ ' onmouseover="popup(\'{trans("Enter contact name/description (optional)")}\')" onmouseout="pophide()">';
-		contactscountelem.value = parseInt(nr) + 1;
-	}
-
-	function newemail() {
-		var emailscountelem = document.getElementById('emailscount');
-		var nr = emailscountelem.value;
-		var lastemailelem = document.getElementById('email' + (nr - 1));
-		var newrow = lastemailelem.parentNode.insertRow(lastemailelem.rowIndex + 1);
-		newrow.className = 'light';
-		newrow.id = 'email' + nr;
-		var newcell = newrow.insertCell(0);
-		newcell.style.whiteSpace = 'nowrap';
-		newcell.innerHTML = '<HR><INPUT TYPE="text" size="38" value="" name="customerdata[emails][' + nr + '][email]"'
-				+ ' onmouseover="popup(\'{trans("Enter e-mail address (optional)")}\')" onmouseout="pophide()">'
-			+ '<BR><INPUT TYPE="text" size="38" value="" name="customerdata[emails][' + nr + '][name]"'
-				+ ' onmouseover="popup(\'{trans("Enter contact name/description (optional)")}\')" onmouseout="pophide()">';
-		emailscountelem.value = parseInt(nr) + 1;
+		switch (type) {
+			{foreach $_CUSTOMERCONTACTTYPES as $contacttype => $properties}
+			case '{$contacttype}':
+				innerHTML = '<HR>';
+				{if isset($properties.ui.typeselectors)}
+				innerHTML += '<SELECT name="customerdata[{$contacttype}s][' + nr + '][typeselector]">'
+					{foreach $properties.ui.typeselectors as $typeselector}
+					+ '<OPTION value="{$typeselector}">{$_CONTACTTYPES[$typeselector]}</OPTION>'
+					{/foreach}
+					+ '</SELECT>&nbsp;';
+				{/if}
+				innerHTML += '<INPUT TYPE="text" size="{$properties.ui.size}" value="" name="customerdata[{$contacttype|cat:"s"}][' + nr + '][contact]"'
+					+ ' title="{$properties.ui.tip}">';
+				innerHTML += '{foreach $properties.ui.flags as $flagtype => $flagproperties}<label{if isset($flagproperties.tip)} title="{$flagproperties.tip}"{/if}><INPUT TYPE="checkbox" value="{$flagtype}" name="customerdata[{$contacttype|cat:"s"}][' + nr + '][type][]"> {$flagproperties.label}</label>{/foreach}';
+				innerHTML += '<BR><INPUT TYPE="text" size="68" value="" name="customerdata[{$contacttype|cat:"s"}][' + nr + '][name]"'
+					+ ' title="{trans("Enter contact name/description (optional)")}">';
+				break;
+			{/foreach}
+		}
+		newcell.innerHTML = innerHTML;
+		$(newcell).children("[title]").tooltip({
+			position: { my: "left top" }
+		});
+		contactcountelem.value = parseInt(nr) + 1;
 	}
 //-->
 </SCRIPT>
-<FORM name="customeredit" id="customeredit" method="post" action="?m=customeredit&amp;id={$customerinfo.id}{if $recover}&amp;action=recover{/if}">
-<p style="display: none;">
+<FORM name="customeredit" id="customeredit" method="post" action="?m=customeredit&id={$customerinfo.id}{if $recover}&action=recover{/if}">
 <INPUT type="hidden" name="customerdata[id]" value="{$customerinfo.id}">
 <INPUT type="submit" class="hiddenbtn">
-</p>
 <TABLE class="lmsbox">
 	<THEAD>
 	<TR>
 		<TD style="width: 100%;" class="nobr">
 			<TABLE width="100%" cellpadding="1">
 				<TR>
-					<TD style="width: 1%;" class="bold">{trans("Name/Surname:")}</TD>
-					<TD style="width: 99%;">
-						<INPUT type="text" size="50" name="customerdata[lastname]" value="{$customerinfo.lastname|escape}" {tip text="Enter first/lastname of customer" trigger="lastname" bold=1}>
+					<TD style="width: 1%;">
+						<TABLE width="100%" cellpadding="1">
+							<TR>
+								<TD style="width: 1%;" class="bold">{trans("Name/Surname:")}</TD>
+								<TD style="width: 99%;">
+									<INPUT type="text" size="50" name="customerdata[lastname]" value="{$customerinfo.lastname|escape}" required {tip text="Enter first/lastname of customer" trigger="lastname" bold=1}>
+								</TD>
+							</TR>
+							<TR>
+								<TD style="width: 1%;" class="bold">{trans("First name:")}</TD>
+								<TD style="width: 99%;">
+									<INPUT type="text" size="50" name="customerdata[name]" value="{$customerinfo.name|escape}" required {tip text="Enter first name of customer (optional)" trigger="name" bold=1}>
+								</TD>
+							</TR>
+						</TABLE>
 					</TD>
-				</TR>
-				<TR>
-					<TD style="width: 1%;" class="bold">{trans("First name:")}</TD>
 					<TD style="width: 99%;">
-						<INPUT type="text" size="50" name="customerdata[name]" value="{$customerinfo.name|escape}" {tip text="Enter first name of customer (optional)" trigger="name" bold=1}>
+						<TABLE width="100%" cellpadding="1">
+							<TR>
+								<TD style="width: 1%;" class="bold nobr">
+									{trans("External system identifier:")}
+								</TD>
+								<TD style="width: 99%;">
+									<input type="text" size="20" maxlength="20" name="customerdata[extid]" value="{$customerinfo.extid}" {tip text="Enter customer identifier in external system (optional)" trigger="extid"}>
+								</TD>
+							</TR>
+						</TABLE>
 					</TD>
 				</TR>
 			</TABLE>
@@ -85,17 +95,16 @@
 				<TR>
 					<TD style="width: 50%;" class="valign-top">
 						<TABLE width="100%" cellpadding="3">
+						{block name="customereditbox-leftcolumn"}
 	<TR>
 		<TD style="width: 1%;">
-			{if $customerinfo.status == "3"}<IMG src="img/customer.gif" alt="">{/if}
-			{if $customerinfo.status == "2"}<IMG src="img/wait.gif" alt="">{/if}
-			{if $customerinfo.status == "1"}<IMG src="img/unk.gif" alt="">{/if}
+			<IMG src="img/{$_CSTATUSES[$customerinfo.status].img}" alt="">
 		</TD>
 		<TD style="width: 99%;">
 			<SELECT size="1" name="customerdata[status]" {tip text="Select customer state" trigger="status"}>
-				<OPTION value="3"{if $customerinfo.status == "3"} SELECTED{/if}>{trans("connected<!singular>")}</OPTION>
-				<OPTION value="2"{if $customerinfo.status == "2"} SELECTED{/if}>{trans("waiting")}</OPTION>
-				<OPTION value="1"{if $customerinfo.status == "1"} SELECTED{/if}>{trans("interested<!singular>")}</OPTION>
+				{foreach $_CSTATUSES as $statusidx => $status}
+				<OPTION value="{$statusidx}"{if $customerinfo.status == $statusidx} selected{/if}>{$status.singularlabel}</OPTION>
+				{/foreach}
 			</SELECT>
 		</TD>
 	</TR>
@@ -125,14 +134,25 @@
 		</TD>
 	</TR>
 	<TR>
-		<TD style="width: 1%;" class="valign-top">
-			<IMG src="img/home.gif" alt="">
-		</TD>
+		<TD style="width: 1%;" class="valign-top"></TD>
 		<TD style="width: 99%;">
+			<table width="100%" cellpadding="1">
+				<tr>
+					<td style="width: 1%;">
+						<fieldset style="width: 1%;" class="nobr">
+							<legend class="bold"><IMG src="img/home.gif" alt=""> {trans("Address")}</legend>
 			<TABLE width="100%" cellpadding="1">
 				<TR>
-					<TD style="width: 1%;" class="nobr">{trans("Address:")}</TD>
-					<TD style="width: 99%;"><INPUT type="text" name="customerdata[address]" id="address" value="{$customerinfo.address}" size="30" {tip text="Enter address" trigger="address"}></TD>
+					<TD style="width: 1%;" class="nobr">{trans("Street:")}</TD>
+					<TD style="width: 99%;"><INPUT type="text" name="customerdata[street]" id="street" value="{$customerinfo.street}" size="30" required {tip text="Enter street name" trigger="street"}></TD>
+				</TR>
+				<TR>
+					<TD style="width: 1%;" class="nobr">{trans("Building:")}</TD>
+					<TD style="width: 99%;">
+						<INPUT type="text" name="customerdata[building]" id="building" value="{$customerinfo.building}" size="8" {tip text="Enter building number" trigger="building"}>
+						{trans("Apartment:")}
+						<INPUT type="text" name="customerdata[apartment]" id="flat" value="{$customerinfo.apartment}" size="8" {tip text="Enter apartment number" trigger="apartment"}>
+					</TD>
 				</TR>
 				<TR>
 					<TD style="width: 1%;" class="nobr">{trans("City:")}</TD>
@@ -174,36 +194,43 @@
 				</TR>
 				{/if}
 			</TABLE>
-		<script type="text/javascript">
-		<!--
-			new AutoSuggest(document.getElementById('customeredit'),document.getElementById('address'),'?m=customeradd&ajax=1&mode=address&what=',0);
-			new AutoSuggest(document.getElementById('customeredit'),document.getElementById('zip'),'?m=customeradd&ajax=1&mode=zip&what=',0);
-			new AutoSuggest(document.getElementById('customeredit'),document.getElementById('city'),'?m=customeradd&ajax=1&mode=city&what=',0);
-		//-->
-		</script>
-	</TR>
-	<TR>
-		<TD style="width: 1%;" class="valign-top">
-			<IMG src="img/post.gif" alt="">
-		</TD>
-		<TD style="width: 99%;">
+			<script type="text/javascript">
+			<!--
+				new AutoSuggest(document.getElementById('customeredit'),document.getElementById('street'),'?m=customeradd&ajax=1&mode=street&what=',0);
+				new AutoSuggest(document.getElementById('customeredit'),document.getElementById('zip'),'?m=customeradd&ajax=1&mode=zip&what=',0);
+				new AutoSuggest(document.getElementById('customeredit'),document.getElementById('city'),'?m=customeradd&ajax=1&mode=city&what=',0);
+			//-->
+			</script>
+						</fieldset>
+					</td>
+					<td style="width: 99%;">
+						<fieldset style="width: 1%;" class="nobr">
+							<legend class="bold"><IMG src="img/post.gif" alt=""> {trans("Postal address")}</legend>
 			<TABLE width="100%" cellpadding="1">
 				<TR>
 					<TD style="width: 1%;" class="nobr">{trans("Name:")}</TD>
-					<TD style="width: 99%;"><INPUT type="text" name="customerdata[post_name]" id="post_name" value="{$customerinfo.post_name}" size="30" {tip text="Enter service name (optional)" trigger="post_name"}></TD>
+					<TD style="width: 99%;"><INPUT type="text" name="customerdata[post_name]" id="post_name" value="{$customerinfo.post_name}" size="30" {tip text="Enter name (optional)" trigger="post_name"}></TD>
 				</TR>
 				<TR>
-					<TD style="width: 1%;" class="nobr">{trans("Address:")}</TD>
-					<TD style="width: 99%;"><INPUT type="text" name="customerdata[post_address]" id="post_address" value="{$customerinfo.post_address}" size="30" {tip text="Enter service address (optional)" trigger="post_address"}></TD>
+					<TD style="width: 1%;" class="nobr">{trans("Street:")}</TD>
+					<TD style="width: 99%;"><INPUT type="text" name="customerdata[post_street]" id="post_street" value="{$customerinfo.post_street}" size="30" {tip text="Enter street name (optional)" trigger="post_street"}></TD>
+				</TR>
+				<TR>
+					<TD style="width: 1%;" class="nobr">{trans("Building:")}</TD>
+					<TD style="width: 99%;">
+						<INPUT type="text" name="customerdata[post_building]" id="post_building" value="{$customerinfo.post_building}" size="8" {tip text="Enter building number (optional)" trigger="post_building"}>
+						{trans("Apartment:")}
+						<INPUT type="text" name="customerdata[post_apartment]" id="post_apartment" value="{$customerinfo.post_apartment}" size="8" {tip text="Enter apartment number (optional)" trigger="post_apartment"}>
+					</TD>
 				</TR>
 				<TR>
 					<TD style="width: 1%;" class="nobr">{trans("City:")}</TD>
-					<TD style="width: 99%;"><INPUT type="text" name="customerdata[post_city]" id="post_city" value="{$customerinfo.post_city}" size="30" {tip text="Enter city of service address (optional)" trigger="post_city"}></TD>
+					<TD style="width: 99%;"><INPUT type="text" name="customerdata[post_city]" id="post_city" value="{$customerinfo.post_city}" size="30" {tip text="Enter city (optional)" trigger="post_city"}></TD>
 				</TR>
 				<TR>
 					<TD style="width: 1%;" class="nobr">{trans("Zip:")}</TD>
 					<TD style="width: 99%;">
-						<INPUT type="text" name="customerdata[post_zip]" id="post_zip" value="{$customerinfo.post_zip}" size="10" {tip text="Enter zip code of service address (optional)" trigger="post_zip"}>
+						<INPUT type="text" name="customerdata[post_zip]" id="post_zip" value="{$customerinfo.post_zip}" size="10" {tip text="Enter zip code (optional)" trigger="post_zip"}>
 						{if $customerinfo.post_zipwarning}
 						<INPUT type="HIDDEN" name="customerdata[post_zipwarning]" value="1">
 						{/if}
@@ -236,100 +263,67 @@
 				</TR>
 				{/if}
 			</TABLE>
-		<script type="text/javascript">
-		<!--
-			new AutoSuggest(document.getElementById('customeredit'),document.getElementById('post_address'),'?m=customeradd&ajax=1&mode=address&what=',0);
-			new AutoSuggest(document.getElementById('customeredit'),document.getElementById('post_zip'),'?m=customeradd&ajax=1&mode=zip&what=',0);
-			new AutoSuggest(document.getElementById('customeredit'),document.getElementById('post_city'),'?m=customeradd&ajax=1&mode=city&what=',0);
-		//-->
-		</script>
+			<script type="text/javascript">
+			<!--
+				new AutoSuggest(document.getElementById('customeredit'),document.getElementById('post_street'),'?m=customeradd&ajax=1&mode=street&what=',0);
+				new AutoSuggest(document.getElementById('customeredit'),document.getElementById('post_zip'),'?m=customeradd&ajax=1&mode=zip&what=',0);
+				new AutoSuggest(document.getElementById('customeredit'),document.getElementById('post_city'),'?m=customeradd&ajax=1&mode=city&what=',0);
+			//-->
+			</script>
+						</fieldset>
+					</td>
+				<tr>
+			</table>
+		</td>
 	</TR>
+	{foreach $_CUSTOMERCONTACTTYPES as $type => $properties}
 	<TR>
 		<TD style="width: 1%;"></TD>
 		<TD style="width: 99%;" class="nobr">
 			<fieldset style="width: 1%;" class="nobr">
-				<legend class="bold"><IMG src="img/phone.gif" alt=""> {trans("Contact phones")}</legend>
+				<legend class="bold"><IMG src="{$properties.ui.legend.icon}" alt=""> {$properties.ui.legend.text}</legend>
 				<table>
-					{foreach from=$customerinfo.contacts item=item key=key}
-					<TR id="contact{$key}">
+					{foreach $customerinfo[$type|cat:'s'] as $key => $item}
+					<TR id="{$type}{$key}">
 						<TD>
-							<INPUT type="text" size="15" value="{$item.phone}" name="customerdata[contacts][{$key}][phone]" {tip text="Enter contact phone" trigger="contact`$key`"}>
-							<INPUT type="checkbox" value="{$smarty.const.CONTACT_MOBILE}" name="customerdata[contacts][{$key}][type][]" id="chkmobile{$key}" {if ($item.type & $smarty.const.CONTACT_MOBILE)} checked{/if}><label for="chkmobile{$key}">{trans("mobile")}</label>
-							<INPUT type="checkbox" value="{$smarty.const.CONTACT_FAX}" name="customerdata[contacts][{$key}][type][]" id="chkfax{$key}" {if ($item.type & $smarty.const.CONTACT_FAX)} checked{/if}><label for="chkfax{$key}">{trans("fax")}</label>
+							{if !$item@first}<HR>{/if}
+							{if isset($properties.ui.typeselectors)}
+							<SELECT name="customerdata[{$type}s][{$key}][typeselector]">
+								{foreach $properties.ui.typeselectors as $typeselector}
+								<OPTION value="{$typeselector}"{if $item.type & $typeselector} selected{/if}>{$_CONTACTTYPES[$typeselector]}</OPTION>
+								{/foreach}
+							</SELECT>
+							{/if}
+							<INPUT type="{$properties.ui.inputtype}" size="{$properties.ui.size}" value="{$item.contact}" name="customerdata[{$type}s][{$key}][contact]" {tip text=$properties.ui.tip trigger="`$type``$key`"}>
+							{foreach $properties.ui.flags as $flagtype => $flagproperties}
+							<label{if isset($flagproperties.tip)} {tip text=$flagproperties.tip}{/if}>
+								<INPUT type="checkbox" value="{$flagtype}" name="customerdata[{$type}s][{$key}][type][]"{if ($item.type & $flagtype)} checked{/if}>
+								{$flagproperties.label}
+							</label>
+							{/foreach}
 							<BR>
-							<INPUT type="text" size="38" value="{$item.name}" name="customerdata[contacts][{$key}][name]" {tip text="Enter contact name/description (optional)"}>
+							<INPUT type="text" size="68" value="{$item.name}" name="customerdata[{$type}s][{$key}][name]" {tip text="Enter contact name/description (optional)"}>
 						</TD>
 					</TR>
 					{/foreach}
 					<TR>
 						<TD>
-							<INPUT type="hidden" id="contactscount" value="{$item@total}">
-							<A href="javascript: newcontact()">{trans("Add contact field")} &raquo;&raquo;&raquo;</A>
+							<INPUT type="hidden" id="{$type}count" value="{count($customerinfo[$type|cat:'s'])}">
+							<A href="javascript:newcontact('{$type}')">{trans("Add contact field")} &raquo;&raquo;&raquo;</A>
 						</TD>
 					</TR>
 				</table>
 			</fieldset>
 		</TD>
 	</TR>
-	<TR>
-		<TD style="width: 1%;"></TD>
-		<TD style="width: 99%;" class="nobr">
-			<fieldset style="width: 1%;" class="nobr">
-				<legend class="bold"><IMG src="img/mail.gif" alt=""> {trans("Email addresses")}</legend>
-				<table>
-					{foreach from=$customerinfo.emails item=item key=key}
-					<TR id="email{$key}">
-						<TD>
-							<INPUT type="text" size="38" value="{$item.email}" name="customerdata[emails][{$key}][email]" {tip text="Enter e-mail address (optional)" trigger="email`$key`"}>
-							<BR>
-							<INPUT type="text" size="38" value="{$item.name}" name="customerdata[emails][{$key}][name]" {tip text="Enter contact name/description (optional)"}>
-						</TD>
-					</TR>
-					{/foreach}
-					<TR>
-						<TD>
-							<INPUT type="hidden" id="emailscount" value="{$item@total}">
-							<A href="javascript: newemail()">{trans("Add contact field")} &raquo;&raquo;&raquo;</A>
-						</TD>
-					</TR>
-				</table>
-			</fieldset>
-		</TD>
-	</TR>
-	<TR>
-		<TD style="width: 1%;">
-			<IMG src="img/gg.gif" alt="Gadu-Gadu">
-		</TD>
-		<TD style="width: 99%;">
-			{assign var=gg value=$smarty.const.IM_GG}
-			<INPUT type="text" name="customerdata[uid][{$gg}]" value="{if $customerinfo.uid.$gg}{$customerinfo.uid.$gg}{/if}" size="20" {tip text="Enter Gadu-Gadu ID (optional)" trigger="gg"}>
-		</TD>
-	</TR>
-	<TR>
-		<TD style="width: 1%;">
-			<IMG src="img/yim.gif" alt="Yahoo">
-		</TD>
-		<TD style="width: 99%">
-			{assign var=yahoo value=$smarty.const.IM_YAHOO}
-			<INPUT type="text" name="customerdata[uid][{$yahoo}]" value="{if $customerinfo.uid.$yahoo}{$customerinfo.uid.$yahoo}{/if}" size="20" {tip text="Enter Yahoo Messenger ID (optional)" trigger="yahoo"}>
-		</TD>
-	</TR>
-	<TR>
-		<TD style="width: 1%;">
-			<IMG src="img/skype.gif" alt="Skype">
-		</TD>
-		<TD style="width: 99%;">
-			{assign var=skype value=$smarty.const.IM_SKYPE}
-			<INPUT type="text" name="customerdata[uid][{$skype}]" value="{if $customerinfo.uid.$skype}{$customerinfo.uid.$skype}{/if}" size="20" {tip text="Enter Skype ID (optional)" trigger="skype"}>
-		</TD>
-	</TR>
+	{/foreach}
 	<TR>
 		<TD style="width: 1%;">
 			<IMG src="img/pin.gif" alt="">
 		</TD>
 		<TD style="width: 98%;">
-			<INPUT type="text" name="customerdata[pin]" value="{if $customerinfo.pin}{$customerinfo.pin}{/if}" size="6" {tip text="Enter 4 to 6 digits PIN number (optional)" trigger="pin"}>&nbsp;
-			<A href="javascript: randomize()" {tip text="Generate PIN"}>&raquo;&raquo;&raquo;</A>
+			<INPUT type="number" pattern="{literal}[0-9]{4,6}{/literal}" required name="customerdata[pin]" value="{if $customerinfo.pin}{$customerinfo.pin}{/if}" size="6" title="{trans("Enter 4 to 6 digits PIN number (optional)")}" {tip text="Enter 4 to 6 digits PIN number (optional)" trigger="pin"}>&nbsp;
+			<A href="javascript:randomize()" {tip text="Generate PIN"}>&raquo;&raquo;&raquo;</A>
 		</TD>
 	</TR>
 	<TR>
@@ -351,6 +345,9 @@
 						{if $customerinfo.ssnwarning}
 						<INPUT type="hidden" name="customerdata[ssnwarning]" value="1">
 						{/if}
+						{if $customerinfo.ssnexistencewarning}
+						<INPUT type="hidden" name="customerdata[ssnexistencewarning]" value="1">
+						{/if}
 					</TD>
 				</TR>
 				<TR>
@@ -359,6 +356,9 @@
 						<INPUT type="text" name="customerdata[ten]" value="{$customerinfo.ten}" size="30" {tip text="Enter Tax Exempt Number (optional)" trigger="ten"}>
 						{if $customerinfo.tenwarning}
 						<INPUT type="hidden" name="customerdata[tenwarning]" value="1">
+						{/if}
+						{if $customerinfo.tenexistencewarning}
+						<INPUT type="hidden" name="customerdata[tenexistencewarning]" value="1">
 						{/if}
 					</TD>
 				</TR>
@@ -396,6 +396,8 @@
 							<OPTION value="14"{if $customerinfo.paytime==14} selected{/if}>14</OPTION>
 							<OPTION value="21"{if $customerinfo.paytime==21} selected{/if}>21</OPTION>
 							<OPTION value="30"{if $customerinfo.paytime==30} selected{/if}>30</OPTION>
+							<OPTION value="60"{if $customerinfo.paytime==60} selected{/if}>60</OPTION>
+							<OPTION value="90"{if $customerinfo.paytime==90} selected{/if}>90</OPTION>
 						</SELECT>
 					</TD>
 				</TR>
@@ -417,9 +419,7 @@
 						{trans("Cutoff suspending:")}
 					</TD>
 					<TD>
-						<div class="calendar">
-						<INPUT type="text" name="customerdata[cutoffstop]" id="cutoffstop" {if $customerinfo.cutoffstop}value="{$customerinfo.cutoffstop}"{/if} size="10" {tip text="Select date of cutoff suspending (optional)" trigger="cutoffstop"}>
-						</div>
+						<INPUT type="text" name="customerdata[cutoffstop]" id="cutoffstop" {if $customerinfo.cutoffstop}value="{$customerinfo.cutoffstop}"{/if} size="10" {tip class="calendar" text="Select date of cutoff suspending (optional)" trigger="cutoffstop"}>
 					</TD>
 				</TR>
 			</TABLE>
@@ -442,13 +442,13 @@
 				</TR>
 				<TR>
 					<TD>
-						<label for="chkeinvoice">{trans("Consent to electronic invoices:")}</label>
+						<label for="chkeinvoice">{trans("Cancellation of a traditional invoice (agreement on an electronic invoice):")}</label>
 					</TD>
 					<TD>
 						<INPUT type="checkbox" name="customerdata[einvoice]" id="chkeinvoice" value="1"{if $customerinfo.einvoice} checked{/if}>
 					</TD>
 				</TR>
-				<TR>
+				<TR {tip text="Consent to invoices delivery via e-mail:" trigger="invoicenotice"}>
 					<TD>
 						<label for="chkinvoicenotice">{trans("Consent to invoices delivery via e-mail:")}</label>
 					</TD>
@@ -469,18 +469,18 @@
 		</TD>
 	</TR>
 	{include file="v_customereditbox.html"}
+						{/block}
 						</TABLE>
 					</TD>
 					<TD style="width: 50%;" class="valign-top">
 						<TABLE width="100%" cellpadding="3">
+						{block name="customereditbox-rightcolumn"}
 	<TR>
 		<TD style="width: 1%;">
 			<IMG src="img/info1.gif" alt="">
 		</TD>
 		<TD style="width: 99%;">
-			<input type="checkbox" id="info_label" onclick="javascript:toggle_visual_editor('info');"{if ConfigHelper::getConfig('phpui.default_editor') == 'wysiwyg'} checked{/if}>
-			<label for="info_label">{trans("visual editor")}</label><br>
-			<TEXTAREA name="customerdata[info]" id="info" COLS="60" ROWS="10" {tip text="Enter additional information (optional)"}>{$customerinfo.info|escape}</TEXTAREA>
+			<TEXTAREA name="customerdata[info]" class="lms-ui-wysiwyg-editor" COLS="60" ROWS="10" {tip text="Enter additional information (optional)"}{if isset($customerinfo.wysiwyg.info)} data-wysiwyg="{$customerinfo.wysiwyg.info}"{/if}>{$customerinfo.info|escape}</TEXTAREA>
 		</TD>
 	</TR>
 	<TR>
@@ -488,9 +488,7 @@
 			<IMG src="img/warningon.gif" alt="">
 		</TD>
 		<TD style="width: 99%;">
-			<input type="checkbox" id="message_label" onclick="javascript:toggle_visual_editor('message');"{if ConfigHelper::getConfig('phpui.default_editor') == 'wysiwyg'} checked{/if}>
-			<label for="message_label">{trans("visual editor")}</label><br>
-			<TEXTAREA name="customerdata[message]" id="message" COLS="60" ROWS="10" {tip text="Enter notice contents (optional)"}>{$customerinfo.message|escape}</TEXTAREA>
+			<TEXTAREA name="customerdata[message]" class="lms-ui-wysiwyg-editor" COLS="60" ROWS="10" {tip text="Enter notice contents (optional)"}{if isset($customerinfo.wysiwyg.message)} data-wysiwyg="{$customerinfo.wysiwyg.message}"{/if}>{$customerinfo.message|escape}</TEXTAREA>
 		</TD>
 	</TR>
 	<TR>
@@ -498,9 +496,7 @@
 			<IMG src="img/note.gif" alt="">
 		</TD>
 		<TD style="width: 99%;">
-			<input type="checkbox" id="notes_label" onclick="javascript:toggle_visual_editor('notes');"{if ConfigHelper::getConfig('phpui.default_editor') == 'wysiwyg'} checked{/if}>
-			<label for="notes_label">{trans("visual editor")}</label><br>
-			<TEXTAREA name="customerdata[notes]" id="notes" COLS="60" ROWS="10" {tip text="Enter notes (optional)"}>{$customerinfo.notes|escape}</TEXTAREA>
+			<TEXTAREA name="customerdata[notes]" class="lms-ui-wysiwyg-editor" COLS="60" ROWS="10" {tip text="Enter notes (optional)"}{if isset($customerinfo.wysiwyg.notes)} data-wysiwyg="{$customerinfo.wysiwyg.notes}"{/if}>{$customerinfo.notes|escape}</TEXTAREA>
 		</TD>
 	</TR>
 	<TR>
@@ -521,6 +517,7 @@
 			<span class="bold">{trans("Modified:")}</span> {if $customerinfo.moddate}{$customerinfo.modifiedby}, {$customerinfo.moddateh}{else}-{/if}
 		</TD>
 	</TR>
+						{/block}
 						</TABLE>
 					</TD>
 				</TR>
@@ -538,13 +535,6 @@
 </FORM>
 <SCRIPT type="text/javascript">
 <!--
-document.forms['customeredit'].elements['customerdata[lastname]'].focus();
-
-tinymce_init('{$_ui_language}');
-{if ConfigHelper::getConfig('phpui.default_editor') == 'wysiwyg'}
-toggle_visual_editor('info');
-toggle_visual_editor('message');
-toggle_visual_editor('notes');
-{/if}
+	document.forms['customeredit'].elements['customerdata[lastname]'].focus();
 //-->
 </SCRIPT>

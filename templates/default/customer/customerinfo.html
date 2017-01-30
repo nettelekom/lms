@@ -3,12 +3,15 @@
 {block name=module_content}
 <!--// $Id$ //-->
 <H1>{$layout.pagetitle}</H1>
-{include file="calendar_js.html"}
+<div id="customerinfo-sortable" class="lms-ui-sortable-persistent">
 {block name="customerinfobox"}
 	{include file="customer/customerinfobox.html"}
 {/block}
 {block name="customernodesbox"}
 	{include file="customer/customernodesbox.html"}
+{/block}
+{block name="customernetworksbox"}
+	{include file="customer/customernetworksbox.html"}
 {/block}
 {block name="transactions"}
 	{if ConfigHelper::checkConfig('phpui.logging') && (ConfigHelper::checkConfig('privileges.superuser') || ConfigHelper::checkConfig('privileges.transaction_logs'))}
@@ -46,4 +49,10 @@
 	{include file="v_customercdr.html"}
 {/block}
 {/if}
+</div>
+<script type="text/javascript">
+<!--
+	restoreSortable('customerinfo-sortable', '{$customerinfo_sortable_order}');
+//-->
+</script>
 {/block}

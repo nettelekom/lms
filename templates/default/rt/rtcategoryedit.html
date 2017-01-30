@@ -44,7 +44,7 @@
                         <TBODY>
 			{cycle values="light,lucid" print=false}
 			{foreach from=$category.owners item=user}
-			<TR class="highlight {cycle}"  >
+			<TR class="highlight {cycle} lms-ui-row-all-check">
 			    <TD width="99%">
 				<A href="?m=userinfo&id={$user.id}">{$user.name}</A>
 			    </TD>
@@ -53,6 +53,14 @@
 			    </TD>
 			</TR>
 			{/foreach}
+                        <TR>
+                                <TD width="1%" class="text-right">
+                                        <label for="allbox">{trans("Check All")}</label>
+                                </TD>
+                                <TD width="1%" align="center">             
+                                        <INPUT TYPE="checkbox" NAME="allbox" id="allbox" onchange="CheckAll('category', this)">
+                                </TD>
+                        </TR> 
                         </TBODY>
 		</TABLE>			
 	    </TD>

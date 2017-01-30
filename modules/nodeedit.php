@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2013 LMS Developers
+ *  (C) Copyright 2001-2016 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -55,12 +55,11 @@ switch ($action) {
 		$DB->Execute('UPDATE nodes SET chkmac=? WHERE id=?', array($_GET['chkmac'], $nodeid));
 		if ($SYSLOG) {
 			$args = array(
-				$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NODE] => $nodeid,
-				$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_CUST] => $customerid,
+				SYSLOG::RES_NODE => $nodeid,
+				SYSLOG::RES_CUST => $customerid,
 				'chkmac' => $_GET['chkmac']
 			);
-			$SYSLOG->AddMessage(SYSLOG_RES_NODE, SYSLOG_OPER_UPDATE, $args,
-				array($SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NODE], $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_CUST]));
+			$SYSLOG->AddMessage(SYSLOG::RES_NODE, SYSLOG::OPER_UPDATE, $args);
 		}
 		$SESSION->redirect('?m=nodeinfo&id=' . $nodeid);
 		break;
@@ -68,12 +67,11 @@ switch ($action) {
 		$DB->Execute('UPDATE nodes SET halfduplex=? WHERE id=?', array($_GET['duplex'], $nodeid));
 		if ($SYSLOG) {
 			$args = array(
-				$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NODE] => $nodeid,
-				$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_CUST] => $customerid,
+				SYSLOG::RES_NODE => $nodeid,
+				SYSLOG::RES_CUST => $customerid,
 				'halfduplex' => $_GET['duplex']
 			);
-			$SYSLOG->AddMessage(SYSLOG_RES_NODE, SYSLOG_OPER_UPDATE, $args,
-				array($SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NODE], $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_CUST]));
+			$SYSLOG->AddMessage(SYSLOG::RES_NODE, SYSLOG::OPER_UPDATE, $args);
 		}
 		$SESSION->redirect('?m=nodeinfo&id=' . $nodeid);
 		break;
@@ -81,12 +79,11 @@ switch ($action) {
 		$DB->Execute('UPDATE nodes SET authtype=? WHERE id=?', array(intval($_GET['authtype']), $nodeid));
 		if ($SYSLOG) {
 			$args = array(
-				$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NODE] => $nodeid,
-				$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_CUST] => $customerid,
+				SYSLOG::RES_NODE => $nodeid,
+				SYSLOG::RES_CUST => $customerid,
 				'authtype' => intval($_GET['authtype']),
 			);
-			$SYSLOG->AddMessage(SYSLOG_RES_NODE, SYSLOG_OPER_UPDATE, $args,
-				array($SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NODE], $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_CUST]));
+			$SYSLOG->AddMessage(SYSLOG::RES_NODE, SYSLOG::OPER_UPDATE, $args);
 		}
 		$SESSION->redirect('?m=nodeinfo&id=' . $nodeid);
 		break;
@@ -106,13 +103,6 @@ else
 
 $layout['pagetitle'] = trans('Node Edit: $a', $nodeinfo['name']);
 
-$nodeauthtype = array();
-$authtype = $nodeinfo['authtype'];
-if ($authtype != 0) {
-	$nodeauthtype['pppoe'] = ($authtype & 1);
-	$nodeauthtype['dhcp'] = ($authtype & 2);
-	$nodeauthtype['eap'] = ($authtype & 4);
-}
 if (isset($_POST['nodeedit'])) {
 	$nodeedit = $_POST['nodeedit'];
 
@@ -123,14 +113,17 @@ if (isset($_POST['nodeedit'])) {
 		$nodeedit['macs'][$key] = str_replace('-', ':', $value);
 
 	foreach ($nodeedit as $key => $value)
-		if ($key != 'macs')
+		if ($key != 'macs' && $key != 'authtype' && $key != 'wysiwyg')
 			$nodeedit[$key] = trim($value);
 
-	if ($nodeedit['ipaddr'] == '' && $nodeedit['ipaddr_pub'] == '' && empty($nodeedit['macs']) && $nodeedit['name'] == '' && $nodeedit['info'] == '' && $nodeedit['passwd'] == '') {
+	if ($nodeedit['ipaddr'] == '' && $nodeedit['ipaddr_pub'] == '' && empty($nodeedit['macs']) && $nodeedit['name'] == '' && $nodeedit['info'] == '' && $nodeedit['passwd'] == '' && !isset($nodeedit['wholenetwork'])) {
 		$SESSION->redirect('?m=nodeinfo&id=' . $nodeedit['id']);
 	}
 
-	if (check_ip($nodeedit['ipaddr'])) {
+	if(isset($nodeedit['wholenetwork'])) {
+		$nodeedit['ipaddr'] = '0.0.0.0';
+		$nodeedit['ipaddr_pub'] = '0.0.0.0';
+	} elseif (check_ip($nodeedit['ipaddr'])) {
 		if ($LMS->IsIPValid($nodeedit['ipaddr'])) {
 			if (empty($nodeedit['netid']))
 				$nodeedit['netid'] = $DB->GetOne('SELECT id FROM networks WHERE INET_ATON(?) & INET_ATON(mask) = address ORDER BY id LIMIT 1',
@@ -173,13 +166,12 @@ if (isset($_POST['nodeedit'])) {
 	$macs = array();
 	foreach ($nodeedit['macs'] as $key => $value)
 		if (check_mac($value)) {
-			if ($value != '00:00:00:00:00:00' && !ConfigHelper::checkValue(ConfigHelper::getConfig('phpui.allow_mac_sharing', false))) {
+			if ($value != '00:00:00:00:00:00' && !ConfigHelper::checkConfig('phpui.allow_mac_sharing')) {
 				if (($nodeid = $LMS->GetNodeIDByMAC($value)) != NULL && $nodeid != $nodeinfo['id'])
 					$error['mac' . $key] = trans('Specified MAC address is in use!');
 			}
 			$macs[] = $value;
-		}
-		elseif ($value != '')
+		} elseif ($value != '')
 			$error['mac' . $key] = trans('Incorrect MAC address!');
 	if (empty($macs))
 		$error['mac0'] = trans('MAC address is required!');
@@ -224,7 +216,7 @@ if (isset($_POST['nodeedit'])) {
 
 			if (!preg_match('/^[0-9]+$/', $nodeedit['port']) || $nodeedit['port'] > $ports) {
 				$error['port'] = trans('Incorrect port number!');
-			} elseif ($DB->GetOne('SELECT id FROM nodes WHERE netdev=? AND port=? AND ownerid>0', array($nodeedit['netdev'], $nodeedit['port']))
+			} elseif ($DB->GetOne('SELECT id FROM vnodes WHERE netdev=? AND port=? AND ownerid>0', array($nodeedit['netdev'], $nodeedit['port']))
 					|| $DB->GetOne('SELECT 1 FROM netlinks WHERE (src = ? OR dst = ?)
 			                AND (CASE src WHEN ? THEN srcport ELSE dstport END) = ?', array($nodeedit['netdev'], $nodeedit['netdev'], $nodeedit['netdev'], $nodeedit['port']))) {
 				$error['port'] = trans('Selected port number is taken by other device or node!');
@@ -245,16 +237,11 @@ if (isset($_POST['nodeedit'])) {
 			array($nodeedit['projectname'], INV_PROJECT_SYSTEM)))
 			$error['projectname'] = trans('Project with that name already exists');
 	}
-	$nodeedit['authtype'] = 0;
-	if(isset($_POST['nodeauthtype'])) {
-		$authtype = $_POST['nodeauthtype'];
-		if (!empty($authtype)) {
-			foreach ($authtype as $op) {
-				$op = (int)$op;
-				$nodeedit['authtype'] |= $op;
-			}
-		}
-	}
+	$authtype = 0;
+	if (isset($nodeedit['authtype']))
+		foreach ($nodeedit['authtype'] as $idx)
+			$authtype |= intval($idx);
+	$nodeedit['authtype'] = $authtype;
 
 	$hook_data = $LMS->executeHook('nodeedit_validation_before_submit',
 		array(
@@ -272,6 +259,10 @@ if (isset($_POST['nodeedit'])) {
 			$nodeedit['location_house'] = null;
 			$nodeedit['location_flat'] = null;
 		}
+		if (empty($nodeedit['location']) && !empty($nodeedit['ownerid'])) {
+                    $location = $LMS->GetCustomer($nodeedit['ownerid']);
+                    $nodeedit['location'] = $location['address'] . ', ' . $location['zip'] . ' ' . $location['city'];
+                }
 
 		$nodeedit = $LMS->ExecHook('node_edit_before', $nodeedit);
 
@@ -307,6 +298,7 @@ if (isset($_POST['nodeedit'])) {
 	$nodeinfo['macs'] = $nodeedit['macs'];
 	$nodeinfo['ip'] = $nodeedit['ipaddr'];
 	$nodeinfo['netid'] = $nodeedit['netid'];
+	$nodeinfo['wholenetwork'] = $nodeedit['wholenetwork'];
 	$nodeinfo['ip_pub'] = $nodeedit['ipaddr_pub'];
 	$nodeinfo['passwd'] = $nodeedit['passwd'];
 	$nodeinfo['access'] = $nodeedit['access'];
@@ -325,11 +317,11 @@ if (isset($_POST['nodeedit'])) {
 	$nodeinfo['latitude'] = $nodeedit['latitude'];
 	$nodeinfo['longitude'] = $nodeedit['longitude'];
 	$nodeinfo['invprojectid'] = $nodeedit['invprojectid'];
+	$nodeinfo['wysiwyg'] = $nodeedit['wysiwyg'];
 
 	if ($nodeedit['ipaddr_pub'] == '0.0.0.0')
 		$nodeinfo['ipaddr_pub'] = '';
-}
-else {
+} else {
 	if ($nodeinfo['city_name'] || $nodeinfo['street_name']) {
 		$nodeinfo['teryt'] = true;
 		$nodeinfo['location'] = location_str($nodeinfo);
@@ -342,9 +334,8 @@ if (empty($nodeinfo['macs']))
 include(MODULES_DIR . '/customer.inc.php');
 include(MODULES_DIR.'/customer.voip.inc.php');
 
-if (!ConfigHelper::checkValue(ConfigHelper::getConfig('phpui.big_networks', false))) {
+if (!ConfigHelper::checkConfig('phpui.big_networks'))
 	$SMARTY->assign('customers', $LMS->GetCustomerNames());
-}
 
 include(MODULES_DIR . '/nodexajax.inc.php');
 
@@ -373,6 +364,7 @@ $SMARTY->assign('error', $error);
 $SMARTY->assign('nodeinfo', $nodeinfo);
 $SMARTY->assign('objectid', $nodeinfo['id']);
 $SMARTY->assign('nodeauthtype', $nodeauthtype);
+$SMARTY->assign('nodeedit_sortable_order', $SESSION->get_persistent_setting('nodeedit-sortable-order'));
 $SMARTY->display('node/nodeedit.html');
 
 ?>

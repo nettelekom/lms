@@ -25,7 +25,7 @@
  */
 
 // variables
-$CONFIG['directories']['userpanel_dir'] = (!isset($CONFIG['directories']['userpanel_dir']) ? getcwd() : $CONFIG['directories']['userpanel_dir']);
+$CONFIG['directories']['userpanel_dir'] = (!isset($CONFIG['directories']['userpanel_dir']) ? getcwd() . DIRECTORY_SEPARATOR . 'userpanel' : $CONFIG['directories']['userpanel_dir']);
 
 define('USERPANEL_DIR', $CONFIG['directories']['userpanel_dir']);
 define('USERPANEL_LIB_DIR', USERPANEL_DIR . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR);
@@ -78,9 +78,9 @@ foreach($USERPANEL->MODULES as $menupos)
 
 
 // Add Userpanel menu to LMS main menu
-$menu[] = array(
+$menu['userpanel'] = array(
 	'name' => trans('Userpanel'),
-	'img' => 'cms.gif',
+	'css' => 'lms-ui-icon-userpanel',
 	'link' => '?m=userpanel',
 	'tip' => trans('Userpanel'),
 	'prio' => '80',

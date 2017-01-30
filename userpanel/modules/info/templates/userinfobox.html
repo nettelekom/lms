@@ -49,24 +49,14 @@
 		</td>
 	</tr>
 {/if}
-{if $userinfo.im != "" && $userinfo.im != 0}
+{foreach $userinfo.ims as $item}
 	<tr>
 		<td width="1%">
+			{if $item.type & $smarty.const.CONTACT_IM_GG}
 			{img src="gg.gif" alt=""}
-		</td>
-		<td width="99%" colspan="2">
-			{$userinfo.im}
-		</td>
-	</tr>
-{/if}
-{foreach from=$userinfo.messengers item=item}
-	<tr>
-		<td width="1%">
-			{if $item.type == $smarty.const.IM_GG}
-			{img src="gg.gif" alt=""}
-			{elseif $item.type == $smarty.const.IM_YAHOO}
+			{elseif $item.type & $smarty.const.CONTACT_IM_YAHOO}
 			{img src="yahoo.gif" alt=""}
-			{elseif $item.type == $smarty.const.IM_SKYPE}
+			{elseif $item.type & $smarty.const.CONTACT_IM_SKYPE}
 			{img src="skype.gif" alt=""}
 			{/if}
 		</td>
@@ -106,17 +96,22 @@
 			{if $userinfo.balance < 0}<font color="red"><b>{$userinfo.balance|money_format}</b></font>{else}{$userinfo.balance|money_format}{/if}
 		</td>
 	</tr>
-{$bankaccount = bankaccount($userinfo.id, $userinfo.account)}
-{if $bankaccount}
+{if $userinfo.bankaccount || $userinfo.accounts}
 	<tr>
 		<td width="1%">
 			{img src="cash.gif" alt=""}
 		</td>
-	    <td width="1%">
-			<b>{trans("Bank account:")}</b>
+		<td width="1%">
+			<b>{trans("Bank accounts:")}</b>
 		</td>
 		<td width="98%">
-			{format_bankaccount($bankaccount)}
+			{if $userinfo.bankaccount}
+			{format_bankaccount($userinfo.bankaccount)|replace:" ":"&nbsp;"}
+			{/if}
+			{if $userinfo.accounts}<BR />{/if}
+			{foreach $userinfo.accounts as $account}
+			{format_bankaccount($account.account)|replace:" ":"&nbsp;"}{if !$account@last}<BR />{/if}
+			{/foreach}
 		</td>
 	</tr>
 {/if}

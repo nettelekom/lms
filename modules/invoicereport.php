@@ -58,7 +58,10 @@ $listdata = array('tax' => 0, 'brutto' => 0);
 $invoicelist = array();
 $taxeslist = array();
 $taxes = array();
-$taxescount = 0;
+if ($doctype == 'invoices')
+	$taxescount = 0;
+else
+	$taxescount = -1;
 
 if(!empty($_POST['group']))
 {
@@ -69,7 +72,7 @@ if(!empty($_POST['group']))
 	else
 		$groups = intval($_POST['group']);
 
-	$groupwhere = ' AND '.(isset($_POST['groupexclude']) ? 'NOT' : '').' 
+	$groupwhere = ' AND '.(isset($_POST['groupexclude']) ? 'NOT' : '').'
 		EXISTS (SELECT 1 FROM customerassignments a
 			WHERE a.customergroupid IN ('.$groups.')
 			AND a.customerid = d.customerid)';
@@ -90,7 +93,7 @@ if(!empty($_POST['division']))
 {
 	$divwhere = ' AND d.divisionid '.(isset($_POST['divexclude']) ? '!=' : '=').' '.intval($_POST['division']);
 
-	$divname = $DB->GetOne('SELECT name FROM divisions WHERE id = ?', 
+	$divname = $DB->GetOne('SELECT name FROM divisions WHERE id = ?',
 			array(intval($_POST['division'])));
 
 	$layout['division'] = $divname;
@@ -109,6 +112,11 @@ switch ($_POST['datetype']) {
 		$sortcol = 'd.cdate';
 }
 
+if (in_array($_POST['doctype'], array('invoices', 'notes')))
+	$doctype = $_POST['doctype'];
+else
+	$doctype = 'invoices';
+
 if (!empty($_POST['numberplanid'])) {
 	if (is_array($_POST['numberplanid'])) {
 		$numberplans = array_map('intval', $_POST['numberplanid']);
@@ -121,13 +129,21 @@ if (!empty($_POST['numberplanid'])) {
 // because we need here incoices-like round-off
 
 // get documents items numeric values for calculations
-$items = $DB->GetAll('SELECT c.docid, c.itemid, c.taxid, c.value, c.count,
+if ($doctype == 'invoices')
+	$args = array(DOC_INVOICE, DOC_CNOTE);
+else
+	$args = array(DOC_DNOTE, DOC_DNOTE);
+$args[] = $unixfrom;
+$args[] = $unixto;
+
+$items = $DB->GetAll('SELECT c.docid, c.itemid,' . ($doctype == 'invoices' ? ' c.taxid, c.count,' : '1 AS count,') . ' c.value,
 	d.number, d.cdate, d.sdate, d.paytime, d.customerid, d.reference,
 	d.name, d.address, d.zip, d.city, d.ten, d.ssn, n.template
 	    FROM documents d
-	    LEFT JOIN invoicecontents c ON c.docid = d.id
+		' . ($doctype == 'invoices' ? 'LEFT JOIN invoicecontents c ON c.docid = d.id'
+			: 'LEFT JOIN debitnotecontents c ON c.docid = d.id') . '
 	    LEFT JOIN numberplans n ON d.numberplanid = n.id
-	    WHERE (d.type = ? OR d.type = ?) AND ('.$sortcol.' BETWEEN ? AND ?) '
+	    WHERE cancelled = 0 AND (d.type = ? OR d.type = ?) AND ('.$sortcol.' BETWEEN ? AND ?) '
 	    .(isset($numberplans) ? 'AND d.numberplanid IN (' . $numberplans . ')' : '')
 	    .(isset($divwhere) ? $divwhere : '')
 	    .(isset($groupwhere) ? $groupwhere : '')
@@ -135,13 +151,10 @@ $items = $DB->GetAll('SELECT c.docid, c.itemid, c.taxid, c.value, c.count,
                 	    SELECT 1 FROM customerassignments a
 			    JOIN excludedgroups e ON (a.customergroupid = e.customergroupid)
 			    WHERE e.userid = lms_current_user() AND a.customerid = d.customerid)
-	    ORDER BY CEIL('.$sortcol.'/86400), d.id',
-	    array(DOC_INVOICE, DOC_CNOTE, $unixfrom, $unixto));
+	    ORDER BY CEIL('.$sortcol.'/86400), d.id', $args);
 
-if($items)
-{
-	foreach($items as $row)
-	{
+if ($items) {
+	foreach ($items as $row) {
 		$idx = $row['docid'];
 		$taxid = $row['taxid'];
 
@@ -170,8 +183,8 @@ if($items)
 			// I think we can simply do query here instead of building
 			// big sql join in $items query, we've got so many credit notes?
 			$item = $DB->GetRow('SELECT taxid, value, count
-						FROM invoicecontents 
-						WHERE docid=? AND itemid=?', 
+						FROM invoicecontents
+						WHERE docid=? AND itemid=?',
 						array($row['reference'], $row['itemid']));
 
 			$row['value'] += $item['value'];
@@ -226,6 +239,7 @@ if($items)
 }
 
 $SMARTY->assign('listdata', $listdata);
+$SMARTY->assign('doctype', $doctype);
 $SMARTY->assign('taxes', $taxeslist);
 $SMARTY->assign('taxescount', $taxescount);
 $SMARTY->assign('layout', $layout);
@@ -283,17 +297,25 @@ if(isset($_POST['extended']))
 	$SMARTY->assign('pagescount', sizeof($pages));
 	$SMARTY->assign('reccount', $reccount);
 	if (strtolower(ConfigHelper::getConfig('phpui.report_type')) == 'pdf') {
+		$SMARTY->assign('printcustomerid', $_POST['printcustomerid']);
+		$SMARTY->assign('printonlysummary', $_POST['printonlysummary']);
 		$output = $SMARTY->fetch('invoice/invoicereport-ext.html');
 		html2pdf($output, trans('Reports'), $layout['pagetitle'], NULL, NULL, 'L', array(5, 5, 5, 5), ($_GET['save'] == 1) ? true : false);
 	} else {
+		$SMARTY->assign('printcustomerid', $_POST['printcustomerid']);
+		$SMARTY->assign('printonlysummary', $_POST['printonlysummary']);
 		$SMARTY->display('invoice/invoicereport-ext.html');
 	}
 }
 else {
 	if (strtolower(ConfigHelper::getConfig('phpui.report_type')) == 'pdf') {
+		$SMARTY->assign('printcustomerid', $_POST['printcustomerid']);
+		$SMARTY->assign('printonlysummary', $_POST['printonlysummary']);
 		$output = $SMARTY->fetch('invoice/invoicereport.html');
 		html2pdf($output, trans('Reports'), $layout['pagetitle'], NULL, NULL, 'L', array(5, 5, 5, 5), ($_GET['save'] == 1) ? true : false);
 	} else {
+		$SMARTY->assign('printcustomerid', $_POST['printcustomerid']);
+		$SMARTY->assign('printonlysummary', $_POST['printonlysummary']);
 		$SMARTY->display('invoice/invoicereport.html');
 	}
 }
