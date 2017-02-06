@@ -179,8 +179,8 @@
 								{if !$item.published || ConfigHelper::checkConfig('privileges.superuser')}
 								<A href="?m=invoice&id={$item.docid}&dontpublish=1" class="lms-ui-tooltip-invoiceinfo" data-resourceid="{$item.docid}" rel="external"><img src="img/view.gif" alt="[ {trans("View")} ]"></A>
 								{/if}
-								{if $balancelist.details[balancelist]}
-								<A href="?m=v_attachment&docid={$balancelist.docid[balancelist]}" TARGET="_blank" onclick="confirmLink(this,'Drukować szczegółowy biling ?');">Zał.</A>
+								{if $item.details}
+								<A href="?m=v_attachment&docid={$item.docid}" TARGET="_blank" onclick="confirmLink(this,'Drukować szczegółowy biling ?');"><img src="img/phone.gif" alt="[ {trans("Attachment")} ]"></A>
 								{/if}
 								<A href="?m=invoice&id={$item.docid}" class="lms-ui-tooltip-invoiceinfo" data-resourceid="{$item.docid}" rel="external"><img src="img/print.gif" alt="[ {trans("Invoice")} ]"></A>
 							{elseif $item.doctype == $smarty.const.DOC_CNOTE}

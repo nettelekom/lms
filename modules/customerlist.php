@@ -67,15 +67,8 @@ $SESSION->save('cld', $division);
 if (! isset($_GET['page']))
 	$SESSION->restore('clp', $_GET['page']);
 	    
-if($s == 99) {
-	$ids = $voip->wsdl->GetCustomerList();
-	if($ids) {
-		$customerlist = $LMS->GetCustomerList($o, $s, $ids, $g, NULL, NULL, 'AND', $ng, $d);
-	} else {
-		$customerlist = array();
-	}
-} else {
-	$customerlist = $LMS->GetCustomerList($o, $s, $n, $g, NULL, NULL, 'AND', $ng, $d);
+if($state == 99) {
+	$network = $voip->wsdl->GetCustomerList();
 }
 
 if(!isset($_GET['assigments']))

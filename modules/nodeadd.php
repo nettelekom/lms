@@ -269,7 +269,9 @@ $layout['pagetitle'] = trans('New Node');
 if($customerid = $nodedata['ownerid'])
 {
 	include(MODULES_DIR.'/customer.inc.php');
-	include(MODULES_DIR.'/customer.voip.inc.php');
+	if($customerinfo['isvoip'] == 1) {
+		include(MODULES_DIR . DIRECTORY_SEPARATOR . 'customer.voip.inc.php');
+	}
 }
 else
 	$SMARTY->assign('allnodegroups', $LMS->GetNodeGroupNames());

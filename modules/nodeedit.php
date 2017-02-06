@@ -332,7 +332,9 @@ if (empty($nodeinfo['macs']))
 	$nodeinfo['macs'][] = '';
 
 include(MODULES_DIR . '/customer.inc.php');
-include(MODULES_DIR.'/customer.voip.inc.php');
+if($customerinfo['isvoip'] == 1) {
+	include(MODULES_DIR . DIRECTORY_SEPARATOR . 'customer.voip.inc.php');
+}
 
 if (!ConfigHelper::checkConfig('phpui.big_networks'))
 	$SMARTY->assign('customers', $LMS->GetCustomerNames());

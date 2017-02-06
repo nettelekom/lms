@@ -1,44 +1,5 @@
 {if $isvoip}
-<script language="Javascript" type="text/JavaScript" src="img/ajax.js"> </script>
-{literal}
-<script type="text/javascript">
-var ajax = new sack();
-
-function getPow(sel)
-{
-        var woj = sel.options[sel.selectedIndex].value;
-        document.getElementById('pow').options.length = 0;     // Empty city select box
-        document.getElementById('mia').options.length = 0;     // Empty city select box
-        if(woj.length>0){
-          ajax.requestFile = '?m=v_geoloc&type=p&id='+woj;   // Specifying which file to get
-          ajax.onCompletion = createPow;       // Specify function that will be executed after file has been found
-          ajax.runAJAX();         // Execute AJAX function
-          }
-}
-
-function createPow()
-{
-        var obj = document.getElementById('pow');
-        eval(ajax.response);    // Executing the response from Ajax as Javascript code
-}
-function getMia(sel)
-{
-        var mia = sel.options[sel.selectedIndex].value;
-        document.getElementById('mia').options.length = 0;     // Empty city select box
-        if(mia.length>0){
-          ajax.requestFile = '?m=v_geoloc&type=m&id='+mia;   // Specifying which file to get
-          ajax.onCompletion = createMia;       // Specify function that will be executed after file has been found
-          ajax.runAJAX();         // Execute AJAX function
-        }
-}
-
-function createMia()
-{
-        var obj = document.getElementById('mia');
-        eval(ajax.response);    // Executing the response from Ajax as Javascript code
-}
-</script>
-{/literal}
+{$xajax}
 <TR CLASS="LIGHT">
 	<TD WIDTH="1%" style="vertical-align: top">
 		<IMG SRC="img/phone.gif" ALT="">
@@ -76,8 +37,8 @@ function createMia()
 	</TD>
 	<TD WIDTH="99%">
 		<SELECT name="customerdata[virtualpbx]">
-		<option value="0"{if $customerinfo.virtualpbx eq 'f'} selected="selected"{/if}>NIE</option>
-		<option value="1"{if $customerinfo.virtualpbx eq 't'} selected="selected"{/if}>TAK</option>
+		<option value="0"{if $customerinfo.virtualpbx eq 'f' || $customerinfo.virtualpbx eq '0'} selected="selected"{/if}>NIE</option>
+		<option value="1"{if $customerinfo.virtualpbx eq 't' || $customerinfo.virtualpbx eq '1'} selected="selected"{/if}>TAK</option>
 		</SELECT>
 	</TD>
 </TR>
@@ -87,8 +48,8 @@ function createMia()
 	</TD>
 	<TD WIDTH="99%">
 		<SELECT name="customerdata[invoice]">
-		<option value="1"{if $customerinfo.invoice eq 't'} selected="selected"{/if}>tak</option>
-		<option value="0"{if $customerinfo.invoice eq 'f'} selected="selected"{/if}>nie</option>
+		<option value="1"{if $customerinfo.invoice eq 't' || $customerinfo.invoice eq '1'} selected="selected"{/if}>tak</option>
+		<option value="0"{if $customerinfo.invoice eq 'f' || $customerinfo.invoice eq '0'} selected="selected"{/if}>nie</option>
 		</SELECT>
 	</TD>
 </TR>
@@ -106,9 +67,9 @@ function createMia()
 	</TD>
 	<TD WIDTH="99%">
 		województwo:<br>
-		{html_options name="customerdata[woj]" options=$woj selected=$customerinfo.woj onchange="getPow(this);"}<br>
+		{html_options name="customerdata[woj]" options=$woj selected=$customerinfo.woj onchange="xajax_v_pow_mia(this.options[this.selectedIndex].value, 'pow', 'p');"}<br>
 		powiat:<br>
-		{html_options name="customerdata[pow]" options=$pow selected=$customerinfo.pow onchange="getMia(this);" id="pow"}<br>
+		{html_options name="customerdata[pow]" options=$pow selected=$customerinfo.pow onchange="xajax_v_pow_mia(this.options[this.selectedIndex].value, 'mia', 'm');" id="pow"}<br>
 		miasto/gmina:<br>
 		{html_options name="customerdata[mia]" options=$mia selected=$customerinfo.mia id="mia"}
 	</TD>

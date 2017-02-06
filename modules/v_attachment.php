@@ -29,9 +29,7 @@ $el['Liczba jedn.'] = number_format($poz, 2, '.', '');
 $data[] = array();
 $data[] = $el;
 
-require_once(LIB_DIR . '/ezpdf.php');
-
-$pdf =& init_pdf('A4', 'portrait', trans('Invoices'));
+$pdf = new LMSEzpdfBackend('A4', 'portrait', trans('Invoices'));
 $inv = $LMS->GetInvoiceContent($docid);
 $numer = docnumber($inv['number'], $inv['template'], $inv['cdate']);
 $pdf->ezText("Załącznik do faktury VAT\nNr $numer\n", 30, array('left' => 130));
@@ -45,8 +43,7 @@ if($_GET['is_sure'] == 1)
 		$pdf->ezTable($data);
 	}
 }
-$pdf->ezStream();
-close_pdf($pdf);
+$pdf->WriteToBrowser();
 
 function at_details($id)
 {

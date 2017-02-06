@@ -151,11 +151,17 @@ return $tslist;
 
 function update_user($d)
 {
-$u = $this->lmsdb->GetRow('SELECT c.lastname, c.name, cs.contact as email, c.address, c.zip, c.city, c.ten, c.pin FROM customers c 
-	LEFT JOIN customercontacts cs ON c.id = cs.customerid AND cs.type = ? WHERE c.id = ? LIMIT 1', array(CONTACT_EMAIL, $d['id']));
-$u['password'] = md5($u['pin']);
-$d['type'] = 'postpaid';
-$this->wsdl->_update_user($d, $u);
+	$u = $this->lmsdb->GetRow('SELECT c.lastname, c.name, cs.contact as email, c.street, c.building, c.apartment, c.zip, c.city, c.ten, c.pin
+	       	FROM customers c 
+		LEFT JOIN customercontacts cs ON c.id = cs.customerid AND cs.type = ? WHERE c.id = ? LIMIT 1',
+		array(CONTACT_EMAIL, $d['id']));
+	$u['address'] = $u['street'] . ' ' . $u['building'];
+	if($u['apartment']) {
+		$u['address'] .= '/' . $u['apartment'];
+	}
+	$u['password'] = md5($u['pin']);
+	$d['type'] = 'postpaid';
+	$this->wsdl->_update_user($d, $u);
 }
 
 function fax_outbox($u, $limit = 0)
@@ -267,12 +273,15 @@ list($year, $month, $day) = explode('/',$date);
 $alltaxes = $LMS->GetTaxes();
 $globaltax = 23;
 $globaltaxid = 1;
-foreach($alltaxes as $val) if($val['id'] == $this->config['taxid'])
-{
-	$globaltax = $val['value'];
-	$globaltaxid = $val['id'];
-	$this->wsdl->UpdateTax($val['value']);
-	break;
+if(is_array($alltaxes)) {
+	foreach($alltaxes as $val) {
+		if($val['id'] == $this->config['taxid']) {
+			$globaltax = $val['value'];
+			$globaltaxid = $val['id'];
+			$this->wsdl->UpdateTax($val['value']);
+			break;
+		}
+	}
 }
 
 $globaltax = $globaltax / 100 + 1;
@@ -287,6 +296,9 @@ $paytype = $CONFIG['payments']['paytype'];
 $customers = $this->wsdl->_ImportInvoice_customers($day);
 if(is_array($customers)) foreach($customers as $val)
 {
+	if($LMS->customerExists($val['lmsid']) !== true) {
+		continue;
+	}
 	$ab = $this->wsdl->_ImportInvoice_ab($val['id']);
 	$now = mktime(1, 0, 0, $month, $day, $year);
 	$last = strtotime('-1 month', $now);
@@ -304,7 +316,7 @@ if(is_array($customers)) foreach($customers as $val)
 
 	$taxid = $globaltaxid;
 	$tax = $globaltax;
-	$invdesc = $this->config['invdesc'];
+	$invdesc = (isset($this->config['invdesc']) ? $this->config['invdesc'] : 'Usługi telekomunikacyjne');
 	$numberplan = 0;
 
 	if($lmsassignment = $this->lmsdb->GetRow('SELECT t.name, t.taxid, a.numberplanid, ta.value
@@ -325,46 +337,66 @@ if(is_array($customers)) foreach($customers as $val)
 
 	$daybegin = mktime(0, 0, 0, $month, $day, $year);
 	$dayend = mktime(23, 59, 59, $month, $day, $year);
-	if($numberplan)
+	if($numberplan) {
 		$docid = $this->lmsdb->GetOne('SELECT id FROM documents WHERE cdate >= ? AND cdate <= ? AND customerid = ? AND type = ? AND numberplanid = ?',array($daybegin, $dayend, $val['lmsid'], DOC_INVOICE, $numberplan));
-	else
+	} else {
 		$docid = $this->lmsdb->GetOne('SELECT id FROM documents WHERE cdate >= ? AND cdate <= ? AND customerid = ? AND type = ?',array($daybegin, $dayend, $val['lmsid'], DOC_INVOICE));
-	if($docid)
-	{
+	}
+	if($docid) {
 		$itemid = $this->lmsdb->getone('SELECT MAX(itemid) FROM invoicecontents WHERE docid = ?',array($docid));
 		$itemid++;
-	}
-	else
-	{
-		if(!$numberplan)
+	} else {
+		if(!$numberplan) {
 			$numberplan = $this->lmsdb->GetOne('SELECT id FROM numberplans WHERE doctype = ? AND isdefault = 1', array(DOC_INVOICE));
-		if(!$numberplan) $numberplan = 0;
+		}
+		if(!$numberplan) {
+			$numberplan = 0;
+		} else {
+			$numbertemplate = $this->lmsdb->GetOne('SELECT template FROM numberplans WHERE id = ?', array($numberplan));
+		}
 		$number = $LMS->GetNewDocumentNumber(DOC_INVOICE, $numberplan, $now);
-		$urow = $this->lmsdb->GetRow('SELECT lastname, name, address, city, zip, ssn, ten, divisionid, paytime, paytype FROM customers WHERE id = ?', array($val['lmsid']));
+		$fullnumber = docnumber($number, $numbertemplate, $now);
+		$urow = $this->lmsdb->GetRow('SELECT lastname, name, street, building, apartment,
+		       	city, zip, ssn, ten, divisionid, paytime, paytype, countryid
+			FROM customers WHERE id = ?', array($val['lmsid']));
+		$urow['address'] = $urow['street'] . ' ' . $urow['building'];
+		if($urow['apartment']) {
+			$urow['address'] .= '/' . $urow['apartment'];
+		}
 		$paytime = $urow['paytime'];
 		if ($paytime == -1) $paytime = $deadline;
 		$division = $this->lmsdb->GetRow('SELECT name, address, city, zip, countryid, ten, regon,
-				account, inv_header, inv_footer, inv_author, inv_cplace, inv_paytype
+				account, inv_header, inv_footer, inv_author, inv_cplace, inv_paytype, shortname
 				FROM divisions WHERE id = ? ;',array($urow['divisionid']));
-			if ($urow['paytype'])
-				$inv_paytype = $urow['paytype'];
-			elseif ($division['inv_paytype'])
-				$inv_paytype = $division['inv_paytype'];
-			else
-				$inv_paytype = $paytype;
-		$this->lmsdb->Execute('INSERT INTO documents (number, numberplanid, type, customerid, name, address, zip, city, ten, ssn, cdate, sdate, paytime, paytype, divisionid, div_name, div_address, div_city, div_zip, div_countryid, div_ten, div_regon, div_account, div_inv_header, div_inv_footer, div_inv_author, div_inv_cplace) VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', array($number, $numberplan, $val['lmsid'], $urow['lastname'].' '.$urow['name'], $urow['address'], $urow['zip'], $urow['city'], $urow['ten'], $urow['ssn'], $now, $now, $paytime, $inv_paytype, $urow['divisionid'],
-			($division['name'] ? $division['name'] : ''),
-			($division['address'] ? $division['address'] : ''), 
-			($division['city'] ? $division['city'] : ''), 
-			($division['zip'] ? $division['zip'] : ''),
-			($division['countryid'] ? $division['countryid'] : 0),
-			($division['ten'] ? $division['ten'] : ''), 
-			($division['regon'] ? $division['regon'] : ''), 
-			($division['account'] ? $division['account'] : ''),
-			($division['inv_header'] ? $division['inv_header'] : ''), 
-			($division['inv_footer'] ? $division['inv_footer'] : ''), 
-			($division['inv_author'] ? $division['inv_author'] : ''), 
-			($division['inv_cplace'] ? $division['inv_cplace'] : ''),
+		if ($urow['paytype'])
+			$inv_paytype = $urow['paytype'];
+		elseif ($division['inv_paytype'])
+			$inv_paytype = $division['inv_paytype'];
+		else
+			$inv_paytype = $paytype;
+		$this->lmsdb->Execute('INSERT INTO documents
+			 (number, numberplanid, type, customerid, name, address, zip, city, ten,
+			 ssn, cdate, sdate, paytime, paytype, divisionid, div_name, div_address,
+			 div_city, div_zip, div_countryid, div_ten, div_regon, div_account, div_inv_header,
+			 div_inv_footer, div_inv_author, div_inv_cplace, fullnumber, div_shortname) VALUES
+			 (?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+			array($number, $numberplan, $val['lmsid'], $urow['lastname'].' '.$urow['name'],
+				$urow['address'], $urow['zip'], $urow['city'], $urow['ten'], $urow['ssn'],
+				$now, $now, $paytime, $inv_paytype, $urow['divisionid'],
+				($division['name'] ? $division['name'] : ''),
+				($division['address'] ? $division['address'] : ''), 
+				($division['city'] ? $division['city'] : ''), 
+				($division['zip'] ? $division['zip'] : ''),
+				($division['countryid'] ? $division['countryid'] : 0),
+				($division['ten'] ? $division['ten'] : ''), 
+				($division['regon'] ? $division['regon'] : ''), 
+				($division['account'] ? $division['account'] : ''),
+				($division['inv_header'] ? $division['inv_header'] : ''), 
+				($division['inv_footer'] ? $division['inv_footer'] : ''), 
+				($division['inv_author'] ? $division['inv_author'] : ''), 
+				($division['inv_cplace'] ? $division['inv_cplace'] : ''),
+				$fullnumber,
+				($division['shortname'] ? $division['shortname'] : ''),
 			));
 		$docid = $this->lmsdb->GetLastInsertID("documents");
 		$itemid = 1;
@@ -377,33 +409,28 @@ if(is_array($customers)) foreach($customers as $val)
 	
 	$cachedrates = array();
 	$konta = $this->wsdl->_ImportInvoice_konta($val['id']);
-	foreach($konta as $konto)
-	{
+	foreach($konta as $konto) {
 		$ab = $this->wsdl->_ImportInvoice_abbd($konto['id_subscriptions']);
 		if($ab['amount']>0)
 			$this->lmsdb->Execute('INSERT INTO billing_details (documents_id, name, value) VALUES (?, ?, ?)', array($docid, $ab['name'], $ab['amount']));
 		$pol = $this->wsdl->_ImportInvoice_pol($val['id'], $from, $to, $konto['accountcode']);
 		$price = array();
-		if(is_array($pol)) foreach($pol as $po)
-		{
-			if($cachedrates[$po['id_rates']])
+		if(is_array($pol)) foreach($pol as $po) {
+			if($cachedrates[$po['id_rates']]) {
 				$rategr = $cachedrates[$po['id_rates']];
-			else
-			{
+			} else {
 				$rategr = $this->wsdl->_ImportInvoice_rategr($po['dst'], $po['id_rates']);
 				$cachedrates[$po['id_rates']] = $rategr;
 			}
 			$price[$rategr] += $po['cost'];
 		}
-		foreach($price as $rtg => $cost) if($cost > 0)
-		{
+		foreach($price as $rtg => $cost) if($cost > 0) {
 			$name = $this->rategroups[$rtg] . ' - konto ' . $konto['accountcode'];
 			$this->lmsdb->Execute('INSERT INTO billing_details (documents_id, name, value) VALUES (?, ?, ?)', array($docid, $name, $cost));
 		}
 	}
 	
-	if(is_array($addserv['data'])) foreach($addserv['data'] as $adds) if($adds['price'] > 0)
-	{
+	if(is_array($addserv['data'])) foreach($addserv['data'] as $adds) if($adds['price'] > 0) {
 		$name = $adds['dname'].' - '.$adds['name'];
 		$this->lmsdb->Execute('INSERT INTO billing_details (documents_id, name, value) VALUES (?, ?, ?)', array($docid, $name, $adds['price']));
 	}
@@ -411,20 +438,23 @@ if(is_array($customers)) foreach($customers as $val)
 }
 
 $users = $this->wsdl->GetCustomerNames();
-foreach($users as $us)
-{
+foreach($users as $us) {
 	$this->wsdl->UpdateCustomerBalance($us['id'], -$LMS->GetCustomerBalance($us['id']));
 }
 if(isset($this->config['voip_timeswitch']) and $this->config['voip_timeswitch'] == 1) $this->wsdl->EnableTimeAccounts($date);
 }
 
-function export_user($lmsid, $type = 'postpaid')
-{
-$u = $this->lmsdb->GetRow('SELECT c.lastname, c.name, cs.contact as email, c.address, c.zip, c.city, c.ten, c.pin FROM customers c 
-	LEFT JOIN customercontacts cs ON c.id = cs.customerid AND cs.type = ? WHERE c.id = ? LIMIT 1', array(CONTACT_EMAIL, $lmsid));
-$u['password'] = md5($u['pin']);
-$this->wsdl->_export_user($lmsid, $type, $u);
-$this->lmsdb->Execute('INSERT INTO v_exportedusers VALUES (?)', array($lmsid));
+function export_user($lmsid, $type = 'postpaid') {
+	$u = $this->lmsdb->GetRow('SELECT c.lastname, c.name, cs.contact as email, c.street, c.building, c.apartment, c.zip, c.city, c.ten, c.pin
+	       	FROM customers c 
+		LEFT JOIN customercontacts cs ON c.id = cs.customerid AND cs.type = ? WHERE c.id = ? LIMIT 1', array(CONTACT_EMAIL, $lmsid));
+	$u['address'] = $u['street'] . ' ' . $u['building'];
+	if($u['apartment']) {
+		$u['address'] .= '/' . $u['apartment'];
+	}
+	$u['password'] = md5($u['pin']);
+	$this->wsdl->_export_user($lmsid, $type, $u);
+	$this->lmsdb->Execute('INSERT INTO v_exportedusers VALUES (?)', array($lmsid));
 }
 
 function CustomerExists($id)

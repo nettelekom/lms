@@ -241,10 +241,10 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
                 $row['after'] = round($result['balance'] + $row['value'], 2);
                 $result['balance'] += $row['value'];
                 $row['date'] = date('Y/m/d H:i', $row['time']);
-		if($this->db->GetOne('select COUNT(id) from billing_details WHERE documents_id = ?', array($val['docid'])) > 0) {
-			$val['details'] = 1;
+		if($this->db->GetOne('select COUNT(id) from billing_details WHERE documents_id = ?', array($row['docid'])) > 0) {
+			$row['details'] = 1;
 		} else {
-			$val['details'] = 0;
+			$row['details'] = 0;
 		}
             }
 
@@ -479,6 +479,9 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
             case 66:
             		$withoutinvoiceflag =1;
             		break;
+	    case 99:
+		    $searchargs[] = ' c.id in ('.$network.')';
+		    unset($network);
         }
 
         switch($as){
@@ -503,12 +506,6 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
                 $assigment = NULL;
                 break;
         }
-
-	if($state == 99)
-	{
-		$searchargs[] = ' c.id in ('.$network.')';
-		unset($network);
-	}
 
         if ($network) {
             $network_manager = new LMSNetworkManager($this->db, $this->auth, $this->cache, $this->syslog);

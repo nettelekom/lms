@@ -10,7 +10,7 @@
 		Bilans całkowity:
 	</TD>
 		<TD WIDTH="98%">
-{if $customerinfo.voipbalance+$customerinfo.balance < 0}<FONT class="alert">{($customerinfo.voipbalance+$customerinfo.balance)|money_format}</FONT>{else}{($customerinfo.voipbalance+$customerinfo.balance)|default:"0"|money_format}{/if}
+{if $customervoip.voipbalance+$customerinfo.balance < 0}<FONT class="alert">{($customervoip.voipbalance+$customerinfo.balance)|money_format}</FONT>{else}{($customervoip.voipbalance+$customerinfo.balance)|default:"0"|money_format}{/if}
 		</TD>
 	</TR>
 	
@@ -20,7 +20,7 @@
 			VOIP {t}Balance:{/t}
 		</TD>
 		<TD WIDTH="98%">
-{if $customerinfo.voipbalance < 0}<FONT class="alert">{$customerinfo.voipbalance|money_format}</FONT>{else}{$customerinfo.voipbalance|default:"0"|money_format}{/if}
+{if $customervoip.voipbalance < 0}<FONT class="alert">{$customervoip.voipbalance|money_format}</FONT>{else}{$customervoip.voipbalance|default:"0"|money_format}{/if}
 		</TD>
 	</TR>
 	<TR>
@@ -28,7 +28,7 @@
 			Koszt rozmów w bieżącym okresie rozliczeniowym
 		</TD>
 		<TD WIDTH="98%">
-{$customerinfo.voipbalanceact|default:"0"|money_format}
+{$customervoip.voipbalanceact|default:"0"|money_format}
 		</TD>
 	</TR>
 		<TR>
@@ -36,7 +36,7 @@
 			VOIP pozostało darmowych
 		</TD>
 		<TD WIDTH="98%">
-{$customerinfo.voipfreesec|default:"0"} minut
+{$customervoip.voipfreesec|default:"0"} minut
 		</TD>
 	</TR>
 		<TR>
@@ -45,8 +45,8 @@
 {t}Modified:{/t}
 		</TD>
 		<TD WIDTH="98%">
-{$customerinfo.voipcreationdateh}<BR>
-{$customerinfo.voipmoddateh}
+{$customervoip.voipcreationdateh}<BR>
+{$customervoip.voipmoddateh}
 		</TD>
 	</TR>
 	<TR>
@@ -54,7 +54,7 @@
 			VOIP początek umowy
 		</TD>
 		<TD WIDTH="98%">
-{if $customerinfo.voippoczatekum > $smarty.now|date_format:"%Y-%m-%d"}<FONT class="alert">{$customerinfo.voippoczatekum}</FONT>{else}{$customerinfo.voippoczatekum}{/if}
+{if $customervoip.voippoczatekum > $smarty.now|date_format:"%Y-%m-%d"}<FONT class="alert">{$customervoip.voippoczatekum}</FONT>{else}{$customervoip.voippoczatekum}{/if}
 		</TD>
 	</TR>	
 {if $setl}
@@ -69,7 +69,7 @@ Umowa klienta kończy się przed upływem {$setl} miesięcy !
 			VOIP koniec umowy
 		</TD>
 		<TD WIDTH="98%">
-{if $customerinfo.voipkoniecum < $smarty.now|date_format:"%Y-%m-%d"}<FONT class="alert">{$customerinfo.voipkoniecum}</FONT>{else}{$customerinfo.voipkoniecum}{/if}
+{if $customervoip.voipkoniecum < $smarty.now|date_format:"%Y-%m-%d"}<FONT class="alert">{$customervoip.voipkoniecum}</FONT>{else}{$customervoip.voipkoniecum}{/if}
 		</TD>
 	</TR>	
 	<TR>
@@ -77,16 +77,16 @@ Umowa klienta kończy się przed upływem {$setl} miesięcy !
 			VOIP dzień wystawienia faktury
 		</TD>
 		<TD WIDTH="98%">
-			{$customerinfo.payday}
+			{$customervoip.payday}
 		</TD>
 	</TR>
-	{if $customerinfo.sumsubscriptions}
+	{if $customervoip.sumsubscriptions}
 	<TR>
 		<TD WIDTH="1%" NOWRAP>
 			VOIP suma miesięcznych abonamentów
 		</TD>
 		<TD WIDTH="98%">
-			{$customerinfo.sumsubscriptions|default:0} zł netto
+			{$customervoip.sumsubscriptions|default:0} zł netto
 		</TD>
 	</TR>
 	{/if}
@@ -95,7 +95,7 @@ Umowa klienta kończy się przed upływem {$setl} miesięcy !
 			Wirtualna centrala PBX
 		</TD>
 		<TD WIDTH="98%">
-			{if $customerinfo.virtualpbx eq 't'}TAK{else}NIE{/if}
+			{if $customervoip.virtualpbx eq 't'}TAK{else}NIE{/if}
 		</TD>
 	</TR>
 	<TR>
@@ -103,7 +103,7 @@ Umowa klienta kończy się przed upływem {$setl} miesięcy !
 			VOIP wystawiaj fakturę
 		</TD>
 		<TD WIDTH="98%">
-			{if $customerinfo.invoice eq 't'}TAK{else}NIE{/if}
+			{if $customervoip.invoice eq 't'}TAK{else}NIE{/if}
 		</TD>
 	</TR>
 	<TR>

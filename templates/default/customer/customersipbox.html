@@ -7,6 +7,7 @@
 			<B>Konta SIP klienta ({$customersip.total|default:"0"}):</B>
 		</TD>
 		<TD width="1%" class="frightu" align="right" nowrap>
+			{if $customerinfo.status eq "3" and ! $customerinfo.deleted}<A HREF="?m=v_nodeadd&ownerid={$customerinfo.id}">{t}New Account{/t} &raquo;</A>{else}<FONT CLASS="BLEND">{t}New Account{/t} &raquo;{/if}&nbsp;
 		</TD>
 	</TR>
 </THEAD>
@@ -57,7 +58,6 @@
 			<A HREF="?m=v_nodeset&ownerid={$customersip.ownerid}"><IMG SRC="img/noaccess.gif"> {t}Disconnect All{/t}</A><BR>
 		</TD>
 		<TD COLSPAN="2" class="ftop text-right">
-			{if $customerinfo.status eq "3" and ! $customerinfo.deleted}<A HREF="?m=v_nodeadd&ownerid={$customerinfo.id}">{t}New Account{/t} <IMG SRC="img/edit.gif" alt=""></A>{else}<FONT CLASS="BLEND">{t}New Account{/t} <IMG SRC="img/edit.gif" alt="">{/if}
 		</TD>
 	</TR>
 	<TR CLASS="LIGHT">

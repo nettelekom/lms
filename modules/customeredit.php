@@ -296,11 +296,15 @@ $SESSION->save('backto', $_SERVER['QUERY_STRING']);
 $customerid = $customerinfo['id'];
 
 include(MODULES_DIR.'/customer.inc.php');
-include(MODULES_DIR.'/customer.voip.inc.php');
+if($customerinfo['isvoip'] == 1) {
+	include(MODULES_DIR . DIRECTORY_SEPARATOR . 'customer.voip.inc.php');
+}
 
 }
 
 $LMS->InitXajax();
+
+include(MODULES_DIR.'/v_customeredit_xajax.php');
 
 $hook_data = $LMS->executeHook(
     'customeredit_before_display', 

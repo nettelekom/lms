@@ -3496,5 +3496,6 @@ $_LANG['Check if IM uid should be disabled'] = 'Oznacz, jeśli identyfikator uż
 $_LANG['IM uid is required!'] = 'Identyfikator użytkownika jest wymagany!';
 
 $_LANG['Facebook'] = 'Facebook';
+$_LANG['Attachment'] = 'Załącznik';
 
 ?>

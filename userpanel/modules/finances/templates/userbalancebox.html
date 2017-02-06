@@ -50,7 +50,7 @@ function confirmLink(theLink, message)
 			{/if}
 		</td>
                 <td width="1%">
-                        {if $balancelist.details[balancelist]}<a href="?m=finances&amp;f=v_attachment&amp;docid={$balancelist.docid[balancelist]}" target="_blank" onclick="confirmLink(this,'Drukować szczegółowy biling ?');">Zał.</a>
+			{if $item.details}<a href="?m=finances&amp;f=v_attachment&amp;docid={$item.docid}" target="_blank" onclick="confirmLink(this,'Drukować szczegółowy biling ?');">{img src="phone.gif" alt="[ Attachment ]" text="[ Attachment ]"}</a>
                         {else}&nbsp;
                         {/if}
                 </td>

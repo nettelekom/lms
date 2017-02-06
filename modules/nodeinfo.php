@@ -60,7 +60,9 @@ $othernodegroups = $LMS->GetNodeGroupNamesWithoutNode($nodeid);
 $customerid = $nodeinfo['ownerid'];
 
 include(MODULES_DIR . '/customer.inc.php');
-include(MODULES_DIR.'/customer.voip.inc.php');
+if($customerinfo['isvoip'] == 1) {
+	include(MODULES_DIR . DIRECTORY_SEPARATOR . 'customer.voip.inc.php');
+}
 
 $SESSION->save('backto', $_SERVER['QUERY_STRING']);
 

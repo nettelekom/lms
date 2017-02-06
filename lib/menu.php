@@ -191,64 +191,6 @@ $menu = array(
 			),
 		),
 
-		'VoIP' => array(
-			'name' => trans('VoIP'),
-			'css' => 'lms-ui-icon-voip',
-			'tip' => trans('VoIP Management'),
-			'accesskey' =>'v',
-			'prio' => 11,
-			'submenu' => array(
-				array(
-					'name' => trans('New Account'),
-					'link' => '?m=voipaccountadd',
-					'tip' => trans('Allows you to add the new VoIP account'),
-					'prio' => 10,
-				),
-				array(
-					'name' => trans('Accounts List'),
-					'link' => '?m=voipaccountlist',
-					'tip' => trans('List of Accounts'),
-					'prio' => 20,
-				),
-				array(
-					'name' => trans('Billing list'),
-					'link' => '?m=voipaccountbillinglist',
-					'tip' => trans('Allows you to view billing list'),
-					'prio' => 30,
-				),
-				array(
-					'name' => trans('Subscription List'),
-					'link' => '?m=tarifflist&t=' . TARIFF_PHONE,
-					'tip' => trans('Phone tariff list'),
-					'prio' => 40,
-				),
-				array(
-					'name' => trans('Tariff rules'),
-					'link' => '?m=voiptariffrules',
-					'tip' => trans('Promotions/special rules for tariffs'),
-					'prio' => 50,
-				),
-				array(
-					'name' => trans('Price lists'),
-					'link' => '?m=voippricelist',
-					'tip' => trans('Edit price lists assigned to VoIP tariffs'),
-					'prio' => 60,
-				),
-				array(
-					'name' => trans('Pool numbers'),
-					'link' => '?m=voippoolnumberlist',
-					'tip' => trans('Number pools management'),
-					'prio' => 70,
-				),
-				array(
-					'name' => trans('Search'),
-					'link' => '?m=voipaccountsearch',
-					'tip' => trans('Allows you to search VoIP account'),
-					'prio' => 80,
-				),
-			),
-		),
-
 		'netdevices' => array(
 			'name' => trans('Net Devices'),
 			'css' => 'lms-ui-icon-netdevice',

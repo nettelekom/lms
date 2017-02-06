@@ -49,11 +49,8 @@ if($_GET['csv'])
 	exit();
 }
 
-require_once(LIB_DIR . '/ezpdf.php');
-
-$pdf =& init_pdf('A4', 'portrait', trans('Invoices'));
+$pdf = new LMSEzpdfBackend('A4', 'portrait', trans('Invoices'));
 $pdf->ezTable($data, '', '', array('fontSize' => 5));
-$pdf->ezStream();
-close_pdf($pdf);
+$pdf->WriteToBrowser();
 
 ?>

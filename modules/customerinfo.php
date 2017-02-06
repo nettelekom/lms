@@ -46,7 +46,9 @@ if (isset($_GET['ajax'])) {
 $customerid = intval($_GET['id']);
 
 include(MODULES_DIR . DIRECTORY_SEPARATOR . 'customer.inc.php');
-include(MODULES_DIR . DIRECTORY_SEPARATOR . 'customer.voip.inc.php');
+if($customerinfo['isvoip'] == 1) {
+	include(MODULES_DIR . DIRECTORY_SEPARATOR . 'customer.voip.inc.php');
+}
 
 $LMS->InitXajax();
 

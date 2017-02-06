@@ -200,7 +200,7 @@ window.open('?m=invoice&amp;id={$invoice.invoice}&amp;original={$invoice.origina
 			{if !$invoice.published || ConfigHelper::checkConfig('privileges.superuser')}
 			<A HREF="?m=invoice&id={$invoice.id}&dontpublish=1" TARGET="_blank"><IMG src="img/view.gif" alt="[ {trans("View")} ]" title="[ {trans("View")} ]"></A>
 			{/if}
-			{if $invoice.details}<A href="?m=v_attachment&docid={$invoice.id}" TARGET="_blank" onclick="confirmLink(this,'Drukować szczegółowy biling ?');">Zał.</A>
+			{if $invoice.details}<A href="?m=v_attachment&docid={$invoice.id}" TARGET="_blank" onclick="confirmLink(this,'Drukować szczegółowy biling ?');"><IMG src="img/phone.gif" alt="[ {trans("Attachment")} ]" title="[ {trans("Attachment")} ]"></A>
 			{/if}
 			<A HREF="?m=invoice&id={$invoice.id}" TARGET="_blank"><IMG src="img/print.gif" alt="[ {trans("Print")} ]" title="[ {trans("Print")} ]"></A>
 			{/if}
