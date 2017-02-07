@@ -2,8 +2,6 @@
 function v_pow_mia($id, $obj, $type) {
 	global $voip;
 	$objResponse = new xajaxResponse();
-
-			error_log($obj);
 	if($type == 'p') {
 		$res = $voip->wsdl->list_pow($id);
 	} elseif($type == 'm') {
