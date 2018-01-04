@@ -27,7 +27,7 @@
 function sessionHandler($item, $name) {
 	global $SESSION;
 
-	if(!isset($_GET[$item]))
+	if (!isset($_GET[$item]))
 		$SESSION->restore($name, $o);
 	else
 		$o = $_GET[$item];
@@ -81,12 +81,12 @@ if (!empty($params['ftype']))
 		break;
 	}
 
-$voipaccountlist = $LMS->GetVoipAccountList($o, NULL, NULL);
+$voipaccountlist = $LMS->GetVoipAccountList('owner', NULL, NULL);
 unset($voipaccountlist['total']);
 unset($voipaccountlist['order']);
 unset($voipaccountlist['direction']);
 
-$page = !$_GET['page'] ? 1 : intval($_GET['page']);
+$page  = !$_GET['page'] ? 1 : intval($_GET['page']);
 $total = intval(count($bill_list));
 $limit = intval(ConfigHelper::getConfig('phpui.billinglist_pagelimit', 100));
 $pagination = LMSPaginationFactory::getPagination($page, $total, $limit, ConfigHelper::checkConfig('phpui.short_pagescroller'));
@@ -109,13 +109,22 @@ if ($SESSION->is_set('valp') && !isset($_GET['page']))
 
 $SESSION->save('valp', $page);
 
+$billing_stats = $DB->GetRow('SELECT
+                                 sum(price) as price,
+                                 sum(totaltime) as call,
+                                 sum(billedtime) as answer,
+                                 count(*) as count
+                              FROM
+                                 voip_cdr');
+
 $SMARTY->assign('voipaccounts', $voipaccountlist);
-$SMARTY->assign('pagination', $pagination);
-$SMARTY->assign('billings', $bill_list);
-$SMARTY->assign('total', $total);
-$SMARTY->assign('page', $page);
-$SMARTY->assign('pagelimit', $limit);
-$SMARTY->assign('listdata', $listdata);
+$SMARTY->assign('pagination'  , $pagination);
+$SMARTY->assign('billings'    , $bill_list);
+$SMARTY->assign('total'       , $total);
+$SMARTY->assign('page'        , $page);
+$SMARTY->assign('pagelimit'   , $limit);
+$SMARTY->assign('listdata'    , $listdata);
+$SMARTY->assign('stats'       , $billing_stats);
 $SMARTY->display('voipaccount/voipaccountbillinglist.html');
 
 ?>

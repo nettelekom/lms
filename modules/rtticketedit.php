@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2016 LMS Developers
+ *  (C) Copyright 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -66,22 +66,26 @@ if ($id && !isset($_POST['ticket'])) {
 								WHERE customerid = c.id AND (type & ?) > 0) AS phones
 							FROM customeraddressview c
 							WHERE id = ?', array(CONTACT_EMAIL, (CONTACT_MOBILE|CONTACT_FAX|CONTACT_LANDLINE), $ticket['customerid']));
-					$custmail_subject = $queue['resolveticketsubject'];
-					$custmail_subject = str_replace('%tid', $id, $custmail_subject);
-					$custmail_subject = str_replace('%title', $ticket['subject'], $custmail_subject);
-					$custmail_body = $queue['resolveticketbody'];
-					$custmail_body = str_replace('%tid', $id, $custmail_body);
-					$custmail_body = str_replace('%cid', $info['id'], $custmail_body);
-					$custmail_body = str_replace('%pin', $info['pin'], $custmail_body);
-					$custmail_body = str_replace('%customername', $info['customername'], $custmail_body);
-					$custmail_body = str_replace('%title', $ticket['subject'], $custmail_body);
-					$custmail_headers = array(
-						'From' => $from,
-						'To' => '<' . $info['email'] . '>',
-						'Reply-To' => $from,
-						'Subject' => $custmail_subject,
-					);
-					$LMS->SendMail($info['emails'], $custmail_headers, $custmail_body);
+					if (!empty($info['emails'])) {
+						$custmail_subject = $queue['resolveticketsubject'];
+						$custmail_subject = str_replace('%tid', $id, $custmail_subject);
+						$custmail_subject = str_replace('%title', $ticket['subject'], $custmail_subject);
+						$custmail_body = $queue['resolveticketbody'];
+						$custmail_body = str_replace('%tid', $id, $custmail_body);
+						$custmail_body = str_replace('%cid', $info['id'], $custmail_body);
+						$custmail_body = str_replace('%pin', $info['pin'], $custmail_body);
+						$custmail_body = str_replace('%customername', $info['customername'], $custmail_body);
+						$custmail_body = str_replace('%title', $ticket['subject'], $custmail_body);
+						$custmail_headers = array(
+							'From' => $from,
+							'Reply-To' => $from,
+							'Subject' => $custmail_subject,
+						);
+						foreach (explode(',', $info['emails']) as $email) {
+							$custmail_headers['To'] = '<' . $email . '>';
+							$LMS->SendMail($email, $custmail_headers, $custmail_body);
+						}
+					}
 				}
 			}
 		}
@@ -170,8 +174,10 @@ if(isset($_POST['ticket']))
 			'customerid' => $ticketedit['customerid'],			
 		);
 		$LMS->TicketChange($ticketedit['ticketid'], $props);
-		
-		$DB->Execute('DELETE FROM rtticketcategories WHERE ticketid = ?', array($id));
+
+                foreach($categories as $category)
+                        $DB->Execute('DELETE FROM rtticketcategories WHERE ticketid = ? and categoryid = ?',
+				array($id, $category['id']));
 		foreach($ticketedit['categories'] as $categoryid => $val)
 			$DB->Execute('INSERT INTO rtticketcategories (ticketid, categoryid) VALUES(?, ?)',
 				array($id, $categoryid));
@@ -212,21 +218,23 @@ if(isset($_POST['ticket']))
 							address, zip, city FROM customeraddressview WHERE id = ?', array($ticketedit['customerid']));
 				$info['contacts'] = $DB->GetAll('SELECT contact, name, type FROM customercontacts
 					WHERE customerid = ?', array($ticketedit['customerid']));
+				$info['locations'] = $LMS->GetUniqueNodeLocations($ticketedit['customerid']);
 
 				$emails = array();
 				$phones = array();
 				if (!empty($info['contacts']))
 					foreach ($info['contacts'] as $contact) {
-						$contact = $contact['contact'] . (strlen($contact['name']) ? ' (' . $contact['name'] . ')' : '');
+						$target = $contact['contact'] . (strlen($contact['name']) ? ' (' . $contact['name'] . ')' : '');
 						if ($contact['type'] & CONTACT_EMAIL)
-							$emails[] = $contact;
+							$emails[] = $target;
 						else
-							$phones[] = $contact;
+							$phones[] = $target;
 					}
 
 				$body .= "\n\n-- \n";
 				$body .= trans('Customer:').' '.$info['customername']."\n";
-				$body .= trans('Address:').' '.$info['address'].', '.$info['zip'].' '.$info['city']."\n";
+				$body .= trans('Address:') . ' ' . (empty($info['locations']) ? $info['address'] . ', ' . $info['zip'] . ' ' . $info['city']
+						: implode(', ', $info['locations'])) . "\n";
 				if (!empty($phones))
 					$body .= trans('Phone:').' ' . implode(', ', $phones) . "\n";
 				if (!empty($emails))
@@ -235,7 +243,8 @@ if(isset($_POST['ticket']))
 				$sms_body .= "\n";
 				$sms_body .= trans('Customer:').' '.$info['customername'];
 				$sms_body .= ' '.sprintf('(%04d)', $ticket['customerid']).'. ';
-				$sms_body .= $info['address'].', '.$info['zip'].' '.$info['city'];
+				$sms_body .= (empty($info['locations']) ? $info['address'] . ', ' . $info['zip'] . ' ' . $info['city']
+					: implode(', ', $info['locations']));
 				if (!empty($phones))
 					$sms_body .= '. ' . trans('Phone:') . ' ' . preg_replace('/([0-9])[\s-]+([0-9])/', '\1\2', implode(',', $phones));
 			}
@@ -313,7 +322,8 @@ if (!ConfigHelper::checkConfig('phpui.big_networks'))
 	$SMARTY->assign('customerlist', $LMS->GetAllCustomerNames());
 
 $queuelist = $LMS->GetQueueNames();
-if (strpos('helpdesk', ConfigHelper::getConfig('userpanel.enabled_modules')) !== false
+$userpanel_enabled_modules = ConfigHelper::getConfig('userpanel.enabled_modules');
+if ((empty($userpanel_enabled_modules) || strpos('helpdesk', $userpanel_enabled_modules) !== false)
 	&& ConfigHelper::getConfig('userpanel.limit_ticket_movements_to_selected_queues')) {
 	$selectedqueues = explode(';', ConfigHelper::getConfig('userpanel.queues'));
 	if (in_array($ticket['queueid'], $selectedqueues))

@@ -13,7 +13,8 @@
 		language: '{$language}',
 		settingsTimeout: {intval(ConfigHelper::getConfig('phpui.settings_timout', 28800))},
 		wysiwygEditor: {if ConfigHelper::getConfig('phpui.default_editor') == 'wysiwyg'}true{else}false{/if},
-		quickSearchAutoSubmit: '{ConfigHelper::getConfig('phpui.quicksearch_autosubmit', 'true')}'
+		quickSearchAutoSubmit: '{ConfigHelper::getConfig('phpui.quicksearch_autosubmit', 'true')}',
+		defaultTerytCity: '{ConfigHelper::getConfig('phpui.default_teryt_city')}'
 	};
 	var lmsMessages = {
 		persistentSettingSaveError: '{trans("AJAX: Error during persistent setting save on server:")}',
@@ -24,8 +25,37 @@
 		columnVisibility: '{trans("Column visibility")}',
 		clearSettings: '{trans("Clear settings")}',
 		visualEditor: '{trans("visual editor")}',
-		selectionAny: '{trans("- any -")}'
+		selectionAny: '{trans("- any -")}',
+		billingAddress          : '{trans('billing address')}',
+		postalAddress           : '{trans('postal address')}',
+		defaultLocationAddress  : '{trans('default location address')}',
+		locationRecipientAddress: '{trans('location/recipient address')}',
+		'Are you shure that you want to remove address?': '{trans('Are you shure that you want to remove address?')}'
 	}
+
+	{if ConfigHelper::checkValue(ConfigHelper::getConfig('phpui.disable_mobile_tooltips', true))}
+	$(function() {
+		if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+			$('[title]').removeAttr('title');
+		}
+	});
+	{/if}
+
+	$( function() {
+		var lmsErrors = {
+			{if $error}
+			{foreach $error as $k=>$v}
+				"{$k|replace:'"':'\"'}":"{$v|replace:'"':'\"'}",
+			{/foreach}
+			{/if}
+		};
+
+		$.each( lmsErrors, function( index, value ) {
+			$("[name='" + index + "']")
+				.attr('title', value)
+				.addClass('alert');
+		});
+	});
 //-->
 </script>
 <script type="text/javascript" src="img/jquery.js"></script>

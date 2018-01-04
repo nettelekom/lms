@@ -3,46 +3,12 @@
 {block name=module_content}
 <!--// $Id$ //-->
 <H1>{$layout.pagetitle}</H1>
+<script type="text/javascript" src="img/location_box_expandable.js"></script>
 <SCRIPT type="text/javascript">
 <!--
 	function randomize() {
 		document.customeradd.elements['customeradd[pin]'].value =
 			generate_random_string(4 + Math.floor(Math.random() * 3), '0123456789');
-	}
-
-	function newcontact(type) {
-		var contactcountelem = document.getElementById(type + 'count');
-		var nr = contactcountelem.value;
-		var lastcontactelem = document.getElementById(type + (nr - 1));
-		var newrow = lastcontactelem.parentNode.insertRow(lastcontactelem.rowIndex + 1);
-		newrow.className = 'light';
-		newrow.id = type + nr;
-		var newcell = newrow.insertCell(0);
-		newcell.style.whiteSpace = 'nowrap';
-		switch (type) {
-			{foreach $_CUSTOMERCONTACTTYPES as $contacttype => $properties}
-			case '{$contacttype}':
-				innerHTML = '<HR>';
-				{if isset($properties.ui.typeselectors)}
-				innerHTML += '<SELECT name="customeradd[{$contacttype}s][' + nr + '][typeselector]">'
-					{foreach $properties.ui.typeselectors as $typeselector}
-					+ '<OPTION value="{$typeselector}">{$_CONTACTTYPES[$typeselector]}</OPTION>'
-					{/foreach}
-					+ '</SELECT>&nbsp;';
-				{/if}
-				innerHTML += '<INPUT TYPE="text" size="{$properties.ui.size}" value="" name="customeradd[{$contacttype|cat:"s"}][' + nr + '][contact]"'
-					+ ' title="{$properties.ui.tip}">';
-				innerHTML += '{foreach $properties.ui.flags as $flagtype => $flagproperties}&nbsp;<label{if isset($flagproperties.tip)} title="{$flagproperties.tip}"{/if}><INPUT TYPE="checkbox" value="{$flagtype}" name="customeradd[{$contacttype|cat:"s"}][' + nr + '][type][]"> {$flagproperties.label}</label>{/foreach}';
-				innerHTML += '<BR><INPUT TYPE="text" size="68" value="" name="customeradd[{$contacttype|cat:"s"}][' + nr + '][name]"'
-					+ ' title="{trans("Enter contact name/description (optional)")}">';
-				break;
-			{/foreach}
-		}
-		newcell.innerHTML = innerHTML;
-		$(newcell).children("[title]").tooltip({
-			position: { my: "left top" }
-		});
-		contactcountelem.value = parseInt(nr) + 1;
 	}
 //-->
 </SCRIPT>
@@ -150,196 +116,98 @@
 						<INPUT type="radio" name="customeradd[type]" value="1" id="company" {tip text="Select legal personality type" trigger="type"}{if $customeradd.type == $smarty.const.CTYPES_COMPANY} CHECKED{/if}><label for="company">{assign var='type' value=$smarty.const.CTYPES_COMPANY}{$_CTYPES.$type}</label>
 					</TD>
 				</TR>
-				<TR>
-					<TD style="width: 1%;" class="valign-top"></TD>
-					<TD style="width: 99%;" class="nobr">
-						<table width="100%" cellpadding="1">
-						<tr>
-							<td style="width: 1%;">
-								<fieldset style="width: 1%;" class="nobr">
-									<legend class="bold"><IMG src="img/home.gif" alt=""> {trans("Address")}</legend>
-						<TABLE width="100%" cellpadding="1">
-							<TR>
-								<TD style="width: 1%;" class="nobr">{trans("Street:")}</TD>
-								<TD style="width: 99%;"><INPUT type="text" size="30" value="{$customeradd.street}" name="customeradd[street]" id="street" required {tip text="Enter street" trigger="street"}></TD>
-							</TR>
-							<TR>
-								<TD style="width: 1%;" class="nobr">{trans("Building:")}</TD>
-								<TD style="width: 99%;">
-									<INPUT type="text" size="8" value="{$customeradd.building}" name="customeradd[building]" id="building" {tip text="Enter building number" trigger="building"}>
-									{trans("Apartment:")}
-									<INPUT type="text" size="8" value="{$customeradd.apartment}" name="customeradd[apartment]" id="apartment" {tip text="Enter apartment number" trigger="apartment"}>
-								</TD>
-							</TR>
-							<TR>
-								<TD style="width: 1%;" class="nobr">{trans("City:")}</TD>
-								<TD style="width: 99%;"><INPUT type="text" SIZE="30" value="{$customeradd.city}" name="customeradd[city]" id="city" {tip text="Enter city" trigger="city"}></TD>
-							</TR>
-							<TR>
-								<TD style="width: 1%;" class="nobr">{trans("Zip:")}</TD>
-								<TD style="width: 99%;">
-									<INPUT type="text" SIZE="10" value="{$customeradd.zip}" name="customeradd[zip]" id="zip" {tip text="Enter zip code" trigger="zip"}>
-									{if $customeradd.zipwarning}
-									<INPUT type="hidden" name="customeradd[zipwarning]" value="1">
-									{/if}
-								</TD>
-							</TR>
-							{if $cstateslist}
-							<TR>
-								<TD style="width: 1%;" class="nobr">{trans("State:")}</TD>
-								<TD style="width: 99%;">
-									<SELECT name="customeradd[stateid]" {tip text="Select country state (optional)" trigger="stateid"}>
-										<OPTION value="0"></OPTION>
-										{foreach from=$cstateslist item=item key=key}
-										<OPTION value="{$key}"{if $key==$customeradd.stateid} SELECTED{/if}>{$item.name}</OPTION>
-										{/foreach}
-									</SELECT>
-								</TD>
-							</TR>
+
+				{$addr_counter = 0}
+
+				<tr>
+					<td style="width: 1%;" class="valign-top"><img src="img/home.gif" alt="" title="{trans('billing address')}"></td>
+					<td style="width: 99%;">
+						{$addr_found = 0}
+						{foreach $customeradd.addresses as $v}
+							{if $v.location_address_type == $smarty.const.BILLING_ADDRESS}
+								{$v.prefix = "customeradd[addresses]["|cat:$addr_counter|cat:"]"}
+								{$addr_counter = $addr_counter + 1}
+								{$addr_found = 1}
+								{$v.hide_name=true}
+								{location_box_expandable data=$v}
 							{/if}
-							{if $countrieslist}
-							<TR>
-								<TD style="width: 1%;" class="nobr">{trans("Country:")}</TD>
-								<TD style="width: 99%;">
-									<SELECT name="customeradd[countryid]" {tip text="Select country (optional)" trigger="countryid"}>
-										<OPTION value="0"></OPTION>
-										{foreach from=$countrieslist item=item key=key}
-										<OPTION value="{$key}"{if $key==$customeradd.countryid} SELECTED{/if}>{t}{$item.name}{/t}</OPTION>
-										{/foreach}
-									</SELECT>
-								</TD>
-							</TR>
+						{/foreach}
+
+						{* if billing address is not set *}
+						{if $addr_found == 0}
+							{$tmp['location_address_type'] = $smarty.const.BILLING_ADDRESS}
+							{$tmp['prefix'] = "customeradd[addresses]["|cat:$addr_counter|cat:"]"}
+							{$tmp['location_zip']        = ConfigHelper::getConfig('phpui.default_zip')}
+							{$tmp['location_city_name']  = ConfigHelper::getConfig('phpui.default_city')}
+							{$tmp['location_state']      = ConfigHelper::getConfig('phpui.default_stateid')}
+							{$tmp['location_country_id'] = ConfigHelper::getConfig('phpui.default_countryid')}
+							{$addr_counter = $addr_counter + 1}
+
+							{$tmp.hide_name=true}
+							{location_box_expandable data=$tmp}
+							{$tmp = array()}
+						{/if}
+					</td>
+				</tr>
+
+				<tr>
+					<td style="width: 1%;" class="valign-top"><img src="img/post.gif" alt="" title="{trans('postal address')}"></td>
+					<td style="width: 99%;">
+						{$addr_found = 0}
+						{foreach $customeradd.addresses as $v}
+							{if $v.location_address_type == $smarty.const.POSTAL_ADDRESS}
+								{$v.prefix = "customeradd[addresses]["|cat:$addr_counter|cat:"]"}
+								{$addr_counter = $addr_counter + 1}
+								{$addr_found = 1}
+								{location_box_expandable data=$v}
 							{/if}
-						</TABLE>
-						<script type="text/javascript">
-						<!--
-							new AutoSuggest(document.getElementById('customeradd'),document.getElementById('street'),'?m=customeradd&ajax=1&mode=street&what=',0);
-							new AutoSuggest(document.getElementById('customeradd'),document.getElementById('zip'),'?m=customeradd&ajax=1&mode=zip&what=',0);
-							new AutoSuggest(document.getElementById('customeradd'),document.getElementById('city'),'?m=customeradd&ajax=1&mode=city&what=',0);
-						//-->
-						</script>
-								</fieldset>
-							</td>
-							<td style="width: 99%;">
-								<fieldset style="width: 1%;" class="nobr">
-									<legend class="bold"><IMG src="img/post.gif" alt=""> {trans("Postal address")}</legend>
-						<TABLE width="100%" cellpadding="1">
-							<TR>
-								<TD style="width: 1%;" class="nobr">{trans("Name:")}</TD>
-								<TD style="width: 99%;"><INPUT type="text" size="30" value="{$customeradd.post_name}" name="customeradd[post_name]" id="post_name" {tip text="Enter name (optional)" trigger="post_name"}></TD>
-							</TR>
-							<TR>
-								<TD style="width: 1%;" class="nobr">{trans("Street:")}</TD>
-								<TD style="width: 99%;"><INPUT type="text" size="30" value="{$customeradd.post_street}" name="customeradd[post_street]" id="post_street" {tip text="Enter street name (optional)" trigger="post_street"}></TD>
-							</TR>
-							<TR>
-								<TD style="width: 1%;" class="nobr">{trans("Building:")}</TD>
-								<TD style="width: 99%;">
-									<INPUT type="text" size="8" value="{$customeradd.post_building}" name="customeradd[post_building]" id="post_builing" {tip text="Enter building number (optional)" trigger="post_building"}>
-									{trans("Apartment:")}
-									<INPUT type="text" size="8" value="{$customeradd.post_apartment}" name="customeradd[post_apartment]" id="post_apartment" {tip text="Enter apartment number (optional)" trigger="post_apartment"}>
-								</TD>
-							</TR>
-							<TR>
-								<TD style="width: 1%;" class="nobr">{trans("City:")}</TD>
-								<TD style="width: 99%;"><INPUT type="text" SIZE="30" value="{$customeradd.post_city}" name="customeradd[post_city]" id="post_city" {tip text="Enter city (optional)" trigger="post_city"}></TD>
-							</TR>
-							<TR>
-								<TD style="width: 1%;" class="nobr">{trans("Zip:")}</TD>
-								<TD style="width: 99%;">
-									<INPUT type="text" SIZE="10" value="{$customeradd.post_zip}" name="customeradd[post_zip]" id="post_zip" {tip text="Enter zip code (optional)" trigger="post_zip"}>
-									{if $customeradd.post_zipwarning}
-									<INPUT type="hidden" name="customeradd[post_zipwarning]" value="1">
-									{/if}
-								</TD>
-							</TR>
-							{if $cstateslist}
-							<TR>
-								<TD style="width: 1%;" class="nobr">{trans("State:")}</TD>
-								<TD style="width: 99%;">
-									<SELECT name="customeradd[post_stateid]" {tip text="Select country state (optional)" trigger="post_stateid"}>
-										<OPTION value="0"></OPTION>
-										{foreach from=$cstateslist item=item key=key}
-										<OPTION value="{$key}"{if $key==$customeradd.post_stateid} SELECTED{/if}>{$item.name}</OPTION>
-										{/foreach}
-									</SELECT>
-								</TD>
-							</TR>
-							{/if}
-							{if $countrieslist}
-							<TR>
-								<TD style="width: 1%;" class="nobr">{trans("Country:")}</TD>
-								<TD style="width: 99%;">
-									<SELECT name="customeradd[post_countryid]" {tip text="Select country (optional)" trigger="post_countryid"}>
-										<OPTION value="0"></OPTION>
-										{foreach from=$countrieslist item=item key=key}
-										<OPTION value="{$key}"{if $key==$customeradd.post_countryid} SELECTED{/if}>{t}{$item.name}{/t}</OPTION>
-										{/foreach}
-									</SELECT>
-								</TD>
-							</TR>
-							{/if}
-						</TABLE>
-						<script type="text/javascript">
-						<!--
-							new AutoSuggest(document.getElementById('customeradd'),document.getElementById('post_street'),'?m=customeradd&ajax=1&mode=street&what=',0);
-							new AutoSuggest(document.getElementById('customeradd'),document.getElementById('post_zip'),'?m=customeradd&ajax=1&mode=zip&what=',0);
-							new AutoSuggest(document.getElementById('customeradd'),document.getElementById('post_city'),'?m=customeradd&ajax=1&mode=city&what=',0);
-						//-->
-						</script>
-								</fieldset>
-							</td>
-						</tr>
-						</table>
-					</TD>
-				</TR>
-				{foreach $_CUSTOMERCONTACTTYPES as $type => $properties}
-				<TR>
-					<TD style="width: 1%;"></TD>
-					<TD style="width: 99%;" class="nobr">
-						<fieldset style="width: 1%;" class="nobr">
-							<legend class="bold"><IMG src="{$properties.ui.legend.icon}" alt=""> {$properties.ui.legend.text}</legend>
-							<table>
-								{foreach $customeradd[$type|cat:'s'] as $key => $item}
-								<TR id="{$type}{$key}">
-									<TD>
-										{if !$item@first}<HR>{/if}
-										<INPUT type="{$properties.ui.inputtype}" size="{$properties.ui.size}" value="{$item.contact}" name="customeradd[{$type}s][{$key}][contact]" {tip text=$properties.ui.tip trigger="`$type``$key`"}>
-										{if isset($properties.ui.typeselectors)}
-										<SELECT name="customeradd[{$type}s][{$key}][typeselector]">
-											{foreach $properties.ui.typeselectors as $typeselector}
-											<OPTION value="{$typeselector}"{if $item.type & $typeselector} selected{/if}>{$_CONTACTTYPES[$typeselector]}</OPTION>
-											{/foreach}
-										</SELECT>
-										{/if}
-										{foreach $properties.ui.flags as $flagtype => $flagproperties}
-										<label{if isset($flagproperties.tip)} {tip text=$flagproperties.tip}{/if}>
-											<INPUT type="checkbox" value="{$flagtype}" name="customeradd[{$type}s][{$key}][type][]"{if ($item.type & $flagtype)} checked{/if}>
-											{$flagproperties.label}
-										</label>
-										{/foreach}
-										<BR>
-										<INPUT type="text" size="68" value="{$item.name}" name="customeradd[{$type}s][{$key}][name]" {tip text="Enter contact name/description (optional)"}>
-									</TD>
-								</TR>
-								{/foreach}
-								<TR>
-									<TD>
-										<INPUT type="hidden" id="{$type}count" value="{count($customeradd[$type|cat:'s'])}">
-										<A href="javascript:newcontact('{$type}')">{trans("Add contact field")} &raquo;&raquo;&raquo;</A>
-									</TD>
-								</TR>
-							</table>
-						</fieldset>
-					</TD>
-				</TR>
+						{/foreach}
+
+						{* if postal address is not set *}
+						{if $addr_found == 0}
+							{$tmp['location_address_type'] = $smarty.const.POSTAL_ADDRESS}
+							{$tmp['prefix'] = "customeradd[addresses]["|cat:$addr_counter|cat:"]"}
+							{$addr_counter = $addr_counter + 1}
+							{location_box_expandable data=$tmp}
+						{/if}
+					</td>
+				</tr>
+
+				{foreach $customeradd.addresses as $v}
+				{if $v.location_address_type != $smarty.const.BILLING_ADDRESS && $v.location_address_type != $smarty.const.POSTAL_ADDRESS }
+				<tr>
+					<td style="width: 1%;" class="valign-top">
+						{if $v.location_address_type == $smarty.const.DEFAULT_LOCATION_ADDRESS}
+							<img src="img/pin_blue.png" alt="" title="{trans('default location address')}" class="location-box-image">
+						{else}
+							<img src="img/location.png" alt="" title="{trans('location/recipient address')}" class="location-box-image">
+						{/if}
+					</td>
+					<td style="width: 99%;">
+						{$v.prefix = "customeradd[addresses]["|cat:$addr_counter|cat:"]"}
+						{$v.default_type = 1}
+						{$v.clear_button = 1}
+						{$addr_counter = $addr_counter + 1}
+						{location_box_expandable data=$v}
+					</td>
+				</tr>
+				{/if}
 				{/foreach}
+
+				<tr>
+					<td></td>
+					<td>
+						<span class="lms-ui-button locbox-addnew" data-prefix="customeradd">{trans('Add address')} &raquo;&raquo;&raquo;</span><br><br>
+					</td>
+				</tr>
+
+				{include file="customer/customercontacts.html" customerinfo=$customeradd formelemprefix="customeradd"}
 				<TR>
 					<TD style="width: 1%;">
 						<IMG src="img/pin.gif" alt="">
 					</TD>
 					<TD style="width: 99%;">
-						<INPUT type="number" pattern="{literal}[0-9]{4,6}{/literal}" required size="6" value="{if $customeradd.pin}{$customeradd.pin}{/if}" name="customeradd[pin]" title="{trans("Enter 4 to 6 digits PIN number (optional)")}" {tip text="Enter 4 to 6 digits PIN number (optional)" trigger="pin"}>&nbsp;
+						<INPUT type="number" pattern="{literal}[0-9]{4,6}{/literal}" required size="6" value="{if $customeradd.pin}{$customeradd.pin}{/if}" name="customeradd[pin]" title="{trans("Enter 4 to 6 digits PIN number")}" {tip text="Enter 4 to 6 digits PIN number" trigger="pin"}>&nbsp;
 						<A href="javascript:randomize()" {tip text="Generate random PIN"}>&raquo;&raquo;&raquo;</A>
 					</TD>
 				</TR>
@@ -383,6 +251,12 @@
 								<TD style="width: 1%;" class="nobr">{trans("REGON")}:</TD>
 								<TD style="width: 99%;">
 									<INPUT type="text" size="30" value="{$customeradd.regon}" name="customeradd[regon]" {tip text="Enter Business Registration Number (optional)" trigger="regon"}>
+								</TD>
+							</TR>
+							<TR>
+								<TD style="width: 1%;" class="nobr">{trans("RBE Name:")}</TD>
+								<TD style="width: 99%;">
+									<TEXTAREA name="customeradd[rbename]" cols="45" rows="4" {tip text="Enter National Court Register / Register of Business Entities Name (optional)" trigger="rbename"}>{$customeradd.rbename|escape}</TEXTAREA>
 								</TD>
 							</TR>
 							<TR>
@@ -436,7 +310,11 @@
 									{trans("Cutoff suspending:")}
 								</TD>
 								<TD>
-									<INPUT type="text" name="customeradd[cutoffstop]" id="cutoffstop" {if $customerinfo.cutoffstop}value="{$customerinfo.cutoffstop}"{/if} size="10" {tip class="calendar" text="Select date of cutoff suspending (optional)" trigger="cutoffstop"}>
+									<label>
+										<input type="checkbox" name="customeradd[cutoffstopindefinitely]" value="1" onchange="$('#cutoffstop').css('display', this.checked ? 'none' : '');"{if $customeradd.cutoffstopindefinitely} checked{/if}>
+										{trans("indefinitely")}
+									</label>&nbsp;
+									<INPUT type="text" name="customeradd[cutoffstop]" id="cutoffstop" {if $customeradd.cutoffstopindefinitely}style="display: none;"{elseif $customeradd.cutoffstop}value="{$customerinfo.cutoffstop}"{/if} size="10" {tip class="calendar" text="Select date of cutoff suspending (optional)" trigger="cutoffstop"}>
 								</TD>
 							</TR>
 						</TABLE>
@@ -525,7 +403,9 @@
 </FORM>
 <SCRIPT type="text/javascript">
 <!--
-	document.forms['customeradd'].elements['customeradd[lastname]'].focus();
+	$(function() {
+		$('form[name="customeradd"] [name="customeradd[lastname]"]').focus();
+	});
 	if(document.forms['customeradd'].elements['customeradd[pin]'].value == '') randomize();
 //-->
 </SCRIPT>

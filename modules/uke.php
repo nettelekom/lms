@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2015 LMS Developers
+ *  (C) Copyright 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -18,11 +18,119 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307,
  *  USA.
  *
  *  $Id$
  */
+
+$customers = array();
+
+/*!
+ * \brief Parse network speed
+ */
+function parseNetworkSpeed( $s ) {
+	$s = round($s / 1000, 2);
+
+	if ($s <= 1) return 1;
+	if ($s <= 2) return 2;
+	if ($s <= 4) return 4;
+	if ($s <= 6) return 6;
+	if ($s <= 8) return 8;
+	if ($s <= 10) return 10;
+	if ($s <= 20) return 20;
+	if ($s <= 30) return 30;
+	if ($s <= 40) return 40;
+	if ($s <= 60) return 60;
+	if ($s <= 80) return 80;
+	if ($s <= 100) return 100;
+	if ($s <= 120) return 120;
+	if ($s <= 150) return 150;
+	if ($s <= 250) return 250;
+	if ($s <= 500) return 500;
+	if ($s <= 1000) return 1000;
+	if ($s <= 2500) return 2500;
+	if ($s <= 10000) return 10000;
+	if ($s <= 40000) return 40000;
+	
+	return 100000;
+}
+
+/*!
+ * \brief Change meters to GPS(dd) distance.
+ *
+ * \param  int   $m      distance
+ * \return float $degree GPS decimal degrees
+ */
+function getLatitudeDistDiff( $m ) {
+    $m = (int) $m;
+
+    // distance in meters => degree
+    $dist_tab = array(
+        1854.277 => 1/60,
+        100      => 1/1111.9662,
+        30.87    => 1/3600,
+        1        => 1/111132
+    );
+
+    $degree = 0;
+
+    foreach ( $dist_tab as $dist=>$deg ) {
+        $degree += intval($m / $dist) * $deg;
+        $m -= intval($m / $dist) * $dist;
+    }
+
+    return $degree;
+}
+
+/*!
+ * \brief Change meters to GPS(dd) distance.
+ *
+ * \param  int   $m      distance
+ * \param  float $lat    latitude
+ * \return float $degree GPS decimal degrees
+ */
+function getLongitudeDistDiff( $m, $lat ) {
+    $m = (int) $m;
+
+    // get latitude length in KM
+    $parallel_len = 2 * M_PI * 6378 * cos(deg2rad($lat));
+
+    // distance in meters => degree
+    $dist_tab = array(
+        (string) ($parallel_len / 21.6)  => 1/60,
+        (string) ($parallel_len / 1296)  => 1/3600,
+        (string) ($parallel_len / 77760) => 1/216000
+    );
+
+    $degree = 0;
+
+    foreach ( $dist_tab as $dist=>$deg ) {
+        $degree += intval($m / $dist) * $deg;
+        $m -= intval($m / $dist) * $dist;
+    }
+
+    return $degree;
+}
+
+/*!
+ * \brief Function used to calculate distance between two GPS points.
+ *
+ * \param  float $p1_lon First point longitude.
+ * \param  float $p1_lat First point latitude.
+ * \param  float $p2_lon Second point Longitude.
+ * \param  float $p2_lat Second point Latitude.
+ * \return int
+ */
+function getGPSdistance( $p1_lon, $p1_lat, $p2_lon, $p2_lat ) {
+    // get distance between two points in kilometers
+    $distance = sqrt( pow($p2_lat - $p1_lat, 2) + pow(cos($p1_lat * M_PI / 180) * ($p2_lon - $p1_lon), 2) ) * 40075.704 / 360;
+
+    // change kilometers to meters
+    $distance *= 1000;
+
+    return $distance;
+}
 
 //require_once(dirname(__FILE__) . '/../contrib/initLMS.php');
 
@@ -180,86 +288,123 @@ $allradiosectors = $DB->GetAllByKey("SELECT * FROM netradiosectors ORDER BY id",
 
 $truenetnodes = $DB->GetAllByKey("SELECT nn.id, nn.name, nn.invprojectid, nn.type, nn.status, nn.ownership, nn.coowner,
 		nn.uip, nn.miar,
-		nn.location_city, nn.location_street, nn.location_house, nn.location_flat, nn.location,
+		a.city_id as location_city, a.street_id as location_street, a.house as location_house, a.flat as location_flat,
+		a.city as location_city_name, a.street as location_street_name,
 		(SELECT ls.name FROM location_cities lc
-			JOIN location_boroughs lb ON lb.id = lc.boroughid
+			JOIN location_boroughs lb  ON lb.id = lc.boroughid
 			JOIN location_districts ld ON ld.id = lb.districtid
 			JOIN location_states ls ON ls.id = ld.stateid
-			WHERE lc.id = nn.location_city) AS area_woj,
+			WHERE lc.id = a.city_id) AS area_woj,
 		(SELECT ld.name FROM location_cities lc
 			JOIN location_boroughs lb ON lb.id = lc.boroughid
 			JOIN location_districts ld ON ld.id = lb.districtid
 			JOIN location_states ls ON ls.id = ld.stateid
-			WHERE lc.id = nn.location_city) AS area_pow,
-		(SELECT lb.name FROM location_boroughs lb JOIN location_cities lc ON lc.boroughid = lb.id WHERE lc.id = nn.location_city) AS area_gmi, 
+			WHERE lc.id = a.city_id) AS area_pow,
+		(SELECT lb.name FROM location_boroughs lb JOIN location_cities lc ON lc.boroughid = lb.id WHERE lc.id = a.city_id) AS area_gmi,
 		(SELECT ".$DB->Concat('ls.ident', "'_'", 'ld.ident', "'_'", 'lb.ident', "'_'", 'lb.type')." 
 			FROM location_cities lc 
-			JOIN location_boroughs lb ON lb.id = lc.boroughid 
+			JOIN location_boroughs lb  ON lb.id = lc.boroughid 
 			JOIN location_districts ld ON ld.id = lb.districtid 
-			JOIN location_states ls ON ls.id = ld.stateid 
-			WHERE lc.id = nn.location_city) AS area_terc, 
-		(SELECT lc.name FROM location_cities lc WHERE lc.id = nn.location_city) AS area_city, 
-		(SELECT lc.ident FROM location_cities lc WHERE lc.id = nn.location_city) AS area_simc, 
-		(SELECT tu.cecha FROM teryt_ulic tu WHERE tu.id = nn.location_street) AS address_cecha, 
+			JOIN location_states ls    ON ls.id = ld.stateid
+			WHERE lc.id = a.city_id) AS area_terc,
+		(SELECT lc.name  FROM location_cities lc WHERE lc.id = a.city_id) AS area_city,
+		(SELECT lc.ident FROM location_cities lc WHERE lc.id = a.city_id) AS area_simc,
+		(SELECT tu.cecha FROM teryt_ulic tu WHERE tu.id = a.street_id) AS address_cecha,
 		(SELECT (CASE WHEN ls.name2 IS NOT NULL THEN ".$DB->Concat('ls.name2' , "' '", 'ls.name')." ELSE ls.name END) AS name 
-			FROM location_streets ls WHERE ls.id = nn.location_street) AS address_ulica, 
-		(SELECT tu.sym_ul FROM teryt_ulic tu WHERE tu.id = nn.location_street) AS address_symul, 
-		(CASE WHEN (nn.location_flat IS NULL OR nn.location_flat = '') THEN nn.location_house ELSE "
-			.$DB->Concat('nn.location_house ', "'/'", 'nn.location_flat')." END) AS address_budynek, 
-		(SELECT zip FROM pna WHERE pna.cityid = nn.location_city
-			AND (pna.streetid IS NULL OR (pna.streetid IS NOT NULL AND pna.streetid = nn.location_street)) LIMIT 1) AS location_zip,
+			FROM location_streets ls WHERE ls.id = a.street_id) AS address_ulica,
+		(SELECT tu.sym_ul FROM teryt_ulic tu WHERE tu.id = a.street_id) AS address_symul,
+		(CASE WHEN (a.flat IS NULL OR a.flat = '') THEN a.house ELSE "
+			.$DB->Concat('a.house ', "'/'", 'a.flat')." END) AS address_budynek,
+		(SELECT zip FROM pna WHERE pna.cityid = a.city_id
+			AND (pna.streetid IS NULL OR (pna.streetid IS NOT NULL AND pna.streetid = a.street_id)) LIMIT 1) AS location_zip,
 		nn.longitude, nn.latitude
 	FROM netnodes nn
+		LEFT JOIN addresses a ON nn.address_id = a.id
 	ORDER BY nn.id", "id");
-if (empty($truenetnodes))
+
+if (empty($truenetnodes)) {
 	$truenetnodes = array();
+} else {
+	foreach ($truenetnodes as $k=>$v) {
+        $tmp = array('city_name'      => $v['location_city_name'],
+                     'location_house' => $v['location_house'],
+                     'location_flat'  => $v['location_flat'],
+                     'street_name'    => $v['location_street_name']);
+
+        $location = location_str( $tmp );
+
+        if ( !$location ) {
+            $location = "";
+        }
+
+        $truenetnodes[$k]['location'] = $location;
+    }
+}
+
 //foreach ($truenetnodes as $idx => $netnode)
 //	echo "network node $idx: " . print_r($netnode, true) . '<br>';
 
 // prepare info about network devices from lms database
-$netdevices = $DB->GetAllByKey("SELECT nd.id, nd.location_city, nd.location_street, nd.location_house, nd.location_flat, nd.location, 
+$netdevices = $DB->GetAllByKey("SELECT nd.id, a.city_id as location_city, a.street_id as location_street, a.house as location_house, a.flat as location_flat,
+		a.city as location_city_name, a.street as location_street_name, nd.ownerid,
 		(SELECT ls.name FROM location_cities lc
-			JOIN location_boroughs lb ON lb.id = lc.boroughid
+			JOIN location_boroughs lb  ON lb.id = lc.boroughid
 			JOIN location_districts ld ON ld.id = lb.districtid
-			JOIN location_states ls ON ls.id = ld.stateid
-			WHERE lc.id = nd.location_city) AS area_woj,
+			JOIN location_states ls    ON ls.id = ld.stateid
+			WHERE lc.id = a.city_id) AS area_woj,
 		(SELECT ld.name FROM location_cities lc
-			JOIN location_boroughs lb ON lb.id = lc.boroughid
+			JOIN location_boroughs lb  ON lb.id = lc.boroughid
 			JOIN location_districts ld ON ld.id = lb.districtid
-			JOIN location_states ls ON ls.id = ld.stateid
-			WHERE lc.id = nd.location_city) AS area_pow,
-		(SELECT lb.name FROM location_boroughs lb JOIN location_cities lc ON lc.boroughid = lb.id WHERE lc.id = nd.location_city) AS area_gmi, 
-		(SELECT ".$DB->Concat('ls.ident', "'_'", 'ld.ident', "'_'", 'lb.ident', "'_'", 'lb.type')." 
-			FROM location_cities lc 
-			JOIN location_boroughs lb ON lb.id = lc.boroughid 
-			JOIN location_districts ld ON ld.id = lb.districtid 
-			JOIN location_states ls ON ls.id = ld.stateid 
-			WHERE lc.id = nd.location_city) AS area_terc, 
-		(SELECT lc.name FROM location_cities lc WHERE lc.id = nd.location_city) AS area_city, 
-		(SELECT lc.ident FROM location_cities lc WHERE lc.id = nd.location_city) AS area_simc, 
-		(SELECT tu.cecha FROM teryt_ulic tu WHERE tu.id = nd.location_street) AS address_cecha, 
-		(SELECT (CASE WHEN ls.name2 IS NOT NULL THEN ".$DB->Concat('ls.name2' , "' '", 'ls.name')." ELSE ls.name END) AS name 
-			FROM location_streets ls WHERE ls.id = nd.location_street) AS address_ulica, 
-		(SELECT tu.sym_ul FROM teryt_ulic tu WHERE tu.id = nd.location_street) AS address_symul, 
-		(CASE WHEN (nd.location_flat IS NULL OR nd.location_flat = '') THEN nd.location_house ELSE "
-			.$DB->Concat('nd.location_house ', "'/'", 'nd.location_flat')." END) AS address_budynek, 
-		(SELECT zip FROM pna WHERE pna.cityid = nd.location_city
-			AND (pna.streetid IS NULL OR (pna.streetid IS NOT NULL AND pna.streetid = nd.location_street)) LIMIT 1) AS location_zip, 
-		ports, 
+			JOIN location_states ls    ON ls.id = ld.stateid
+			WHERE lc.id = a.city_id) AS area_pow,
+		(SELECT lb.name FROM location_boroughs lb JOIN location_cities lc ON lc.boroughid = lb.id WHERE lc.id = a.city_id) AS area_gmi,
+		(SELECT ".$DB->Concat('ls.ident', "'_'", 'ld.ident', "'_'", 'lb.ident', "'_'", 'lb.type')."
+			FROM location_cities lc
+			JOIN location_boroughs lb  ON lb.id = lc.boroughid
+			JOIN location_districts ld ON ld.id = lb.districtid
+			JOIN location_states ls    ON ls.id = ld.stateid
+			WHERE lc.id = a.city_id) AS area_terc,
+		(SELECT lc.name FROM location_cities lc WHERE lc.id = a.city_id) AS area_city,
+		(SELECT lc.ident FROM location_cities lc WHERE lc.id = a.city_id) AS area_simc,
+		(SELECT tu.cecha FROM teryt_ulic tu WHERE tu.id = a.street_id) AS address_cecha,
+		(SELECT (CASE WHEN ls.name2 IS NOT NULL THEN ".$DB->Concat('ls.name2' , "' '", 'ls.name')." ELSE ls.name END) AS name
+			FROM location_streets ls WHERE ls.id = a.street_id) AS address_ulica,
+		(SELECT tu.sym_ul FROM teryt_ulic tu WHERE tu.id = a.street_id) AS address_symul,
+		(CASE WHEN (a.flat IS NULL OR a.flat = '') THEN a.house ELSE "
+			.$DB->Concat('a.house ', "'/'", 'a.flat')." END) AS address_budynek,
+		(SELECT zip FROM pna WHERE pna.cityid = a.city_id
+			AND (pna.streetid IS NULL OR (pna.streetid IS NOT NULL AND pna.streetid = a.street_id)) LIMIT 1) AS location_zip,
+		ports,
 		nd.longitude, nd.latitude, nd.status, nd.netnodeid,
 		(CASE WHEN nd.invprojectid = 1 THEN nn.invprojectid ELSE nd.invprojectid END) AS invprojectid
-		FROM netdevices nd
+	FROM netdevices nd
 		LEFT JOIN netnodes nn ON nn.id = nd.netnodeid
-		WHERE EXISTS (SELECT id FROM netlinks nl WHERE nl.src = nd.id OR nl.dst = nd.id) 
+		LEFT JOIN addresses a ON nd.address_id = a.id
+	WHERE EXISTS (SELECT id FROM netlinks nl WHERE nl.src = nd.id OR nl.dst = nd.id)
 		ORDER BY nd.name", "id");
 
 // prepare info about network nodes
-$netnodes = array();
-$netdevs = array();
+$netnodes   = array();
+$netdevs    = array();
 $foreigners = array();
 $netnodeid = 1;
+
 if ($netdevices)
 	foreach ($netdevices as $netdevid => $netdevice) {
+
+        $tmp = array('city_name'      => $netdevice['location_city_name'],
+                     'location_house' => $netdevice['location_house'],
+                     'location_flat'  => $netdevice['location_flat'],
+                     'street_name'    => $netdevice['location_street_name']);
+
+        $location = location_str( $tmp );
+
+        if ( $location ) {
+            $netdevices[$netdevid]['location'] = $location;
+        } else if ( $netdevice['ownerid'] ){
+            $netdevices[$netdevid]['location'] = $LMS->getAddressForCustomerStuff( $netdevice['ownerid'] );
+        }
+
 		$backboneports = $DB->GetAll("SELECT nl.type, nl.technology, speed,
 				(CASE src WHEN ? THEN (CASE WHEN rssrc.frequency IS NULL THEN rsdst.frequency ELSE rssrc.frequency END)
 					ELSE (CASE WHEN rsdst.frequency IS NULL THEN rssrc.frequency ELSE rsdst.frequency END) END) AS freq,
@@ -276,6 +421,7 @@ if ($netdevices)
 					OR (nddst.netnodeid IS NOT NULL AND nndst.ownership = 2))
 			GROUP BY nl.type, nl.technology, speed, freq",
 			array($netdevice['id'], $netdevice['id'], $netdevice['id']));
+
 		$distports = $DB->GetAll("SELECT nl.type, nl.technology, speed,
 				(CASE src WHEN ? THEN (CASE WHEN rssrc.frequency IS NULL THEN rsdst.frequency ELSE rssrc.frequency END)
 					ELSE (CASE WHEN rsdst.frequency IS NULL THEN rssrc.frequency ELSE rsdst.frequency END) END) AS freq,
@@ -291,6 +437,7 @@ if ($netdevices)
 				AND (nddst.netnodeid IS NULL OR nndst.ownership < 2)
 			GROUP BY nl.type, nl.technology, speed, freq",
 			array($netdevice['id'], $netdevice['id'], $netdevice['id']));
+
 		$accessports = $DB->GetAll("SELECT linktype AS type, linktechnology AS technology,
 				linkspeed AS speed, rs.frequency, " . $DB->GroupConcat('rs.id') . " AS radiosectors,
 				c.type AS customertype, COUNT(port) AS portcount
@@ -335,13 +482,13 @@ if ($netdevices)
 
 		$netdevice['netnodename'] = $netdevices[$netdevid]['netnodename'] = $netnodename;
 		if (!array_key_exists($netnodename, $netnodes)) {
-			$netnodes[$netnodename]['ports'] = 0;
-			$netnodes[$netnodename]['backboneports'] = array();
-			$netnodes[$netnodename]['totalbackboneports'] = 0;
-			$netnodes[$netnodename]['distports'] = array();
-			$netnodes[$netnodename]['totaldistports'] = 0;
-			$netnodes[$netnodename]['accessports'] = array();
-			$netnodes[$netnodename]['personalaccessports'] = 0;
+			$netnodes[$netnodename]['ports']                 = 0;
+			$netnodes[$netnodename]['backboneports']         = array();
+			$netnodes[$netnodename]['totalbackboneports']    = 0;
+			$netnodes[$netnodename]['distports']             = array();
+			$netnodes[$netnodename]['totaldistports']        = 0;
+			$netnodes[$netnodename]['accessports']           = array();
+			$netnodes[$netnodename]['personalaccessports']   = 0;
 			$netnodes[$netnodename]['commercialaccessports'] = 0;
 
 			$netnodes[$netnodename]['id'] = $netnodeid;
@@ -359,15 +506,19 @@ if ($netdevices)
 				$netnodes[$netnodename]['miar'] = intval($netnode['miar']);
 				$netnodes[$netnodename]['ownership'] = intval($netnode['ownership']);
 				$netnodes[$netnodename]['coowner'] = $netnode['coowner'];
+
 				if (strlen($netnode['coowner'])) {
 					$coowner = $netnode['coowner'];
+
 					if (!array_key_exists($coowner, $foreigners))
 						$foreigners[$coowner] = array(
 							'projects' => array(),
 						);
+
 					if (!in_array($prj, $foreigners[$coowner]['projects']))
 						$foreigners[$coowner]['projects'][] = $prj;
 				}
+
 				if (isset($netnode['area_woj'])) {
 					$netnodes[$netnodename]['area_woj'] = $netnode['area_woj'];
 					$netnodes[$netnodename]['area_pow'] = $netnode['area_pow'];
@@ -479,6 +630,7 @@ if ($netdevices)
 							$linktechnology = 205;
 							break;
 					}
+
 				if ($linktype == 1 && empty($linkfrequency))
 					switch ($linktechnology) {
 						case 100:
@@ -490,6 +642,11 @@ if ($netdevices)
 						default:
 							$linkfrequency = '';
 					}
+
+				if ( $linktype == LINKTYPE_WIRELESS ) {
+					$netnodes[$netnodename]['tech'][LINKTYPE_WIRELESS] = true;
+				}
+
 				if (!empty($linkfrequency))
 					$linkfrequency = str_replace(',', '.', (float) $linkfrequency);
 				if (!isset($netnodes[$netnodename]['distports'][$prj][$status][$linktype][$linktechnology][$linkspeed][$linkfrequency]))
@@ -497,6 +654,10 @@ if ($netdevices)
 				$netnodes[$netnodename]['distports'][$prj][$status][$linktype][$linktechnology][$linkspeed][$linkfrequency] += $port['portcount'];
 				$netnodes[$netnodename]['totaldistports'] += $port['portcount'];
 				$netnodes[$netnodename]['ports'] += $port['portcount'];
+
+				if ( empty($netnodes[$netnodename]['linkmaxspeed'][$linktype][$linktechnology]) || $netnodes[$netnodename]['linkmaxspeed'][$linktype][$linktechnology] < $linkspeed ) {
+					$netnodes[$netnodename]['linkmaxspeed'][$linktype][$linktechnology] = $linkspeed;
+				}
 			}
 
 		if (!empty($accessports))
@@ -533,9 +694,15 @@ if ($netdevices)
 					$linkfrequency = str_replace(',', '.', (float) $linkfrequency);
 				if (!isset($netnodes[$netnodename]['accessports'][$prj][$status][$linktype][$linktechnology][$linkspeed][$linkfrequency]['customers'][$customertype]))
 					$netnodes[$netnodename]['accessports'][$prj][$status][$linktype][$linktechnology][$linkspeed][$linkfrequency]['customers'][$customertype] = 0;
+
 				$netnodes[$netnodename]['accessports'][$prj][$status][$linktype][$linktechnology][$linkspeed][$linkfrequency]['customers'][$customertype] += $ports['portcount'];
 				$netnodes[$netnodename]['accessports'][$prj][$status][$linktype][$linktechnology][$linkspeed][$linkfrequency]['radiosectors'] =
 					empty($ports['radiosectors']) ? array() : explode(',', $ports['radiosectors']);
+
+				if ( empty($netnodes[$netnodename]['linkmaxspeed'][$linktype][$linktechnology]) || $netnodes[$netnodename]['linkmaxspeed'][$linktype][$linktechnology] < $linkspeed ) {
+					$netnodes[$netnodename]['linkmaxspeed'][$linktype][$linktechnology] = $linkspeed;
+				}
+
 				$netnodes[$netnodename][($customertype ? 'commercialaccessports' : 'personalaccessports')] += $ports['portcount'];
 				$netnodes[$netnodename]['ports'] += $ports['portcount'];
 			}
@@ -590,7 +757,7 @@ $sradiosectors = '';
 $snetranges = '';
 $snetbuildings = '';
 if ($netnodes)
-foreach ($netnodes as $netnodename => $netnode) {
+foreach ($netnodes as $netnodename => &$netnode) {
 	// if teryt location is not set then try to get location address from network node name
 	if (!isset($netnode['area_woj'])) {
 		$address = mb_split("[[:blank:]]+", $netnodename);
@@ -647,6 +814,7 @@ foreach ($netnodes as $netnodename => $netnode) {
 			'ww_invproject' => $netnode['invproject'],
 			'ww_invstatus' => $netnode['invproject'] ? $NETELEMENTSTATUSES[$netnode['status']] : '',
 		);
+
 		if (in_array('ww', $sheets))
 			if ($format == 2)
 				$buffer .= 'WW,' . to_csv($data) . EOL;
@@ -674,12 +842,14 @@ foreach ($netnodes as $netnodename => $netnode) {
 			'wo_objtype' => $NETELEMENTTYPES[$netnode['type']],
 			'wo_invproject' => $netnode['invproject'],
 		);
+
 		if (in_array('wo', $sheets))
 			if ($format == 2)
 				$buffer .= 'WO,' . to_csv($data) . EOL;
 			else
 				$sforeignernetnodes .= to_old_csv($wo_keys, $data) . EOL;
 	}
+
 	if ($netnode['ownership'] == 2)
 		continue;
 
@@ -883,10 +1053,12 @@ foreach ($netnodes as $netnodename => $netnode) {
 	}
 
 	// save info about network ranges
-	$ranges = $DB->GetAll("SELECT n.linktype, n.linktechnology, n.location_street, n.location_city, n.location_house
+	$ranges = $DB->GetAll("SELECT n.linktype, n.linktechnology,
+			a.city_id as location_city, a.street_id as location_street, a.house as location_house
 		FROM nodes n
-		WHERE n.ownerid > 0 AND n.location_city <> 0 AND n.netdev IN (" . implode(',', $netnode['netdevices']) . ")
-		GROUP BY n.linktype, n.linktechnology, n.location_street, n.location_city, n.location_house");
+			LEFT JOIN addresses a ON n.address_id = a.id
+		WHERE n.ownerid > 0 AND a.city_id <> 0 AND n.netdev IN (" . implode(',', $netnode['netdevices']) . ")
+		GROUP BY n.linktype, n.linktechnology, a.street_id, a.city_id, a.house");
 	if (empty($ranges))
 		continue;
 
@@ -964,9 +1136,10 @@ foreach ($netnodes as $netnodename => $netnode) {
 				WHEN ".TARIFF_TV." THEN 'TV'
 				ELSE 'INT' END)") . " AS servicetypes, SUM(t.downceil) AS downstream, SUM(t.upceil) AS upstream
 			FROM nodeassignments na
-			JOIN nodes n ON n.id = na.nodeid
-			JOIN assignments a ON a.id = na.assignmentid
-			JOIN tariffs t ON t.id = a.tariffid
+			JOIN nodes n             ON n.id = na.nodeid
+			LEFT JOIN addresses addr ON addr.id = n.address_id
+			JOIN assignments a       ON a.id = na.assignmentid
+			JOIN tariffs t           ON t.id = a.tariffid
 			JOIN customers c ON c.id = n.ownerid
 			LEFT JOIN (SELECT aa.customerid AS cid, COUNT(id) AS total FROM assignments aa
 				WHERE aa.tariffid = 0 AND aa.liabilityid = 0
@@ -974,8 +1147,8 @@ foreach ($netnodes as $netnodename => $netnode) {
 					AND (aa.dateto > ?NOW? OR aa.dateto = 0) GROUP BY aa.customerid)
 				AS allsuspended ON allsuspended.cid = c.id
 			JOIN netdevices nd ON nd.id = n.netdev
-			WHERE n.ownerid > 0 AND n.netdev > 0 AND n.linktype = ? AND n.linktechnology = ? AND n.location_city = ?
-				AND (n.location_street = ? OR n.location_street IS NULL) AND n.location_house = ?
+			WHERE n.ownerid > 0 AND n.netdev > 0 AND n.linktype = ? AND n.linktechnology = ? AND addr.city_id = ?
+				AND (addr.street_id = ? OR addr.street_id IS NULL) AND addr.house = ?
 				AND a.suspended = 0 AND a.period IN (".implode(',', array(YEARLY, HALFYEARLY, QUARTERLY, MONTHLY, DISPOSABLE)).")
 				AND (a.datefrom = 0 OR a.datefrom < ?NOW?) AND (a.dateto = 0 OR a.dateto > ?NOW?)
 				AND allsuspended.total IS NULL
@@ -984,6 +1157,8 @@ foreach ($netnodes as $netnodename => $netnode) {
 
 		if (empty($nodes))
 			continue;
+
+		$netnode['tech'][$range['linktype']] = true;
 
 		// check if this is range with the same location as owning network node
 		if ($range['location_city'] == $netnode['location_city']
@@ -1148,50 +1323,7 @@ foreach ($netnodes as $netnodename => $netnode) {
 				}
 
 				$allservices = array_unique($allservices);
-
-				$maxdownstream = round($maxdownstream / 1000, 2);
-				if ($maxdownstream <= 1)
-					$maxdownstream = 1;
-				elseif ($maxdownstream <= 2)
-					$maxdownstream = 2;
-				elseif ($maxdownstream <= 4)
-					$maxdownstream = 4;
-				elseif ($maxdownstream <= 6)
-					$maxdownstream = 6;
-				elseif ($maxdownstream <= 8)
-					$maxdownstream = 8;
-				elseif ($maxdownstream <= 10)
-					$maxdownstream = 10;
-				elseif ($maxdownstream <= 20)
-					$maxdownstream = 20;
-				elseif ($maxdownstream <= 30)
-					$maxdownstream = 30;
-				elseif ($maxdownstream <= 40)
-					$maxdownstream = 40;
-				elseif ($maxdownstream <= 60)
-					$maxdownstream = 60;
-				elseif ($maxdownstream <= 80)
-					$maxdownstream = 80;
-				elseif ($maxdownstream <= 100)
-					$maxdownstream = 100;
-				elseif ($maxdownstream <= 120)
-					$maxdownstream = 120;
-				elseif ($maxdownstream <= 150)
-					$maxdownstream = 150;
-				elseif ($maxdownstream <= 250)
-					$maxdownstream = 250;
-				elseif ($maxdownstream <= 500)
-					$maxdownstream = 500;
-				elseif ($maxdownstream <= 1000)
-					$maxdownstream = 1000;
-				elseif ($maxdownstream <= 2500)
-					$maxdownstream = 2500;
-				elseif ($maxdownstream <= 10000)
-					$maxdownstream = 10000;
-				elseif ($maxdownstream <= 40000)
-					$maxdownstream = 40000;
-				else
-					$maxdownstream = 100000;
+				$maxdownstream = parseNetworkSpeed($maxdownstream);
 
 				if ($maxdownstream > $range_maxdownstream) {
 					$range_maxdownstream = $maxdownstream;
@@ -1199,26 +1331,30 @@ foreach ($netnodes as $netnodename => $netnode) {
 					$range_linktechnology = $linktechnology;
 				}
 
+				if ( array_search('TV', $allservices) ) {
+					$netnode['tv_avible'] = true;
+				}
+
+				if ( array_search('TEL', $allservices) ) {
+					$netnode['tel_avible'] = true;
+				}
+
 				$data = array_merge($data, array(
-					'zas_phonepots' => array_search('TEL', $allservices) !== FALSE
-						&& $range['linktechnology'] == 12 ? 'Tak' : 'Nie',
-					'zas_phonevoip' => array_search('TEL', $allservices) !== FALSE && $range['linktechnology'] != 12
-						&& ($range['linktechnology'] < 105 || $range['linktechnology'] >= 200) ? 'Tak' : 'Nie',
-					'zas_phonemobile' => array_search('TEL', $allservices) !== FALSE
-						&& $range['linktechnology'] >= 105 && $range['linktechnology'] < 200 ? 'Tak' : 'Nie',
-					'zas_internetstationary' => array_search('INT', $allservices) !== FALSE
-						&& ($range['linktechnology'] < 105 || $range['linktechnology'] >= 200) ? 'Tak' : 'Nie',
-					'zas_internetmobile' => array_search('INT', $allservices) !== FALSE
-						&& $range['linktechnology'] >= 105 && $range['linktechnology'] < 200 ? 'Tak' : 'Nie',
+					'zas_phonepots' => array_search('TEL', $allservices) !== FALSE && $range['linktechnology'] == 12 ? 'Tak' : 'Nie',
+					'zas_phonevoip' => array_search('TEL', $allservices) !== FALSE && $range['linktechnology'] != 12 && ($range['linktechnology'] < 105 || $range['linktechnology'] >= 200) ? 'Tak' : 'Nie',
+					'zas_phonemobile' => array_search('TEL', $allservices) !== FALSE && $range['linktechnology'] >= 105 && $range['linktechnology'] < 200 ? 'Tak' : 'Nie',
+					'zas_internetstationary' => array_search('INT', $allservices) !== FALSE && ($range['linktechnology'] < 105 || $range['linktechnology'] >= 200) ? 'Tak' : 'Nie',
+					'zas_internetmobile' => array_search('INT', $allservices) !== FALSE && $range['linktechnology'] >= 105 && $range['linktechnology'] < 200 ? 'Tak' : 'Nie',
 					'zas_tv' => array_search('TV', $allservices) !== FALSE ? 'Tak' : 'Nie',
 					'zas_other' => '',
-					'zas_stationarymaxspeed' => array_search('INT', $allservices) !== FALSE 
-						&& ($range['linktechnology'] < 105 || $range['linktechnology'] >= 200) ? $maxdownstream : '0',
-					'zas_mobilemaxspeed' => array_search('INT', $allservices) !== FALSE
-						&& $range['linktechnology'] >= 105 && $range['linktechnology'] < 200 ? $maxdownstream : '0',
+					'zas_stationarymaxspeed' => array_search('INT', $allservices) !== FALSE && ($range['linktechnology'] < 105 || $range['linktechnology'] >= 200) ? $maxdownstream : '0',
+					'zas_mobilemaxspeed' => array_search('INT', $allservices) !== FALSE && $range['linktechnology'] >= 105 && $range['linktechnology'] < 200 ? $maxdownstream : '0',
 					'zas_invproject' => strlen($prj) ? $prj : '',
 					'zas_invstatus' => strlen($prj) ? $NETELEMENTSTATUSES[$status] : '',
 				));
+
+				$customers[ strtolower($data['zas_city'] . '|' . $data['zas_street'] . '|' . $data['zas_house']) ] = 1;
+
 				if (in_array('zas', $sheets))
 					if ($format == 2)
 						$buffer .= 'ZS,' . to_csv($data) . EOL;
@@ -1263,6 +1399,9 @@ foreach ($netnodes as $netnodename => $netnode) {
 			'zas_invproject' => '',
 			'zas_invstatus' => '',
 		);
+
+		$customers[ strtolower($data['zas_city'] . '|' . $data['zas_street'] . '|' . $data['zas_house']) ] = 1;
+
 		if (in_array('zas', $sheets))
 			if ($format == 2)
 				$buffer .= 'ZS,' . to_csv($data) . EOL;
@@ -1270,6 +1409,166 @@ foreach ($netnodes as $netnodename => $netnode) {
 				$snetbuildings .= to_old_csv($zas_keys, $data) . EOL;
 		$netbuildingid++;
 	}
+}
+unset($netnode);
+
+$max_range = 0;
+
+if ( !empty($_POST['uke']['linktypes']) ) {
+    foreach ($_POST['uke']['linktypes'] as $link) {
+        if ( $max_range < intval($link['range']) ) {
+            $max_range = intval($link['range']);
+        }
+    }
+}
+
+if ( $max_range > 0 ) {
+
+    $top    = -1;
+    $right  = -1;
+    $bottom = PHP_INT_MAX;
+    $left   = PHP_INT_MAX;
+
+    // find extreme points
+    foreach ($netnodes as $v) {
+        if ( $v['latitude'] > $top ) {
+            $top = $v['latitude'];
+        } else if ( $v['latitude'] < $bottom ) {
+            $bottom = $v['latitude'];
+        }
+
+        if ( $v['longitude'] < $left ) {
+            $left = $v['longitude'];
+        } else if ( $v['longitude'] > $right ) {
+            $right = $v['longitude'];
+        }
+    }
+
+    // add extra 5%
+    $max_range = intval($max_range * 1.05);
+
+    // enlarge searched area
+    $top    = ceil(  ($top    + getLatitudeDistDiff($max_range)) * 10000 ) / 10000;
+    $right  = ceil(  ($right  + getLongitudeDistDiff($max_range, ($top+$bottom)/2)) * 10000 ) / 10000;
+    $bottom = floor( ($bottom - getLatitudeDistDiff($max_range)) * 10000 ) / 10000;
+    $left   = floor( ($left   - getLongitudeDistDiff($max_range, ($top+$bottom)/2)) * 10000 ) / 10000;
+
+    $top    = str_replace(',', '.', $top);
+    $right  = str_replace(',', '.', $right);
+    $bottom = str_replace(',', '.', $bottom);
+    $left   = str_replace(',', '.', $left);
+
+    $buildings = $DB->GetAll('
+        SELECT lc.name as city, building_num as house, longitude as "0", latitude as "1",
+            lst.name || \' \' || CASE WHEN ls.name2 is NOT NULL AND char_length(ls.name2) > 0 THEN ls.name2 || \' \' || ls.name ELSE ls.name END as street,
+            ls.ident as street_ident, lc.ident as city_ident, lbor.name as borough, ldist.name as district,
+            lsta.name as state, lsta.ident as state_ident, ldist.ident as district_ident, lbor.ident as borough_ident,
+            lbor.type as borough_type
+        FROM location_buildings lb
+            LEFT JOIN location_streets ls       ON lb.street_id = ls.id
+            LEFT JOIN location_street_types lst ON lst.id = ls.typeid
+            LEFT JOIN location_cities lc        ON lc.id = lb.city_id
+            LEFT JOIN location_boroughs lbor    ON lc.boroughid = lbor.id
+            LEFT JOIN location_districts ldist  ON lbor.districtid = ldist.id
+            LEFT JOIN location_states lsta      ON lsta.id = ldist.stateid
+        WHERE
+            longitude > ? AND longitude < ? AND
+            latitude  < ? AND latitude  > ?
+        ORDER BY
+            ls.name;',
+        array($left, $right, $top, $bottom)
+    );
+
+    // LMS doesn't contain priorities for link types
+    // if it contains then fix code below
+    $linktype_priorities = array(
+        LINKTYPE_FIBER => 0,
+        LINKTYPE_WIRE => 1,
+        LINKTYPE_WIRELESS => 2,
+    );
+    $link_orderlist = array();
+    foreach ( $_POST['uke']['linktypes'] as $linktypeindex => $link ) {
+        $link_orderlist[$linktype_priorities[$linktypeindex]] = array(
+             'type' => $link['type'],
+             'range' => $link['range'],
+        );
+    }
+
+    ksort($link_orderlist);
+    // ---
+
+    $kd = new Kd_tree();
+
+    foreach ( $link_orderlist as $link ) {
+        $kd->clear();
+
+        foreach ($netnodes as $k=>$netnode) {
+            if ( isset($netnode['tech'][$link['type']]) ) {
+                $kd->insert( array(floatval($netnode['longitude']), floatval($netnode['latitude']), 'netnode'=>$k) );
+            }
+        }
+
+        if ( $buildings ) {
+            foreach ( $buildings as $k=>$b ) {
+                $closest_p = $kd->findNN( $b );
+
+                $dist = getGPSdistance( $closest_p[0], $closest_p[1], $b[0], $b[1] );
+                $key  = strtolower( $b['city'] . '|' . $b['street'] . '|' . $b['house'] );
+
+                if ( $dist < $link['range'] && !isset($customers[$key]) ) {
+                    $node = $netnodes[ $closest_p['netnode'] ];
+
+                    if ( empty($b['street_ident'])) {
+                        $b['street']       = "ul. SPOZA ZAKRESU";
+                        $b['street_ident'] = "99998";
+                    } else if ( empty($b['street']) ) {
+                        $b['street']       = "BRAK ULICY";
+                        $b['street_ident'] = "99999";
+                    }
+
+                    foreach ( $node['linkmaxspeed'][$link['type']] as $tech=>$max_speed ) {
+                        $data = array(
+                            'zas_id'                 => $netbuildingid,
+                            'zas_ownership'          => 'Własna',
+                            'zas_leasetype'          => '',
+                            'zas_foreignerid'        => '',
+                            'zas_nodeid'             => $node['id'],
+                            'zas_state'              => $b['state'],
+                            'zas_district'           => $b['district'],
+                            'zas_borough'            => $b['borough'],
+                            'zas_terc'               => sprintf("%02d%02d%02d%s", $b['state_ident'], $b['district_ident'], $b['borough_ident'], $b['borough_type']),
+                            'zas_city'               => $b['city'],
+                            'zas_simc'               => sprintf("%07d", $b['city_ident']),
+                            'zas_street'             => $b['street'],
+                            'zas_ulic'               => sprintf("%05d", $b['street_ident']),
+                            'zas_house'              => $b['house'],
+                            'zas_zip'                => $node['location_zip'],
+                            'zas_latitude'           => $b[1],
+                            'zas_longitude'          => $b[0],
+                            'zas_tech'               => $linktypes[$link['type']]['technologia'],
+                            'zas_ltech'              => $LINKTECHNOLOGIES[$link['type']][$tech],
+                            'zas_phonepots'          => 'Nie',
+                            'zas_phonevoip'          => 'Nie',
+                            'zas_phonemobile'        => 'Nie',
+                            'zas_internetstationary' => 'Tak',
+                            'zas_internetmobile'     => 'Nie',
+                            'zas_tv'                 => isset($node['tv_avible']) ? 'Tak' : 'Nie',
+                            'zas_other'              => '',
+                            'zas_stationarymaxspeed' => parseNetworkSpeed($max_speed),
+                            'zas_mobilemaxspeed'     => 0,
+                            'zas_invproject'         => '',
+                            'zas_invstatus'          => ''
+                        );
+
+                        $buffer .= 'ZS,' . to_csv($data) . EOL;
+                        $netbuildingid++;
+                    }
+
+                    unset($buildings[$k]);
+                }
+            }
+        }
+    }
 }
 
 //prepare info about network links (only between different network nodes)
@@ -1584,7 +1883,7 @@ if ($format == 2) {
 
 // prepare zip archive package containing all generated files
 if (!extension_loaded('zip'))
-	die ('<B>Zip extension not loaded! In order to use this extension you must compile PHP with zip support by using the --enable-zip configure option. </B>');
+	die('<B>Zip extension not loaded! In order to use this extension you must compile PHP with zip support by using the --enable-zip configure option. </B>');
 
 $zip = new ZipArchive();
 $filename = tempnam('/tmp', 'LMS_SIIS_').'.zip';

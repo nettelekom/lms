@@ -303,6 +303,10 @@ function GetConfigList() {
 					$config[$idx]['description'] = trans('Default City in TERYT. Set city id in TERYT.');
 				break;
 
+				case 'logout_confirmation':
+					$config[$idx]['description'] = trans('If set to "true" then logout confirmation is required. Default "false"');
+				break;
+
 				default:
 					$config[$idx]['description'] = trans('Unknown option. No description.');
 				break;
@@ -603,14 +607,14 @@ $layout['pagetitle'] = trans('User Interface Configuration');
 
 $configlist = GetConfigList();
 
-$pagelimit = ConfigHelper::getConfig('phpui.configlist_pagelimit', $listdata['total']);
+$pagelimit = ConfigHelper::getConfig('phpui.configlist_pagelimit', count($configlist));
 
 $SESSION->save('backto', $_SERVER['QUERY_STRING']);
 
 $SMARTY->assign('sections', $LMS->GetConfigSections());
 $SMARTY->assign('pagelimit', $pagelimit);
 $SMARTY->assign('configlist', $configlist);
-$SMARTY->assign('listdata', $listdata);
+$SMARTY->assign('section', isset($_GET['s']) ? $_GET['s'] : '');
 $SMARTY->display('config/configlist.html');
 
 ?>

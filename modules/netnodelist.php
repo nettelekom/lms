@@ -63,75 +63,28 @@ else
 	$d = $_GET['d'];
 $SESSION->save('ndfd', $d);
 
+$search = array(
+	'status' => $s,
+	'type' => $t,
+	'invprojectid' => $p,
+	'ownership' => $w,
+	'divisionid' => $d,
+);
+$nlist = $LMS->GetNetNodeList($search, $o);
 
+$listdata = $search;
 
-list($order,$dir) = sscanf($o,'%[^,],%s');
-($dir == 'desc') ? $dir='desc' : $dir='asc';
-switch ($order) {
-	case 'id':
-		$ostr = 'ORDER BY id';
-		break;
-	case 'name':
-		$ostr = 'ORDER BY name';
-		break;
-	case 'type':
-		$ostr = 'ORDER BY type';
-		break;
-	case 'status':
-		$ostr = 'ORDER BY status';
-		break;
-	default:
-		$ostr = 'ORDER BY name';
-		break;
-}
+$listdata['total'] = $nlist['total'];
+$listdata['order'] = $nlist['order'];
+$listdata['direction'] = $nlist['direction'];
 
-$warr = array();
-if (strlen(trim($t)) && $t!=-1) {
-	$warr[] = "n.type=$t";
-}
-if (strlen(trim($s)) && $s!=-1) {
-	$warr[] = "n.status=$s";
-}
-if (strlen(trim($p))) {
-	if ($p == -2)
-		$warr[] = "n.invprojectid IS NULL";
-	elseif ($p != -1)
-		$warr[] = "n.invprojectid=$p";
-}
-if (strlen(trim($w)) && $w!=-1) {
-	$warr[] = "n.ownership=$w";
-}
+unset($nlist['total']);
+unset($nlist['order']);
+unset($nlist['direction']);
 
-if (strlen(trim($d)) && $d!=-1) {
-	$warr[] = "n.divisionid=$d";
-}
+if (!isset($_GET['page']))
+	$SESSION->restore('ndlp', $_GET['page']);
 
-
-$fstr = empty($warr) ? '' : ' WHERE ' . implode(' AND ', $warr);
-
-$nlist = $DB->GetAll('SELECT n.id, n.name, n.type, n.status, n.invprojectid, p.name AS project,
-		n.location, n.divisionid,
-		lb.name AS borough_name, lb.type AS borough_type,
-		ld.name AS district_name, ls.name AS state_name
-	FROM netnodes n
-	LEFT JOIN invprojects p ON (n.invprojectid = p.id) 
-	LEFT JOIN location_cities lc ON lc.id = n.location_city
-	LEFT JOIN location_boroughs lb ON lb.id = lc.boroughid
-	LEFT JOIN location_districts ld ON ld.id = lb.districtid
-	LEFT JOIN location_states ls ON ls.id = ld.stateid ' . $fstr . ' ' . $ostr . ' ' . $dir);
-
-$listdata['total'] = sizeof($nlist);
-$listdata['order'] = $order;
-$listdata['direction'] = $dir;
-$listdata['status'] = $s;
-$listdata['type'] = $t;
-$listdata['invprojectid'] = $p;
-$listdata['ownership'] = $w;
-$listdata['divisionid'] = $d;
-
-if(!isset($_GET['page']))
-        $SESSION->restore('ndlp', $_GET['page']);
-	
 $page = (! $_GET['page'] ? 1 : $_GET['page']);
 $pagelimit = ConfigHelper::getConfig('phpui.nodelist_pagelimit', $listdata['total']);
 $start = ($page - 1) * $pagelimit;
@@ -140,11 +93,11 @@ $SESSION->save('ndlp', $page);
 
 $SESSION->save('backto', $_SERVER['QUERY_STRING']);
 
-$SMARTY->assign('page',$page);
-$SMARTY->assign('pagelimit',$pagelimit);
-$SMARTY->assign('start',$start);
-$SMARTY->assign('nlist',$nlist);
-$SMARTY->assign('listdata',$listdata);
+$SMARTY->assign('page'     , $page);
+$SMARTY->assign('pagelimit', $pagelimit);
+$SMARTY->assign('start'    , $start);
+$SMARTY->assign('nlist'    , $nlist);
+$SMARTY->assign('listdata' , $listdata);
 $SMARTY->assign('divisions', $DB->GetAll('SELECT id, shortname FROM divisions ORDER BY shortname'));
 
 $nprojects = $DB->GetAll("SELECT * FROM invprojects WHERE type<>? ORDER BY name",

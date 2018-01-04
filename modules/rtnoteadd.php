@@ -67,11 +67,12 @@ elseif(isset($_POST['note']))
 		$mail_dir = ConfigHelper::getConfig('rt.mail_dir');
 		if (!empty($files) && !empty($mail_dir)) {
 			$id = $DB->GetLastInsertId('rtmessages');
-			$dir = $mail_dir . sprintf('/%06d/%06d', $note['ticketid'], $id);
-			@mkdir($mail_dir . sprintf('/%06d', $note['ticketid']), 0700);
-			@mkdir($dir, 0700);
+			$mail_dir_permission = intval(ConfigHelper::getConfig('rt.mail_dir_permission', '0700'), 8);
+			$dir = $mail_dir . DIRECTORY_SEPARATOR . sprintf('%06d' . DIRECTORY_SEPARATOR . '%06d', $note['ticketid'], $id);
+			@mkdir($mail_dir . DIRECTORY_SEPARATOR . sprintf('%06d', $note['ticketid']), $mail_dir_permission);
+			@mkdir($dir, $mail_dir_permission);
 			foreach ($files as $file) {
-				$newfile = $dir . '/' . $file['name'];
+				$newfile = $dir . DIRECTORY_SEPARATOR . $file['name'];
 				if (@rename($tmppath . DIRECTORY_SEPARATOR . $file['name'], $newfile))
 					$DB->Execute('INSERT INTO rtattachments (messageid, filename, contenttype)
 							VALUES (?, ?, ?)', array($id, $file['name'], $file['type']));
@@ -126,8 +127,7 @@ elseif(isset($_POST['note']))
 						address, zip, city FROM customeraddressview WHERE id = ?', array($cid));
 				$info['contacts'] = $DB->GetAll('SELECT contact, name, type FROM customercontacts
 					WHERE customerid = ?', array($cid));
-				$info['locations'] = $DB->GetCol('SELECT DISTINCT location FROM nodes
-					WHERE ownerid = ?', array($cid));
+				$info['locations'] = $LMS->GetUniqueNodeLocations($cid);
 
 				$emails = array();
 				$phones = array();
@@ -136,7 +136,7 @@ elseif(isset($_POST['note']))
 						$target = $contact['contact'] . (strlen($contact['name']) ? ' (' . $contact['name'] . ')' : '');
 						if ($contact['type'] & CONTACT_EMAIL)
 							$emails[] = $target;
-						else
+						elseif ($contact['type'] & (CONTACT_LANDLINE | CONTACT_MOBILE))
 							$phones[] = $target;
 					}
 
@@ -158,13 +158,23 @@ elseif(isset($_POST['note']))
 					$sms_body .= '. ' . trans('Phone:') . ' ' . preg_replace('/([0-9])[\s-]+([0-9])/', '\1\2', implode(',', $phones));
 			}
 
+			$notify_author = ConfigHelper::checkConfig('phpui.helpdesk_author_notify');
+			$args = array(
+				'queue' => $queue['id'],
+				'user' => $AUTH->id,
+			);
+			if ($notify_author)
+				unset($args['user']);
+
 			// send email
+			$args['type'] = MSG_MAIL;
 			if ($recipients = $DB->GetCol('SELECT DISTINCT email
 				FROM users, rtrights
 					WHERE users.id=userid AND queueid = ? AND email != \'\'
-						AND (rtrights.rights & 8) = 8
-						AND deleted = 0 AND (ntype & ?) = ?',
-					array($queue['id'], MSG_MAIL, MSG_MAIL))
+						AND (rtrights.rights & 8) = 8 AND deleted = 0'
+						. ($notify_author ? '' : ' AND users.id <> ?')
+						. ' AND (ntype & ?) > 0',
+					array_values($args))
 			)
 				foreach ($recipients as $email) {
 					$headers['To'] = '<'.$email.'>';
@@ -174,12 +184,14 @@ elseif(isset($_POST['note']))
 
 			// send sms
 			$service = ConfigHelper::getConfig('sms.service');
+			$args['type'] = MSG_SMS;
 			if (!empty($service) && ($recipients = $DB->GetCol('SELECT DISTINCT phone
 				FROM users, rtrights
 					WHERE users.id=userid AND queueid = ? AND phone != \'\'
-						AND (rtrights.rights & 8) = 8
-						AND deleted = 0 AND (ntype & ?) = ?',
-					array($queue['id'], MSG_SMS, MSG_SMS)))
+						AND (rtrights.rights & 8) = 8 AND deleted = 0'
+						. ($notify_author ? '' : ' AND users.id <> ?')
+						. ' AND (ntype & ?) > 0',
+					array_values($args)))
 			)
 				foreach ($recipients as $phone)
 					$LMS->SendSMS($phone, $sms_body);

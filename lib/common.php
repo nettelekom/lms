@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2016 LMS Developers
+ *  (C) Copyright 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -131,7 +131,7 @@ function check_ipv6($ip)
 {
         // fast exit for localhost
 	if (strlen($ip) < 3)
-	        return $IP == '::';
+	        return $ip == '::';
 	
 	// Check if part is in IPv4 format
 	if (strpos($ip, '.')) {
@@ -181,6 +181,14 @@ function check_mask($mask)
 	}
 }
 
+/*!
+ * \brief Returns network broadcast address by IP and mask.
+ *
+ * \param  string  $ip   IP address 192.168.0.0, 10.0.0.4, etc.
+ * \param  string  $mask Network mask 255.255.255.000, etc.
+ * \return longint       Network broadcast address
+ * \return false         Incorrect IP or Mask
+ */
 function getbraddr($ip,$mask)
 {
 	if(check_ip($ip) && check_mask($mask))
@@ -194,6 +202,14 @@ function getbraddr($ip,$mask)
 		return false;
 }
 
+/*!
+ * \brief Returns network address by IP and mask.
+ *
+ * \param  string  $ip   IP address 192.168.0.0, 10.0.0.4, etc.
+ * \param  string  $mask Network mask 255.255.255.000, etc.
+ * \return longint       Network IP
+ * \return false         Incorrect IP or Mask
+ */
 function getnetaddr($ip,$mask)
 {
 	if(check_ip($ip) && check_mask($mask))
@@ -529,6 +545,11 @@ function moneyf($value)
 	return sprintf($LANGDEFS[$_language]['money_format'], $value);
 }
 
+function moneyf_in_words($value) {
+	global $LANGDEFS, $_language;
+	return sprintf($LANGDEFS[$_language]['money_format_in_words'], to_words(floor($value)), to_words(round(($value - floor($value)) * 100)));
+}
+
 if (!function_exists('bcmod'))
 {
     function bcmod( $x, $y )
@@ -547,14 +568,38 @@ if (!function_exists('bcmod'))
     }
 }
 
-function docnumber($number=NULL, $template=NULL, $time=NULL, $ext_num='')
-{
+function docnumber($number = null, $template = null, $cdate = null, $ext_num = '') {
+	if (is_array($number)) {
+		unset($template, $cdate, $ext_num);
+		extract($number);
+		if (!isset($number))
+			$number = null;
+		if (!isset($template))
+			$template = null;
+		if (!isset($cdate))
+			$cdate = null;
+		if (!isset($ext_num))
+			$ext_num = '';
+		if (!isset($customerid))
+			$customerid = null;
+	}
+
 	$number = $number ? $number : 1;
 	$template = $template ? $template : DEFAULT_NUMBER_TEMPLATE;
-	$time = $time ? $time : time();
-	
+	$cdate = $cdate ? $cdate : time();
+
+	// customer id support
+	if (empty($customerid))
+		$result = preg_replace('/%\\d*C/', trans('customer ID'), $template);
+	else {
+		$result = preg_replace_callback('/%(\\d*)C/',
+			function ($m) use ($customerid) {
+				return sprintf('%0' . $m[1] . 'd', $customerid);
+			}, $template);
+	}
+
 	// extended number part
-	$result = str_replace('%I', $ext_num, $template);
+	$result = str_replace('%I', $ext_num, $result);
 
 	// main document number
 	// code for php < 5.3
@@ -569,7 +614,7 @@ function docnumber($number=NULL, $template=NULL, $time=NULL, $ext_num='')
 		}, $result);
 
 	// time conversion specifiers
-	return strftime($result, $time);
+	return strftime($result, $cdate);
 }
 
 // our finance round
@@ -671,6 +716,36 @@ function clear_utf($str)
 	return $r;
 }
 
+function mazovia_to_utf8($text) {
+	static $mazovia_regexp = array(
+		'/\x86/', // ą
+		'/\x92/', // ł
+		'/\x9e/', // ś
+		'/\x8d/', // ć
+		'/\xa4/', // ń
+		'/\xa6/', // ź
+		'/\x91/', // ę
+		'/\xa2/', // ó
+		'/\xa7/', // ż
+		'/\x8f/', // Ą
+		'/\x9c/', // Ł
+		'/\x98/', // Ś
+		'/\x95/', // Ć
+		'/\xa5/', // Ń
+		'/\xa0/', // Ź
+		'/\x90/', // Ę
+		'/\xa3/', // Ó
+		'/\xa1/', // Ż
+	);
+
+	static $utf8_codes = array(
+		'ą', 'ł', 'ś', 'ć', 'ń', 'ź', 'ę', 'ó', 'ż',
+		'Ą', 'Ł', 'Ś', 'Ć', 'Ń', 'Ź', 'Ę', 'Ó', 'Ż',
+	);
+
+	return preg_replace($mazovia_regexp, $utf8_codes, $text);
+}
+
 function lastonline_date($timestamp)
 {
     if (!$timestamp)
@@ -722,13 +797,30 @@ function location_str($data)
 
     if ($data['street_name']) {
         $street = $data['street_type'] .' '. $data['street_name'];
-        $location .= ($location ? ', ' : '') . $street;
+        $location .= ($location ? ',' : '') . $street;
     }
 
     if ($h)
         $location .= ' ' . $h;
 
-    return htmlentities($location, ENT_COMPAT, 'UTF-8');
+    return htmlentities($location, ENT_COMPAT, 'UTF-8', false);
+}
+
+function document_address($data) {
+	$lines = array();
+
+	if ($data['name'])
+		$lines[] = $data['name'];
+
+	if ($data['postoffice'] && $data['postoffice'] != $data['city']) {
+		$lines[] = ($data['street'] ? $data['city'] . ', ' : '') . $data['address'];
+		$lines[] .= $data['zip'] . ' ' . $data['postoffice'];
+	} else {
+		$lines[] = $data['address'];
+		$lines[] = $data['zip'] . ' ' . $data['city'];
+	}
+
+	return $lines;
 }
 
 function set_timer($label = 0)
@@ -1108,3 +1200,55 @@ function check_yahoo($im) {
 function check_facebook($im) {
 	return preg_match('/^[.a-z0-9]{5,}$/i', $im);
 }
+
+/*!
+ * \brief Recursive trim function.
+ *
+ * \param $data mixed
+ */
+function trim_rec( $data ) {
+
+    if ( is_array($data) ) {
+        foreach ($data as $k => $v) {
+            if ( is_array($data[$k]) ) {
+                $data[$k] = trim_rec($data[$k]);
+            } else {
+                $data[$k] = trim($data[$k]);
+            }
+        }
+
+        return $data;
+    } else {
+        return trim($data);
+    }
+}
+
+/*!
+ * \brief Google Maps Geocode service function
+ *
+ * \param $location string location formatted human-friendly
+ * \return mixed Result in associative array or null on error
+ */
+
+function geocode($location) {
+	$api_key = ConfigHelper::getConfig('phpui.googlemaps_api_key', '', true);
+	$address = urlencode($location);
+	$link = "http://maps.googleapis.com/maps/api/geocode/json?address=" . $address . "&sensor=false"
+		. (empty($api_key) ? '' : 'key=' . $api_key);
+	if (($res = @file_get_contents($link)) === false)
+		return null;
+	$page = json_decode($res, true);
+	$latitude = str_replace(',', '.', $page["results"][0]["geometry"]["location"]["lat"]);
+	$longitude = str_replace(',', '.', $page["results"][0]["geometry"]["location"]["lng"]);
+	$status = $page["status"];
+	$accuracy = $page["results"][0]["geometry"]["location_type"];
+	return array(
+		'status' => $status,
+		'accuracy' => $accuracy,
+		'latitude' => $latitude,
+		'longitude' => $longitude,
+		'raw-result' => $page,
+	);
+}
+
+?>

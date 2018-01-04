@@ -84,6 +84,9 @@ function NetDevSearch($order='name,asc', $search=NULL, $sqlskey='AND')
 				case 'ports':
 				        $searchargs[] = "ports = ".intval($value);
 				break;
+				case 'location':
+					$searchargs[] = "UPPER(a.$idx) ?LIKE? UPPER(".$DB->Escape("%$value%").')';
+					break;
 				default:
 					// UPPER here is a postgresql ILIKE bug workaround
 					$searchargs[] = "UPPER(d.$idx) ?LIKE? UPPER(".$DB->Escape("%$value%").')';
@@ -95,12 +98,13 @@ function NetDevSearch($order='name,asc', $search=NULL, $sqlskey='AND')
 	if(isset($searchargs))
                 $searchargs = ' WHERE ('.implode(' '.$sqlskey.' ',$searchargs).')';
 
-	$netdevlist = $DB->GetAll('SELECT DISTINCT d.id, d.name, d.location, d.description, d.producer, 
-				d.model, d.serialnumber, d.ports,
-                		(SELECT COUNT(*) FROM vnodes WHERE netdev = d.id AND ownerid > 0)
-	            		+ (SELECT COUNT(*) FROM netlinks WHERE src = d.id OR dst = d.id) AS takenports
-	        		FROM netdevices d'
-				.(isset($nodes) ? ' LEFT JOIN vnodes n ON (netdev = d.id AND ownerid = 0)' : '')
+	$netdevlist = $DB->GetAll('SELECT DISTINCT d.id, d.name, a.location, d.description, d.producer,
+					d.model, d.serialnumber, d.ports,
+					(SELECT COUNT(*) FROM vnodes WHERE netdev = d.id AND ownerid > 0)
+					+ (SELECT COUNT(*) FROM netlinks WHERE src = d.id OR dst = d.id) AS takenports
+				FROM netdevices d
+					LEFT JOIN vaddresses a ON d.address_id = a.id'
+				.(isset($nodes) ? ' LEFT JOIN vnodes n ON (netdev = d.id AND n.ownerid = 0)' : '')
 				.(isset($searchargs) ? $searchargs : '')
 				.($sqlord != '' ? $sqlord.' '.$direction : ''));
 

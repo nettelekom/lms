@@ -203,6 +203,7 @@ $sender_name = ConfigHelper::getConfig('sendinvoices.sender_name', '', true);
 $sender_email = ConfigHelper::getConfig('sendinvoices.sender_email', '', true);
 $mail_subject = ConfigHelper::getConfig('sendinvoices.mail_subject', 'Invoice No. %invoice');
 $mail_body = ConfigHelper::getConfig('sendinvoices.mail_body', ConfigHelper::getConfig('mail.sendinvoice_mail_body'));
+$mail_format = ConfigHelper::getConfig('sendinvoices.mail_format', 'text');
 $invoice_filename = ConfigHelper::getConfig('sendinvoices.invoice_filename', 'invoice_%docid');
 $dnote_filename = ConfigHelper::getConfig('sendinvoices.debitnote_filename', 'dnote_%docid');
 $notify_email = ConfigHelper::getConfig('sendinvoices.notify_email', '', true);
@@ -219,8 +220,8 @@ $smtp_auth = empty($smtp_auth) ? ConfigHelper::getConfig('mail.smtp_auth_type') 
 if (!empty($smtp_auth) && !preg_match('/^LOGIN|PLAIN|CRAM-MD5|NTLM$/i', $smtp_auth))
 	die("Fatal error: smtp_auth setting not supported! Can't continue, exiting." . PHP_EOL);
 
-$fakedate = (array_key_exists('fakedate', $options) ? $options['fakedate'] : NULL);
-$fakehour = (array_key_exists('fakedate', $options) ? $options['fakehour'] : NULL);
+$fakedate = isset($options['fakedate']) ? $options['fakedate'] : null;
+$fakehour = isset($options['fakehour']) ? $options['fakehour'] : null;
 
 $extrafile = (array_key_exists('extra-file', $options) ? $options['extra-file'] : NULL);
 if ($extrafile && !is_readable($extrafile))
@@ -235,7 +236,7 @@ function localtime2() {
 		return time();
 }
 
-if (!empty($fakehour))
+if (isset($fakehour))
 	$curr_h = intval($fakehour);
 else
 	$curr_h = intval(date('H', time()));
@@ -285,11 +286,12 @@ $query = "SELECT d.id, d.number, d.cdate, d.name, d.customerid, d.type AS doctyp
 			AND d.cdate >= $daystart AND d.cdate <= $dayend"
 			. (!empty($groupnames) ? $customergroups : "")
 		. " ORDER BY d.number" . (!empty($count_limit) ? " LIMIT $count_limit OFFSET $count_offset" : '');
-$docs = $DB->GetAll($query, array(CONTACT_INVOICES | CONTACT_DISABLED, CONTACT_INVOICES, DOC_INVOICE, DOC_CNOTE, DOC_DNOTE));
+$docs = $DB->GetAll($query, array(CONTACT_EMAIL | CONTACT_INVOICES | CONTACT_DISABLED,
+	CONTACT_EMAIL | CONTACT_INVOICES, DOC_INVOICE, DOC_CNOTE, DOC_DNOTE));
 
 if (!empty($docs))
 	$LMS->SendInvoices($docs, 'backend', compact('SMARTY', 'invoice_filetype', 'dnote_filetype' , 'invoice_filename', 'dnote_filename', 'debug_email',
-		'mail_body', 'mail_subject', 'currtime', 'sender_email', 'sender_name', 'extrafile',
+		'mail_body', 'mail_subject', 'mail_format', 'currtime', 'sender_email', 'sender_name', 'extrafile',
 		'dsn_email', 'reply_email', 'mdn_email', 'notify_email', 'quiet', 'test', 'add_message',
 		'smtp_options'));
 

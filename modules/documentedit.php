@@ -29,22 +29,24 @@ if(isset($_GET['action']) && $_GET['action'] == 'confirm')
 	if(!empty($_POST['marks']))
 	{
 	        foreach($_POST['marks'] as $id => $mark)
-			$DB->Execute('UPDATE documents SET closed=1 WHERE id=?
+			$DB->Execute('UPDATE documents SET sdate=?NOW?, cuserid=?, closed=1 WHERE id=?
 				AND EXISTS (SELECT 1 FROM docrights r WHERE r.userid = ?
 					AND r.doctype = documents.type AND (r.rights & 4) = 4)',
-				array($mark, $AUTH->id));
+				array($AUTH->id, $mark, $AUTH->id));
 	}
 	else
-		$DB->Execute('UPDATE documents SET closed=1 WHERE id=?
+		$DB->Execute('UPDATE documents SET sdate=?NOW?, cuserid=?, closed=1 WHERE id=?
 			AND EXISTS (SELECT 1 FROM docrights r WHERE r.userid = ?
 				AND r.doctype = documents.type AND (r.rights & 4) = 4)',
-			array($_GET['id'], $AUTH->id));
+			array($AUTH->id, $_GET['id'], $AUTH->id));
 
 	$SESSION->redirect('?'.$SESSION->get('backto'));
 }
 
+include(MODULES_DIR . DIRECTORY_SEPARATOR . 'document.inc.php');
+
 $document = $DB->GetRow('SELECT documents.id AS id, closed, type, number, template,
-	cdate, numberplanid, title, fromdate, todate, description, divisionid
+	cdate, sdate, cuserid, numberplanid, title, fromdate, todate, description, divisionid, documents.customerid
 	FROM documents
 	JOIN docrights r ON (r.doctype = documents.type)
 	LEFT JOIN documentcontents ON (documents.id = docid)
@@ -79,7 +81,11 @@ if(isset($_POST['document']))
 	{
 		if($document['numberplanid'] != $documentedit['numberplanid'])
 		{
-			$tmp = $LMS->GetNewDocumentNumber($documentedit['type'], $documentedit['numberplanid']);
+			$tmp = $LMS->GetNewDocumentNumber(array(
+				'doctype' => $documentedit['type'],
+				'planid' => $documentedit['numberplanid'],
+				'customerid' => $document['customerid'],
+			));
 			$documentedit['number'] = $tmp ? $tmp : 1;
 		}
 		else
@@ -89,7 +95,11 @@ if(isset($_POST['document']))
     		$error['number'] = trans('Document number must be an integer!');
 	elseif($document['number'] != $documentedit['number'] || $document['numberplanid'] != $documentedit['numberplanid'])
 	{
-		if($LMS->DocumentExists($documentedit['number'], $documentedit['type'], $documentedit['numberplanid']))
+		if($LMS->DocumentExists(array(
+				'number' => $documentedit['number'],
+				'doctype' => $documentedit['type'],
+				'planid' => $documentedit['numberplanid'],
+			)))
 			$error['number'] = trans('Document with specified number exists!');
 	}
 
@@ -165,14 +175,19 @@ if(isset($_POST['document']))
 	if (!$error) {
 		$DB->BeginTrans();
 
-		$fullnumber = docnumber($documentedit['number'],
-			$DB->GetOne('SELECT template FROM numberplans WHERE id = ?', array($documentedit['numberplanid'])),
-			$document['cdate']);
+		$fullnumber = docnumber(array(
+			'number' => $documentedit['number'],
+			'template' => $DB->GetOne('SELECT template FROM numberplans WHERE id = ?', array($documentedit['numberplanid'])),
+			'cdate' => $document['cdate'],
+			'customerid' => $document['customerid'],
+		));
 
-		$DB->Execute('UPDATE documents SET type=?, closed=?, number=?, numberplanid=?, fullnumber=?
+		$DB->Execute('UPDATE documents SET type=?, closed=?, sdate=?, cuserid=?, number=?, numberplanid=?, fullnumber=?
 				WHERE id=?',
 				array(	$documentedit['type'],
 					$documentedit['closed'],
+					$documentedit['closed'] ? ($document['closed'] ? $document['sdate'] : time()) : 0,
+					$documentedit['closed'] ? ($document['closed'] ? $document['cuserid'] : $AUTH->id) : 0,
 					$documentedit['number'],
 					$documentedit['numberplanid'],
 					$fullnumber,
@@ -245,20 +260,10 @@ if(!$rights || !$DB->GetOne('SELECT 1 FROM docrights
         die;
 }
 
-$allnumberplans = array();
-$numberplans = array();
-
-if($templist = $LMS->GetNumberPlans())
-        foreach($templist as $item)
-	        if($item['doctype']<0)
-			$allnumberplans[] = $item;
-
-if(isset($document['numberplanid']))
-{
-        foreach($allnumberplans as $plan)
-                if($plan['doctype'] == $document['numberplanid'])
-                        $numberplans[] = $plan;
-}
+$numberplans = GetDocumentNumberPlans($document['type'], $document['customerid']);
+if (empty($numberplans))
+	$numberplans = array();
+$SMARTY->assign('numberplans', $numberplans);
 
 /*
 if($dirs = getdir(DOC_DIR.'/templates', '^[a-z0-9_-]+$'))
@@ -276,12 +281,15 @@ if($dirs = getdir(DOC_DIR.'/templates', '^[a-z0-9_-]+$'))
 if($docengines) ksort($docengines);
 */
 
-$layout['pagetitle'] = trans('Edit Document: $a', docnumber($document['number'], $document['template'], $document['cdate']));
+$layout['pagetitle'] = trans('Edit Document: $a', docnumber(array(
+	'number' => $document['number'],
+	'template' => $document['template'],
+	'cdate' => $document['cdate'],
+	'customerid' => $document['customerid'],
+)));
 
 //$SMARTY->assign('docengines', $docengines);
-$SMARTY->assign('numberplans', $numberplans);
 $SMARTY->assign('docrights', $rights);
-$SMARTY->assign('allnumberplans', $allnumberplans);
 $SMARTY->assign('error', $error);
 $SMARTY->assign('document', $document);
 $SMARTY->display('document/documentedit.html');

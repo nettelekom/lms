@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2013 LMS Developers
+ *  (C) Copyright 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -174,6 +174,58 @@ define('ACCOUNT_MAIL', 2);
 define('ACCOUNT_WWW', 4);
 define('ACCOUNT_FTP', 8);
 define('ACCOUNT_SQL', 16);
+define('ACCOUNT_CLOUD', 32);
+
+$ACCOUNTTYPES = array(
+	ACCOUNT_SHELL => array(
+		'label' => trans('shell'),
+		'alias' => 'sh',
+		'accountlimittip' => trans('Enter limit of shell accounts'),
+		'accountquotatip' => trans('Enter quota limit of shell account'),
+		'accountlimitlabel' => trans('Limit of shell accounts:'),
+		'accountquotalabel' => trans('Quota limit of shell account:'),
+	),
+	ACCOUNT_MAIL => array(
+		'label' => trans('mail'),
+		'alias' => 'mail',
+		'accountlimittip' => trans('Enter limit of e-mail accounts'),
+		'accountquotatip' => trans('Enter quota limit of e-mail account'),
+		'accountlimitlabel' => trans('Limit of e-mail accounts:'),
+		'accountquotalabel' => trans('Quota limit of e-mail account:'),
+	),
+	ACCOUNT_WWW => array(
+		'label' => trans('www'),
+		'alias' => 'www',
+		'accountlimittip' => trans('Enter limit of www accounts'),
+		'accountquotatip' => trans('Enter quota limit of www account'),
+		'accountlimitlabel' => trans('Limit of www accounts:'),
+		'accountquotalabel' => trans('Quota limit of www account:'),
+	),
+	ACCOUNT_FTP => array(
+		'label' => trans('ftp'),
+		'alias' => 'ftp',
+		'accountlimittip' => trans('Enter limit of ftp accounts'),
+		'accountquotatip' => trans('Enter quota limit of ftp account'),
+		'accountlimitlabel' => trans('Limit of ftp accounts:'),
+		'accountquotalabel' => trans('Quota limit of ftp account:'),
+	),
+	ACCOUNT_SQL => array(
+		'label' => trans('sql'),
+		'alias' => 'sql',
+		'accountlimittip' => trans('Enter limit of sql accounts'),
+		'accountquotatip' => trans('Enter quota limit of sql account'),
+		'accountlimitlabel' => trans('Limit of sql accounts:'),
+		'accountquotalabel' => trans('Quota limit of sql account:'),
+	),
+	ACCOUNT_CLOUD => array(
+		'label' => trans('cloud'),
+		'alias' => 'cloud',
+		'accountlimittip' => trans('Enter limit of cloud accounts'),
+		'accountquotatip' => trans('Enter quota limit of cloud account'),
+		'accountlimitlabel' => trans('Limit of cloud accounts:'),
+		'accountquotalabel' => trans('Quota limit of cloud account:'),
+	),
+);
 
 // Document types
 define('DOC_INVOICE', 1);
@@ -189,6 +241,7 @@ define('DOC_ANNEX', -2);
 define('DOC_PROTOCOL', -3);
 define('DOC_ORDER', -4);
 define('DOC_SHEET', -5);
+define('DOC_BREACH', -6);
 define('DOC_OTHER', -128);
 define('DOC_BILLING',-10);
 define('DOC_PRICELIST', -11);
@@ -211,7 +264,7 @@ $DOCTYPES = array(
     DOC_PROTOCOL        =>      trans('protocol'),
     DOC_ORDER       =>  trans('order'),
     DOC_SHEET       =>  trans('customer sheet'), // karta klienta
-    -6  =>      trans('contract termination'),
+    DOC_BREACH      =>  trans('contract termination'),
     -7  =>      trans('payments book'), // ksiazeczka oplat
     -8  =>      trans('payment summons'), // wezwanie do zapłaty
     -9  =>      trans('payment pre-summons'), // przedsądowe wezw. do zapłaty
@@ -282,6 +335,15 @@ define('CALL_ANSWERED', 2);
 define('CALL_NO_ANSWER', 3);
 define('CALL_SERVER_FAILED', 4);
 
+// VoIP pool number types
+define('VOIP_POOL_NUMBER_MOBILE', 1);
+define('VOIP_POOL_NUMBER_FIXED' , 2);
+
+$VOIP_POOL_NUMBER_TYPES = array(
+    VOIP_POOL_NUMBER_MOBILE => trans("mobile"),
+    VOIP_POOL_NUMBER_FIXED  => trans("fixed")
+);
+
 // bit flags for VoIP call
 define('CALL_FLAG_ADMIN_RECORDING', 1);
 define('CALL_FLAG_CUSTOMER_RECORDING', 2);
@@ -322,6 +384,7 @@ define('CONTACT_IM_YAHOO', 1024);
 define('CONTACT_IM_SKYPE', 2048);
 define('CONTACT_IM_FACEBOOK', 4096);
 define('CONTACT_DISABLED', 16384);
+define('CONTACT_DOCUMENTS', 32768);
 
 $CONTACTTYPES = array(
     CONTACT_MOBILE          =>	trans('mobile'),
@@ -334,6 +397,7 @@ $CONTACTTYPES = array(
     CONTACT_IM_YAHOO        =>	trans('Yahoo'),
     CONTACT_IM_SKYPE        =>	trans('Skype'),
     CONTACT_IM_FACEBOOK     =>	trans('Facebook'),
+    CONTACT_DOCUMENTS		=>	trans('documents'),
 );
 
 define('DISCOUNT_PERCENTAGE', 1);
@@ -362,10 +426,14 @@ $DAYS = array(
 	DAY_SUNDAY	=> trans('Sun'),
 );
 
+define('LINKTYPE_WIRE'    , 0);
+define('LINKTYPE_WIRELESS', 1);
+define('LINKTYPE_FIBER'   , 2);
+
 $LINKTYPES = array(
-	0		=> trans('wire'),
-	1		=> trans('wireless'),
-	2		=> trans('fiber'),
+    LINKTYPE_WIRE     => trans('wire'),
+    LINKTYPE_WIRELESS => trans('wireless'),
+    LINKTYPE_FIBER    => trans('fiber'),
 );
 
 $LINKTECHNOLOGIES = array(
@@ -510,21 +578,27 @@ define('EVENT_NETWORK', 2);
 define('EVENT_SERVICE', 3);
 define('EVENT_INSTALLATION', 4);
 define('EVENT_MEETING', 5);
+define('EVENT_VACATION', 6);
+define('EVENT_DUTY', 7);
 
 $EVENTTYPES = array(
-	EVENT_SERVICE      => trans('service<!event>'),
+	EVENT_OTHER => trans('other'),
+	EVENT_NETWORK => trans('network'),
+	EVENT_SERVICE => trans('service<!event>'),
 	EVENT_INSTALLATION => trans('installation'),
-	EVENT_NETWORK      => trans('network'),
-	EVENT_MEETING      => trans('meeting'),
-	EVENT_OTHER        => trans('other')
+	EVENT_MEETING => trans('meeting'),
+	EVENT_VACATION => trans('vacation'),
+	EVENT_DUTY => trans('duty')
 );
 
 $EVENTSTYLES = array(
-	EVENT_SERVICE		=> 'background-color: red; color: white;',
-	EVENT_INSTALLATION	=> 'background-color: green; color: white;',
-	EVENT_NETWORK		=> 'background-color: blue; color: white;',
-	EVENT_MEETING		=> 'background-color: yellow; color: black;',
-	EVENT_OTHER			=> 'background-color: gray; color: white;'
+	EVENT_OTHER => 'background-color: gray; color: white;',
+	EVENT_NETWORK => 'background-color: blue; color: white;',
+	EVENT_SERVICE => 'background-color: red; color: white;',
+	EVENT_INSTALLATION => 'background-color: green; color: white;',
+	EVENT_MEETING => 'background-color: yellow; color: black;',
+	EVENT_VACATION => 'background-color: white; color: black;',
+	EVENT_DUTY => 'background-color: brown; color: white;'
 );
 
 define('SESSIONTYPE_PPPOE', 1);
@@ -532,6 +606,7 @@ define('SESSIONTYPE_DHCP', 2);
 define('SESSIONTYPE_EAP', 4);
 define('SESSIONTYPE_WIFI', 8);
 define('SESSIONTYPE_VOIP', 16);
+define('SESSIONTYPE_STB', 32);
 
 $SESSIONTYPES = array(
 	SESSIONTYPE_PPPOE => array(
@@ -554,19 +629,23 @@ $SESSIONTYPES = array(
 		'label' => trans('VoIP Gateway'),
 		'tip' => 'Enable/disable VoIP Gateway access'
 	),
+	SESSIONTYPE_STB => array(
+		'label' => trans('Set-top box'),
+		'tip' => 'Enable/disable set-top box access'
+	),
 );
 
 if(isset($SMARTY))
 {
 	$SMARTY->assign('_CTYPES',$CTYPES);
 	$SMARTY->assign('_CSTATUSES', $CSTATUSES);
+	$SMARTY->assign('_ACCOUNTTYPES', $ACCOUNTTYPES);
 	$SMARTY->assign('_DOCTYPES', $DOCTYPES);
 	$SMARTY->assign('_PERIODS', $PERIODS);
 	$SMARTY->assign('_GUARANTEEPERIODS', $GUARANTEEPERIODS);
 	$SMARTY->assign('_NUM_PERIODS', $NUM_PERIODS);
 	$SMARTY->assign('_RT_STATES', $RT_STATES);
 	$SMARTY->assign('_CONFIG_TYPES', $CONFIG_TYPES);
-	$SMARTY->assign('_MESSENGERS', $MESSENGERS);
 	$SMARTY->assign('_TARIFFTYPES', $TARIFFTYPES);
 	$SMARTY->assign('_PAYTYPES', $PAYTYPES);
 	$SMARTY->assign('_CONTACTTYPES', $CONTACTTYPES);
@@ -590,6 +669,13 @@ define('DEFAULT_NUMBER_TEMPLATE', '%N/LMS/%Y');
 
 // Investment project types
 define('INV_PROJECT_REGULAR', 0);
-define('INV_PROJECT_SYSTEM', 1)
+define('INV_PROJECT_SYSTEM', 1);
+
+// Address types
+define('POSTAL_ADDRESS'          , 0);
+define('BILLING_ADDRESS'         , 1);
+define('LOCATION_ADDRESS'        , 2);
+define('DEFAULT_LOCATION_ADDRESS', 3);
+define('RECIPIENT_ADDRESS'       , 4);
 
 ?>

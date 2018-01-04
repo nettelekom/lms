@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2013 LMS Developers
+ *  (C) Copyright 2001-2016 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -35,6 +35,16 @@ function set_taxes($taxid)
 
 $from = $_POST['from'];
 $to = $_POST['to'];
+
+switch ( intval($_POST['customer_type']) ) {
+	case CTYPES_PRIVATE:
+	case CTYPES_COMPANY:
+		$ctype = $_POST['customer_type'];
+	break;
+
+	default:
+		$ctype = -1; //all
+}
 
 // date format 'yyyy/mm/dd'
 if($from) {
@@ -100,16 +110,23 @@ if(!empty($_POST['division']))
 }
 
 // Sorting
-switch ($_POST['datetype']) {
+switch ($_POST['sorttype']) {
 	case 'sdate':
-		$sortcol = 'COALESCE(d.sdate, d.cdate)';
+		$sortcol = 'CEIL(COALESCE(d.sdate, d.cdate) / 86400)';
+		$wherecol = 'COALESCE(d.sdate, d.cdate)';
 		break;
 	case 'pdate':
-		$sortcol = '(d.cdate + (d.paytime * 86400))';
+		$sortcol = 'CEIL((d.cdate + (d.paytime * 86400)) / 86400)';
+		$wherecol = '(d.cdate + (d.paytime * 86400))';
+		break;
+	case 'number':
+		$sortcol = 'd.number';
+		$wherecol = 'd.cdate';
 		break;
 	case 'cdate':
 	default:
-		$sortcol = 'd.cdate';
+		$sortcol = 'CEIL(d.cdate / 86400)';
+		$wherecol = 'd.cdate';
 }
 
 if (in_array($_POST['doctype'], array('invoices', 'notes')))
@@ -142,16 +159,18 @@ $items = $DB->GetAll('SELECT c.docid, c.itemid,' . ($doctype == 'invoices' ? ' c
 	    FROM documents d
 		' . ($doctype == 'invoices' ? 'LEFT JOIN invoicecontents c ON c.docid = d.id'
 			: 'LEFT JOIN debitnotecontents c ON c.docid = d.id') . '
-	    LEFT JOIN numberplans n ON d.numberplanid = n.id
-	    WHERE cancelled = 0 AND (d.type = ? OR d.type = ?) AND ('.$sortcol.' BETWEEN ? AND ?) '
+	    LEFT JOIN numberplans n ON d.numberplanid = n.id' .
+	    ( $ctype != -1 ? ' LEFT JOIN customers cu ON d.customerid = cu.id ' : '' )
+	    . ' WHERE cancelled = 0 AND (d.type = ? OR d.type = ?) AND (' . $wherecol . ' BETWEEN ? AND ?) '
 	    .(isset($numberplans) ? 'AND d.numberplanid IN (' . $numberplans . ')' : '')
 	    .(isset($divwhere) ? $divwhere : '')
 	    .(isset($groupwhere) ? $groupwhere : '')
+		.( $ctype != -1 ? ' AND cu.type = ' . $ctype : '')
 	    .' AND NOT EXISTS (
                 	    SELECT 1 FROM customerassignments a
 			    JOIN excludedgroups e ON (a.customergroupid = e.customergroupid)
 			    WHERE e.userid = lms_current_user() AND a.customerid = d.customerid)
-	    ORDER BY CEIL('.$sortcol.'/86400), d.id', $args);
+	    ORDER BY ' . $sortcol . ', d.id', $args);
 
 if ($items) {
 	foreach ($items as $row) {
@@ -163,7 +182,12 @@ if ($items) {
 		$invoicelist[$idx]['custname'] = $row['name'];
 		$invoicelist[$idx]['custaddress'] = $row['zip'].' '.$row['city'].', '.$row['address'];
 		$invoicelist[$idx]['ten'] = ($row['ten'] ? trans('TEN').' '.$row['ten'] : ($row['ssn'] ? trans('SSN').' '.$row['ssn'] : ''));
-		$invoicelist[$idx]['number'] = docnumber($row['number'], $row['template'], $row['cdate']);
+		$invoicelist[$idx]['number'] = docnumber(array(
+			'number' => $row['number'],
+			'template' => $row['template'],
+			'cdate' => $row['cdate'],
+			'customerid' => $row['customerid'],
+		));
 		$invoicelist[$idx]['cdate'] = $row['cdate'];
 		$invoicelist[$idx]['sdate'] = $row['sdate'];
 		$invoicelist[$idx]['pdate'] = $row['cdate'] + ($row['paytime'] * 86400);

@@ -27,8 +27,10 @@
 function select_customer($id)
 {
     $JSResponse = new xajaxResponse();
-    $nodes_location = LMSDB::getInstance()->GetAll('SELECT n.id, n.name, location FROM vnodes n WHERE ownerid = ? ORDER BY n.name ASC', array($id));
-    $JSResponse->call('update_nodes_location', (array)$nodes_location);
+	if (!empty($id)) {
+		$nodes_location = LMSDB::getInstance()->GetAll('SELECT n.id, n.name, location FROM vnodes n WHERE ownerid = ? ORDER BY n.name ASC', array($id));
+		$JSResponse->call('update_nodes_location', (array)$nodes_location);
+	}
     return $JSResponse;
 }
 
@@ -57,6 +59,11 @@ if(isset($_GET['action']) && $_GET['action'] == 'open')
 	$DB->Execute('UPDATE events SET closed = 0, closeduserid = 0, closeddate = 0 WHERE id = ?',array($_GET['id']));
 	$SESSION->redirect('?'.$SESSION->get('backto'));
 }
+elseif(isset($_GET['action']) && $_GET['action'] == 'close' && isset($_GET['ticketid']) )
+{
+	$DB->Execute('UPDATE events SET closed = 1, closeduserid = ?, closeddate = ?NOW?  WHERE ticketid = ?',array($AUTH->id, $_GET['ticketid']));
+	$SESSION->redirect('?'.$SESSION->get('backto'));
+}
 elseif(isset($_GET['action']) && $_GET['action'] == 'close')
 {
 	$DB->Execute('UPDATE events SET closed = 1, closeduserid = ?, closeddate = ?NOW?  WHERE id = ?',array($AUTH->id, $_GET['id']));
@@ -64,7 +71,7 @@ elseif(isset($_GET['action']) && $_GET['action'] == 'close')
 }
 
 $event = $DB->GetRow('SELECT events.id AS id, title, description, note, events.type,
-			date, begintime, enddate, endtime, customerid, private, closed, ' 
+			date, begintime, enddate, endtime, customerid, private, closed, '
 			.$DB->Concat('UPPER(customers.lastname)',"' '",'customers.name').' AS customername, nodeid
 			FROM events LEFT JOIN customers ON (customers.id = customerid)
 			WHERE events.id = ?', array($_GET['id']));
@@ -156,8 +163,8 @@ $layout['pagetitle'] = trans('Event Edit');
 $SESSION->save('backto', $_SERVER['QUERY_STRING']);
 
 $usergroups = $DB->GetAll('SELECT id, name FROM usergroups');
-$userlist = $DB->GetAll('SELECT id, name FROM users
-	WHERE deleted = 0 AND users.access = 1 ORDER BY login ASC');
+$userlist = $DB->GetAll('SELECT id, name FROM vusers
+	WHERE deleted = 0 AND vusers.access = 1 ORDER BY lastname ASC');
 
 if (empty($nodes_location))
 	$nodes_location = $DB->GetAll('SELECT n.id, n.name, location FROM vnodes n WHERE ownerid = ? ORDER BY name ASC', array($event['customerid']));
@@ -173,7 +180,7 @@ $SMARTY->assign('userlist', $userlist);
 $SMARTY->assign('usergroups', $usergroups);
 $SMARTY->assign('error', $error);
 $SMARTY->assign('event', $event);
-$SMARTY->assign('hours', 
+$SMARTY->assign('hours',
 		array(0,30,100,130,200,230,300,330,400,430,500,530,
 		600,630,700,730,800,830,900,930,1000,1030,1100,1130,
 		1200,1230,1300,1330,1400,1430,1500,1530,1600,1630,1700,1730,

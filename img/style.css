@@ -595,6 +595,21 @@ div.lms-ui-multiselectlayer ul span {
     color: black;
   }
 }
+@media print {
+  .ui-tooltip,
+  .no-print,
+  .no-print * {
+    display: none !important;
+  }
+}
+.lms-ui-button {
+  color: #800000;
+}
+.lms-ui-button:hover {
+  color: #336600;
+  cursor: pointer;
+  text-decoration: underline;
+}
 .lms-ui-multi-check-all {
   -webkit-user-select: none;
   -moz-user-select: none;
@@ -743,6 +758,20 @@ td.multiselect select {
 .lms-ui-selectable-draggable-active.lms-ui-selectable-draggable-hover {
   box-shadow: 0px 0px 25px 0px rgba(0, 0, 0, 0.75);
 }
+.lms-inline-list {
+  display: inline;
+  list-style: none;
+  padding: 0;
+}
+.lms-inline-list li {
+  display: inline;
+}
+.lms-inline-list li:after {
+  content: ', ';
+}
+.lms-inline-list li:last-child:after {
+  content: '';
+}
 .nobr {
   white-space: nowrap;
 }
@@ -757,6 +786,9 @@ td.multiselect select {
 }
 .text-center {
   text-align: center;
+}
+.font-normal {
+  font-weight: normal !important;
 }
 .lighter {
   font-weight: lighter;
@@ -827,8 +859,14 @@ td.multiselect select {
 .ui-button,
 html .ui-button.ui-state-disabled:hover,
 html .ui-button.ui-state-disabled:active {
+  padding: 0em 1em;
   border: 1px solid #615847;
   background-color: #DFD5BD;
+}
+.ui-state-default,
+.ui-widget-content .ui-state-default {
+  padding: 0;
+  text-align: center;
 }
 .ui-state-hover,
 .ui-widget-content .ui-state-hover,
@@ -843,6 +881,12 @@ html .ui-button.ui-state-disabled:active {
   border: 1px solid #615847;
   outline: none;
   color: black;
+}
+.ui-selectmenu-text {
+  padding-top: 2px;
+}
+.ui-selectmenu-button.ui-button {
+  width: 20em;
 }
 .ui-state-highlight,
 .ui-widget-content .ui-state-highlight,
@@ -893,6 +937,10 @@ html .ui-button.ui-state-disabled:active {
 }
 .ui-datepicker-calendar {
   background-color: #CEBD9B;
+}
+.ui-datepicker .ui-datepicker-buttonpane {
+  border-top: 1px solid black;
+  margin-top: 0;
 }
 .ui-tooltip.voipaccountinfo,
 .ui-tooltip.invoiceinfo,
@@ -1065,6 +1113,39 @@ table.dataTable thead tr:last-child th {
 .lmsbox .dataTables_wrapper .top {
   border: 0;
 }
+.location-box-expandable {
+  padding-top: 2px;
+}
+.address-full {
+  display: inline-block;
+  height: 13px;
+}
+.address-full:hover {
+  cursor: pointer;
+}
+.lms-ui-address-select {
+  padding-left: 4px;
+  padding-right: 4px;
+  border: 1px solid #a9a9a9 !important;
+  background-color: #ebe4d6 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  color: black !important;
+}
+.lms-ui-address-select:hover {
+  cursor: default;
+}
+.lms-ui-address-select .ui-selectmenu-icon.ui-icon {
+  background: url("1.png") !important;
+}
+.ui-menu-item {
+  background-color: #ebe4d6 !important;
+}
+.ui-menu-item .ui-state-active,
+.ui-menu-item .ui-state-active:hover {
+  color: white;
+  background-color: #4a90d9 !important;
+}
 .lms-ui-cursor-pointer:hover {
   cursor: pointer;
 }
@@ -1232,9 +1313,11 @@ img.lms-ui-quick-search {
   user-select: none;
 }
 input.lms-ui-quick-search {
-  display: none;
+  width: 20px;
+  display: inline-block;
 }
 input.lms-ui-quick-search.lms-ui-quick-search-active {
+  width: 100px;
   display: inline-block;
 }
 .lms-ui-icon-administration {

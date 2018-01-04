@@ -39,7 +39,7 @@
 				<td width="1%" valign="top" nowrap>
 					{if $receipt.type == "out"}{trans("To whom:")}{else}{trans("From who:")}{/if}
 				</td>
-				<td width="99%" class="sdr"><b>{$receipt.name}<br>{$receipt.zip} {$receipt.city} {$receipt.address}</b></td>
+				<td width="99%" class="sdr"><b>{$receipt.name}<br>{$receipt.zip} {$receipt.city}, {$receipt.address}</b></td>
 			    </tr>
 			</table>
 		</td>
@@ -82,7 +82,7 @@
 					{if ConfigHelper::checkConfig('phpui.to_words_short_version')}
 						{$receipt.total|string_format:"%d"|to_words:0:"":1} {$receipt.totalg|string_format:"%02d"}/100
 					{else}
-						{t a=$receipt.total|string_format:"%d"|to_words b=$receipt.totalg|to_words}$a dollars $b cents{/t}
+						{moneyf_in_words($receipt.total)}
 					{/if}</b>
 				</td>
 			    </tr>
@@ -224,7 +224,7 @@
 					{if ConfigHelper::checkConfig('phpui.to_words_short_version')}
 						{$receipt.total|string_format:"%d"|to_words:0:"":1} {$receipt.totalg|string_format:"%02d"}/100
 					{else}
-						{t a=$receipt.total|string_format:"%d"|to_words b=$receipt.totalg|to_words}$a dollars $b cents{/t}
+						{moneyf_in_words($receipt.total)}
 					{/if}</b>
 				</td>
 			    </tr>

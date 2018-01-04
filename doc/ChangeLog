@@ -1,6 +1,137 @@
 $Id$
 
-version ?.??.?? (????-??-??):
+version 1.11.22 (2017-06-08):
+
+  - userpanel enhancement: show confirmed documents only checkbox decides if confirmed
+    documents are only shown for customer [chilan]
+  - documentview enhancement: allow to view many pdf documents as single pdf file [chilan]
+  - userpanel enhancement: module order can be changed from LMS userpanel configuration
+    using drag&drop (fixes LMS+ #102) [chilan]
+  - improvement - don't show boxes for contact types when no contact
+    type is assigned to customer [chilan]
+  - enhancement: phpui.disable_active_links_in_nodeinfo controls if some controls
+    are active ui elements [chilan]
+  - performance improvement: phpui.datatables_max_records limits datatables initialisation
+    to tables with specified number of records (default: 300) [chilan]
+  - improvement: click on tariff tag should add tag to filter and click on right side
+    should move to tariff tag info (should fix LMS+ #101) [chilan]
+  - added support for attribution network device for customer [kosa/chilan]
+  - enhancement: added support for pro forma invoices (should resolve LMS+ #120) [chilan]
+  - enhancement: support of convertion pro forma invoice to invoice [chilan]
+  - improvement: splited user name to separated first name and last name components [kyob]
+  - enhancement: support of customer number plans with special symbol %C [chilan]
+  - enhancement: allow to select first free ip address automatically in node forms
+    (phpui.first_reserved_addresses controls how many first addresses are omitted
+    for selected network) [chilan]
+  - added support for assignment tariffs to network device hosts [kosa/chilan]
+  - improvement: if ip address is not empty go to the page in ip address selection
+    window where this non-empty ip address is visible [chilan]
+  - added support for set type of voip pool numbers [kosa/chilan]
+  - improvement: allow to change number and number plan for edited invoices [chilan]
+  - improvement: phpui.helpdesk_author_notify configuration variable controls
+    if new helpdesk ticket/message/note notifications are sent to author [chilan]
+  - improvement: allow to search for customers which are not assigned to any
+    customer groups [chilan]
+  - bugfix: taxes were inproperly displayed on invoice for both zero tax and tax free
+    values were present at the same time [chilan]
+  - enhancement: added node session support for ip addresses assigned to network
+    devices [chilan]
+  - enhancement: allow to automatically get first free address for network device
+    ip addresses [chilan]
+  - enhancement: allow to specify indefinite cutoff stop dates [chilan]
+  - enhancement: JPK FA (invoices) support added [chilan]
+  - enhancement: allow to define teryt addresses and tax office codes for divisions [chilan]
+  - improvement: JPK FA (invoices) report uses recently added division teryt location
+    and division tax office assigned [chilan]
+  - improvement: allow to print web layout without left menu bar, top autosuggest fields
+    and toolbar [chilan]
+  - enhancement: show document creator on document lists [chilan]
+  - enhancement: added support for confirmation user storage in documents [chilan]
+  - enhancement: allow to select which helpdesk ticket details are printed [chilan]
+  - enhancement: added document number sort cryterion to invoice report [chilan]
+  - added script to load and bind buildings with teryt localizations [kosa/chilan]
+  - improvement: switched to new multi attachment code for new mail messages [chilan]
+  - improvement: when we try to send messages to more than 50 customers at once, confirmation
+    dialog is displayed [chilan]
+  - enhancement: cash source: added suport for main bank account definition [chilan]
+  - enhancement: lms-notify.php: all actions are logged into transaction log [chilan]
+  - improvement: voip.cdr_billing_record_format configuration variable describes
+    format of billing record [chilan]
+  - improvement: allow to print invoices manually issued [chilan]
+  - enhacement: added documents flag to email and phone customer contacts which allows
+    to decide if those contacts should be printed on documents [chilan]
+  - enhancement: added support for effective dates of tariffs and promotions - only effective
+    ones are displayed by default [chilan]
+  - enhancement: added rbe info fields to divisions and rbe name for customers [chilan]
+  - enhancement: allow filter document list by creator/authorising and all date types
+    for periods [chilan]
+  - moved addresses from nodes, netdevices, customers, netnodes, voipaccounts and divisions
+    to one table [kosa/chilan]
+  - removed possibility for setting up custom address for nodes and voipaccounts [kosa/chilan]
+  - added possibility for create many addresses for each customer [kosa/chilan]
+  - improvement: added new event types - vacation and duty [chilan]
+  - enhancement: number plan list is updated automatically after customer or document
+    type selection change [chilan]
+  - improvement: sendinvoices.mail_format=text|html ('text' by default) allows
+    to select mail format between html and text [chilan]
+  - improvement: for new receipt show only cash registries to which cashier have
+    read/write access privileges (we also take selected customer division into account) [chilan]
+  - improvement: switched to pear/mail maintained by composer [chilan]
+  - improvement: invoices: dynamic adjustment of number plan list according to
+    selected customer division [chilan]
+  - improvement: show db backup sizes also in human friendly units [chilan]
+  - improvement: switched to xajax 0.6 beta fork from https://github.com/feuzeu/xajax which
+    generates much less warnings in PHP 7 (if any at all) [chilan]
+  - enhancement: added support for JPK-VAT exports [chilan]
+  - rewrite lms-teryt to PHP [kosa/chilan]
+  - merged lms-teryt and lms-teryt-buildings scripts [kosa/chilan]
+  - added posibility to set recipient for invoices [kosa/chilan]
+  - enhancement: added backend script which creates new helpdesk tickets when new sms
+    messages has been received by smstools [chilan]
+  - enhancement: allow to notify customer via sms for helpdesk ticket messages which were
+    created from customer sms earlier [chilan]
+  - improvement: phpui.helpdesk_customer_notify determines if customer notify checkbox
+    should be checked by default (for messages created from customer smses) [chilan]
+  - improvement: hosts are automatically reloaded after one click if there is only
+    one host in database [chilan]
+  - enhancement: allow to assign events with helpdesk tickets [interduo]
+  - improvement: phpui.default_event_ticket_assignment controls if event ticket
+    assignment is checked by default [chilan]
+  - clarification: customer pin on html and tcpdf invoices are printed based on
+    the same common rules [chilan]
+  - improvement: lms-gps.php script allows to automatically determine netnodes gps
+    coordinates [chilan]
+  - improvement: lms-gps.php script can search for more exact locations if resource
+    address is teritied [chilan]
+  - enhancement: lms-gps.php allows to use two different sources of gps coordinates:
+    google and siis [chilan]
+  - enhancement: restore old-style quick search panel behavior [chilan]
+  - enhancement: added potential ranges for UKE report [kosa/chilan]
+  - improvement: show unique customer node locations in helpdesk notification footer [chilan]
+  - improvement: allow to select division for liability report [chilan]
+  - improvement: added select by customer type for sale registry [kosa]
+  - enhancement: auto gps coordinates detection in UI uses territory units if they are
+    defined [chilan]
+  - improvement: phpui.gps_coordinate_providers specifies which gps providers are used
+    (google,siis by default) [chilan]
+  - improvement: added support for polish mazovia encoding for cash import files [chilan]
+  - improvement: added support of References, In-Reply-To and Message-ID headers
+    for phpmailer mail backend [chilan]
+  - improvement: complete rewrite of lms-rtparser script to php [chilan]
+  - bugfix: money quotes printed in words use system locales instead ui locales [chilan]
+  - enhancement: added network usage module for print list of used IP addresses [kosa/chilan]
+  - enhancement: added cloud account type for hosting and refactored account code [chilan]
+  - improvement: allow to decide if customer notifications are sent after new ticket
+    / new message creation [chilan]
+  - improvement: if name of requestor was not specified for new ticket, we set it to
+    current logged user name [chilan]
+  - enhancement: added post office property for addresses [chilan]
+  - improvement: allow to select invoices between enabled, disabled and all as customer
+    agreement for an electronic invoice [chilan]
+  - improvement: phpui.capitalize_customer_names configuration variable settings decides
+    if customer last names are automatically capitalized ('true' by default) [chilan]
+  - improvement: if gps coordinates determined by google api are not precise we show
+    javascript popup which allows user to decide if they should stored beside of this [chilan]
 
 version 1.11.21 (2016-10-14):
 

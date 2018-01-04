@@ -29,12 +29,20 @@
     }
 </STYLE>
 
-{function restrictions}
+{function bitrate_restrictions}
     {if $day}{$day} kbit/s{else}{trans("no limits")}{/if}
 
     ({trans("night:")}
 
-    {if $val_night}{$val_night|default:0} kbit/s{else}{trans("not defined")}{/if})
+    {if $night}{$night|default:0} kbit/s{else}{trans("not defined")}{/if})
+{/function}
+
+{function restrictions}
+    {if $day}{$day}{else}{trans("no limits")}{/if}
+
+    ({trans("night:")}
+
+    {if $night}{$night|default:0}{else}{trans("not defined")}{/if})
 {/function}
 
 {function user_restrictions}
@@ -91,6 +99,21 @@
                             </TR>
                             {/if}
 
+							{if $tariff.datefrom || $tariff.dateto}
+							<TR>
+								<TD><img src="img/calendar.gif" alt=""></td>
+								<td>{trans("Period:")}</td>
+								<td>
+									{if $tariff.datefrom}
+									{trans("from:")} {$tariff.datefrom|date_format:"%Y/%m/%d"}
+									{/if}
+									{if $tariff.dateto}
+									{trans("to:")} {$tariff.dateto|date_format:"%Y/%m/%d"}
+									{/if}
+								</td>
+							</TR>
+							{/if}
+
                             {if !empty($tariff.prodid)}
                             <TR>
                                 <TD><IMG SRC="img/class.gif" ALT=""></TD>
@@ -142,22 +165,22 @@
                             <TR>
                                 <TD><IMG SRC="img/uprate.gif" ALT=""></TD>
                                 <TD>{trans("Upload rate:")}</TD>
-                                <TD>{restrictions day=$tariff.uprate night=$tariff.uprate_n}</TD>
+                                <TD>{bitrate_restrictions day=$tariff.uprate night=$tariff.uprate_n}</TD>
                             </TR>
                             <TR>
                                 <TD></TD>
                                 <TD>{trans("Upload ceil:")}</TD>
-                                <TD>{restrictions day=$tariff.upceil night=$tariff.upceil_n}</TD>
+                                <TD>{bitrate_restrictions day=$tariff.upceil night=$tariff.upceil_n}</TD>
                             </TR>
                             <TR>
                                 <TD><IMG SRC="img/downrate.gif" ALT=""></TD>
                                 <TD>{trans("Download rate:")}</TD>
-                                <TD>{restrictions day=$tariff.downrate night=$tariff.downrate_n}</TD>
+                                <TD>{bitrate_restrictions day=$tariff.downrate night=$tariff.downrate_n}</TD>
                             </TR>
                             <TR>
                                 <TD></TD>
                                 <TD>{trans("Download ceil:")}</TD>
-                                <TD>{restrictions day=$tariff.downceil night=$tariff.downceil_n}</TD>
+                                <TD>{bitrate_restrictions day=$tariff.downceil night=$tariff.downceil_n}</TD>
                             </TR>
                             <TR>
                                 <TD><IMG SRC="img/options.gif" ALT=""></TD>
@@ -196,48 +219,22 @@
                 </TR>
                 <TR>
                     <TD>{trans("Limit of account aliases:")}</TD>
-                    <TD>{user_restrictions limit=$tariff.alias}</TD>
+                    <TD>{user_restrictions limit=$tariff.alias_limit}</TD>
                 </TR>
+                {foreach $_ACCOUNTTYPES as $typeidx => $type}
                 <TR>
-                    <TD>{trans("Limit of e-mail accounts:")}</TD>
-                    <TD>{user_restrictions limit=$tariff.mail_limit}</TD>
+                    <TD>{$type.accountlimitlabel}</TD>
+                    {$alias=$type.alias|cat:"_limit"}
+                    <TD>{user_restrictions limit=$tariff[$alias]}</TD>
                 </TR>
+                {/foreach}
+                {foreach $_ACCOUNTTYPES as $typeidx => $type}
                 <TR>
-                    <TD>{trans("Limit of shell accounts:")}</TD>
-                    <TD>{user_restrictions limit=$tariff.sh_limit}</TD>
+                    <TD>{$type.accountquotalabel}</TD>
+                    {$alias="quota_"|cat:$type.alias|cat:"_limit"}
+                    <TD>{user_restrictions limit=$tariff[$alias]}</TD>
                 </TR>
-                <TR>
-                    <TD>{trans("Limit of www accounts:")}</TD>
-                    <TD>{user_restrictions limit=$tariff.www_limit}</TD>
-                </TR>
-                <TR>
-                    <TD>{trans("Limit of ftp accounts:")}</TD>
-                    <TD>{user_restrictions limit=$tariff.ftp_limit}</TD>
-                </TR>
-                <TR>
-                    <TD>{trans("Limit of sql accounts:")}</TD>
-                    <TD>{user_restrictions limit=$tariff.sql_limit}</TD>
-                </TR>
-                <TR>
-                    <TD>{trans("Quota limit of e-mail account:")}</TD>
-                    <TD>{user_restrictions limit=$tariff.mail_limit}</TD>
-                </TR>
-                <TR>
-                    <TD>{trans("Quota limit of shell account:")}</TD>
-                    <TD>{user_restrictions limit=$tariff.sh_limit}</TD>
-                </TR>
-                <TR>
-                    <TD>{trans("Quota limit of www account:")}</TD>
-                    <TD>{user_restrictions limit=$tariff.www_limit}</TD>
-                </TR>
-                <TR>
-                    <TD>{trans("Quota limit of ftp account:")}</TD>
-                    <TD>{user_restrictions limit=$tariff.ftp_limit}</TD>
-                </TR>
-                <TR>
-                    <TD>{trans("Quota limit of sql account:")}</TD>
-                    <TD>{user_restrictions limit=$tariff.sql_limit}</TD>
-                </TR>
+                {/foreach}
             </TABLE>
         </TD>
     </TR>
@@ -291,7 +288,7 @@
 
     <TR>
         <TD WIDTH="100%" COLSPAN="2">
-            <TABLE CLASS="lmsbox-inner">
+            <TABLE CLASS="lmsbox-innerbox">
                 <THEAD>
                 <TR>
                     <TD CLASS="bold">{trans("Customers in Subscription:")}</TD>

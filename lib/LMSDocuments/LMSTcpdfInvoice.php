@@ -477,7 +477,12 @@ class LMSTcpdfInvoice extends LMSInvoice {
 			/* title */
 			$this->backend->Text(7, 249, trans('Payment for invoice No. $a', NULL));
 			$this->backend->SetFont('arial', 'B', 10);
-			$this->backend->Text(7, 253, docnumber($this->data['number'], $this->data['template'], $this->data['cdate']));
+			$this->backend->Text(7, 253, docnumber(array(
+				'number' => $this->data['number'],
+				'template' => $this->data['template'],
+				'cdate' => $this->data['cdate'],
+				'customerid' => $this->data['customerid'],
+			)));
 
 			$value = $this->data['value'];
 		}
@@ -511,7 +516,7 @@ class LMSTcpdfInvoice extends LMSInvoice {
 		else
 			$value = $this->data['value'];
 		$this->backend->Text(142, 224, moneyf($value));
-		$this->backend->Text(67, 233, trans('$a dollars $b cents', to_words(floor($value)), to_words(round(($value - floor($value)) * 100))));
+		$this->backend->Text(67, 233, moneyf_in_words($value));
 
 		/* customer name */
 		$this->backend->SetFont('arial', '', 9);
@@ -523,7 +528,12 @@ class LMSTcpdfInvoice extends LMSInvoice {
 		$this->backend->Text(67, 252.5, $this->data['address'] . ', ' . $this->data['zip'] . ' ' . $this->data['city']);
 
 		/* barcode */
-		$barcode = docnumber($this->data['number'], $this->data['template'], $this->data['cdate']);
+		$barcode = docnumber(array(
+			'number' => $this->data['number'],
+			'template' => $this->data['template'],
+			'cdate' => $this->data['cdate'],
+			'customerid' => $this->data['customerid'],
+		));
 		if (!empty($barcode)) {
 			$style = array(
 				'position' => 'L',
@@ -574,16 +584,28 @@ class LMSTcpdfInvoice extends LMSInvoice {
 	protected function invoice_title() {
 		$this->backend->SetY(30);
 		$this->backend->SetFont('arial', 'B', 16);
-		$docnumber = docnumber($this->data['number'], $this->data['template'], $this->data['cdate']);
+		$docnumber = docnumber(array(
+			'number' => $this->data['number'],
+			'template' => $this->data['template'],
+			'cdate' => $this->data['cdate'],
+			'customerid' => $this->data['customerid'],
+		));
 		if (isset($this->data['invoice']))
 			$title = trans('Credit Note No. $a', $docnumber);
-		else
+		elseif ($this->data['doctype'] == DOC_INVOICE)
 			$title = trans('Invoice No. $a', $docnumber);
+		else
+			$title = trans('Pro Forma Invoice No. $a', $docnumber);
 		$this->backend->Write(0, $title, '', 0, 'C', true, 0, false, false, 0);
 
 		if (isset($this->data['invoice'])) {
 			$this->backend->SetFont('arial', 'B', 12);
-			$docnumber = docnumber($this->data['invoice']['number'], $this->data['invoice']['template'], $this->data['invoice']['cdate']);
+			$docnumber = docnumber(array(
+				'number' => $this->data['invoice']['number'],
+				'template' => $this->data['invoice']['template'],
+				'cdate' => $this->data['invoice']['cdate'],
+				'customerid' => $this->data['customerid'],
+			));
 			$title = trans('for Invoice No. $a', $docnumber);
 			$this->backend->Write(0, $title, '', 0, 'C', true, 0, false, false, 0);
 		}
@@ -636,12 +658,15 @@ class LMSTcpdfInvoice extends LMSInvoice {
 
 		$postbox = '';
 		if ($this->data['post_name'] || $this->data['post_address']) {
-			if ($this->data['post_name'])
-				$postbox .= $this->data['post_name'] . '<br>';
-			else
-				$postbox .= $this->data['name'] . '<br>';
-			$postbox .= $this->data['post_address'] . '<br>';
-			$postbox .= $this->data['post_zip'] . ' ' . $this->data['post_city'] . '<br>';
+			$lines = document_address(array(
+				'name' => $this->data['post_name'] ? $this->data['post_name'] : $this->data['name'],
+				'address' => $this->data['post_address'],
+				'street' => $this->data['post_street'],
+				'zip' => $this->data['post_zip'],
+				'postoffice' => $this->data['post_postoffice'],
+				'city' => $this->data['post_city'],
+			));
+			$postbox .= implode('<br>', $lines);
 		} else {
 			$postbox .= $this->data['name'] . '<br>';
 			$postbox .= $this->data['address'] . '<br>';
@@ -676,6 +701,28 @@ class LMSTcpdfInvoice extends LMSInvoice {
 		$this->backend->SetY($y);
 	}
 
+	protected function invoice_recipient() {
+		if ( empty($this->data['recipient_address_id']) ) {
+			return 0;
+		}
+
+		$this->backend->SetFont('arial', '', 10);
+
+		$this->backend->writeHTMLCell(80, '', '', '', '<b>' . trans('Recipient:') . '</b>', 0, 1, 0, true, 'L');
+
+		$rec_lines = document_address(array(
+			'name' => $this->data['rec_name'],
+			'address' => $this->data['rec_address'],
+			'street' => $this->data['rec_street'],
+			'zip' => $this->data['rec_zip'],
+			'postoffice' => $this->data['rec_postoffice'],
+			'city' => $this->data['rec_city'],
+		));
+
+		foreach ($rec_lines as $line)
+			$this->backend->writeHTMLCell(80, '', '', '', $line, 0, 1, 0, true, 'L');
+	}
+
 	protected function invoice_data() {
 		/* print table */
 		$this->backend->writeHTMLCell('', '', '', '', '', 0, 1, 0, true, 'L');
@@ -691,7 +738,7 @@ class LMSTcpdfInvoice extends LMSInvoice {
 			$this->backend->writeHTMLCell(0, 0, '', '', trans('To pay:') . ' ' . moneyf($this->data['value']), 0, 1, 0, true, 'L');
 
 		$this->backend->SetFont('arial', '', 10);
-		$this->backend->writeHTMLCell(0, 6, '', '', trans('In words:') . ' ' . trans('$a dollars $b cents', to_words(floor($this->data['value'])), to_words(round(($this->data['value'] - floor($this->data['value'])) * 100))), 0, 1, 0, true, 'L');
+		$this->backend->writeHTMLCell(0, 6, '', '', trans('In words:') . ' ' . moneyf_in_words($this->data['value']), 0, 1, 0, true, 'L');
 	}
 
 	protected function invoice_balance() {
@@ -797,6 +844,7 @@ class LMSTcpdfInvoice extends LMSInvoice {
 		$this->invoice_title();
 		$this->invoice_seller();
 		$this->invoice_buyer();
+		$this->invoice_recipient();
 		$this->invoice_data();
 		$this->invoice_to_pay();
 		if (ConfigHelper::checkValue(ConfigHelper::getConfig('invoices.show_balance',true)))
@@ -805,8 +853,16 @@ class LMSTcpdfInvoice extends LMSInvoice {
 		$this->invoice_expositor();
 		$this->invoice_footnote();
 
-		$docnumber = docnumber($this->data['number'], $this->data['template'], $this->data['cdate']);
-		$this->backend->SetTitle(trans('Invoice No. $a', $docnumber));
+		$docnumber = docnumber(array(
+			'number' => $this->data['number'],
+			'template' => $this->data['template'],
+			'cdate' => $this->data['cdate'],
+			'customerid' => $this->data['customerid'],
+		));
+		if ($this->data['doctype'] == DOC_INVOICE_PRO)
+			$this->backend->SetTitle(trans('Pro Forma Invoice No. $a', $docnumber));
+		else
+			$this->backend->SetTitle(trans('Invoice No. $a', $docnumber));
 		$this->backend->SetAuthor($this->data['division_name']);
 		$this->backend->setBarcode($docnumber);
 
@@ -818,7 +874,7 @@ class LMSTcpdfInvoice extends LMSInvoice {
 		$info = array(
 			'Name' => $this->data['division_name'],
 			'Location' => trans('Invoices'),
-			'Reason' => trans('Invoice No. $a', $docnumber),
+			'Reason' => $this->data['doctype'] == DOC_INVOICE_PRO ? trans('Pro Forma Invoice No. $a', $docnumber) : trans('Invoice No. $a', $docnumber),
 			'ContactInfo' => $this->data['division_author']
 		);
 
@@ -839,6 +895,7 @@ class LMSTcpdfInvoice extends LMSInvoice {
 		$this->invoice_title();
 		$this->invoice_seller();
 		$this->invoice_buyer();
+		$this->invoice_recipient();
 		$this->invoice_data();
 		$this->invoice_to_pay();
 		if (ConfigHelper::checkValue(ConfigHelper::getConfig('invoices.show_balance',true)))
@@ -859,8 +916,16 @@ class LMSTcpdfInvoice extends LMSInvoice {
 			$this->invoice_main_form_fill();
 		}
 
-		$docnumber = docnumber($this->data['number'], $this->data['template'], $this->data['cdate']);
-		$this->backend->SetTitle(trans('Invoice No. $a', $docnumber));
+		$docnumber = docnumber(array(
+			'number' => $this->data['number'],
+			'template' => $this->data['template'],
+			'cdate' => $this->data['cdate'],
+			'customerid' => $this->data['customerid'],
+		));
+		if ($this->data['doctype'] == DOC_INVOICE_PRO)
+			$this->backend->SetTitle(trans('Pro Forma Invoice No. $a', $docnumber));
+		else
+			$this->backend->SetTitle(trans('Invoice No. $a', $docnumber));
 		$this->backend->SetAuthor($this->data['division_name']);
 
 		/* setup your cert & key file */
@@ -871,7 +936,7 @@ class LMSTcpdfInvoice extends LMSInvoice {
 		$info = array(
 			'Name' => $this->data['division_name'],
 			'Location' => trans('Invoices'),
-			'Reason' => trans('Invoice No. $a', $docnumber),
+			'Reason' => $this->data['doctype'] == DOC_INVOICE_PRO ? trans('Pro Forma Invoice No. $a', $docnumber) : trans('Invoice No. $a', $docnumber),
 			'ContactInfo' => $this->data['division_author']
 		);
 

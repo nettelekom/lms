@@ -47,9 +47,30 @@
 			<B>{trans("IP address:")}</B>
 		</TD>
 		<TD WIDTH="98%">
-			<INPUT TYPE="TEXT" NAME="ipadd[ipaddr]" VALUE="{$nodeipdata.ipaddr}" {tip text="Enter IP address" trigger="ipaddr"}> <a href="javascript: void(0);" onClick="return ipchoosewin(document.editipaddr['ipadd[ipaddr]'], document.editipaddr['ipadd[netid]'], 0, {$netdevinfo.id});" {tip text="Click to select IP from the list"}>&raquo;&raquo;&raquo;</A>
+			<INPUT TYPE="TEXT" NAME="ipadd[ipaddr]" VALUE="{$nodeipdata.ipaddr}" {tip text="Enter IP address" trigger="ipaddr"}>
+			<a href="javascript: void(0);" onClick="return ipchoosewin({
+					ipelem: document.editipaddr['ipadd[ipaddr]'],
+					netelem: document.editipaddr['ipadd[netid]'],
+					ip: document.editipaddr['ipadd[ipaddr]'].value,
+					netid: document.editipaddr['ipadd[netid]'].value,
+					device: {$netdevinfo.id}
+				});" {tip text="Click to select IP from the list"}>&raquo;&raquo;&raquo;</A>
+			<br>
+			<a href="#" id="selectfirstfreeaddress">{trans("Select first free address")}</a>
 		</TD>
 	</TR>
+	<script type="text/javascript">
+	<!--
+		$(function() {
+			$('#selectfirstfreeaddress').click(function() {
+				var netid = $('[name="ipadd[netid]"]').val();
+				if (netid == 0)
+					return;
+				xajax_getFirstFreeAddress(netid, $('[name="ipadd[ipaddr]"]').uniqueId().attr('id'));
+			});
+		});
+	//-->
+	</script>
 	{if ConfigHelper::checkConfig('phpui.public_ip')}
 	<TR>
 		<TD WIDTH="1%">
@@ -59,7 +80,13 @@
 			<B>{trans("Pub. IP address:")}</B>
 		</TD>
 		<TD WIDTH="98%">
-		        <INPUT TYPE="TEXT" NAME="ipadd[ipaddr_pub]" VALUE="{$nodeipdata.ipaddr_pub}" {tip text="Enter IP address (optional)" trigger="ipaddr_pub"}> <a href="javascript: void(0);" onClick="return ipchoosewin(document.editipaddr['ipadd[ipaddr_pub]'], null, 0, {$netdevinfo.id});" {tip text="Click to select IP from the list"}>&raquo;&raquo;&raquo;</A>
+			<INPUT TYPE="TEXT" NAME="ipadd[ipaddr_pub]" VALUE="{$nodeipdata.ipaddr_pub}" {tip text="Enter IP address (optional)" trigger="ipaddr_pub"}>
+			<a href="javascript: void(0);" onClick="return ipchoosewin({
+					ipelem: document.editipaddr['ipadd[ipaddr_pub]'],
+					netelem: null,
+					netid: 0,
+					device: {$netdevinfo.id}
+				});" {tip text="Click to select IP from the list"}>&raquo;&raquo;&raquo;</A>
 		</TD>
 	</TR>
 	{/if}
@@ -101,10 +128,21 @@
 			<B>{trans("Options:")}</B>
 		</TD>
 		<TD WIDTH="98%" NOWRAP>
-			<label for="chkmac">{trans("MAC checking")}:</label><INPUT TYPE="checkbox" NAME="ipadd[chkmac]" VALUE="1" ID="chkmac" {tip text="Enable/disable MAC address checking" trigger="chkmac"}{if $nodeipdata.chkmac} checked{/if}>&nbsp;
-			<label for="chkduplex">{trans("Half duplex")}:</label><INPUT TYPE="checkbox" NAME="ipadd[halfduplex]" VALUE="1" ID="chkduplex" {tip text="Select transmission mode" trigger="halfduplex"}{if $nodeipdata.halfduplex} checked{/if}>
+			<label>
+				<INPUT TYPE="checkbox" NAME="ipadd[chkmac]" VALUE="1" ID="chkmac" {tip text="Enable/disable MAC address checking" trigger="chkmac"}{if $nodeipdata.chkmac} checked{/if}>&nbsp;
+				{trans("MAC checking")}
+			</label>
+
+			<label>
+				<INPUT TYPE="checkbox" NAME="ipadd[halfduplex]" VALUE="1" ID="chkduplex" {tip text="Select transmission mode" trigger="halfduplex"}{if $nodeipdata.halfduplex} checked{/if}>
+				{trans("Half duplex")}
+			</label>
+
 			{if ConfigHelper::checkConfig('phpui.radius')}
-			&nbsp;<label for="chknas">{trans("NAS")}:</label><INPUT TYPE="checkbox" NAME="ipadd[nas]" VALUE="1" ID="chknas" {tip text="Select NAS on or off" trigger="nas"}{if $nodeipdata.nas} checked{/if}>
+				<label for="chknas">
+					<INPUT TYPE="checkbox" NAME="ipadd[nas]" VALUE="1" ID="chknas" {tip text="Select NAS on or off" trigger="nas"}{if $nodeipdata.nas} checked{/if}>
+					{trans("NAS")}
+				</label>
 			{/if}
 		</TD>
 	</TR>
@@ -112,12 +150,15 @@
 		<TD style="width: 1%;">
 			<IMG SRC="img/netdev.gif" ALT="">
 		</TD>
-		<TD style="width: 99%;" class="nobr" COLSPAN="2">
+		<td class="bold">
+			{trans("Type:")}
+		</td>
+		<TD style="width: 99%;" class="nobr">
 			{foreach $_SESSIONTYPES as $idx => $sessiontype}
 			<label>
 				<INPUT TYPE="checkbox" NAME="ipadd[authtype][{$idx}]" value="{$idx}" id="authtype{$idx}" {tip text="`$sessiontype.tip`" trigger="authtype`$idx`"} onchange="change_authtype()" {if ($nodeipdata.authtype & $idx) == $idx} checked{/if}>
 				{$sessiontype.label}
-			</label>
+			</label><br>
 			{/foreach}
 		</TD>
 	</TR>

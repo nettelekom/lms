@@ -37,6 +37,7 @@ $parameters = array(
 	't:' => 'type:',
 	's:' => 'section:',
 	'c:' => 'channel:',
+	'a:' => 'actions:',
 );
 
 foreach ($parameters as $key => $val) {
@@ -77,6 +78,9 @@ lms-notify.php
                                 (separated by colons)
 -s, --section=<section-name>    section name from lms configuration where settings
                                 are stored
+-a, --actions=<node-access,customer-status,assignment-invoice,all-assignment-suspension>
+                                action names which should be performed for
+                                virtual block/unblock channels
 
 EOF;
 	exit(0);
@@ -104,6 +108,15 @@ if (array_key_exists('channel', $options))
 if (empty($channels))
 	$channels[] = 'mail';
 
+$actions = array();
+if (isset($options['actions']))
+	$actions = explode(',', $options['actions']);
+else
+	$actions = array('node-access', 'customer-status', 'assignment-invoice');
+
+$current_month = intval(strftime('%m'));
+$current_year = intval(strftime('%Y'));
+
 $config_section = (array_key_exists('section', $options) && preg_match('/^[a-z0-9-_]+$/i', $options['section']) ? $options['section'] : 'notify');
 
 $timeoffset = date('Z');
@@ -123,10 +136,10 @@ else
 	$CONFIG_FILE = DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'lms' . DIRECTORY_SEPARATOR . 'lms.ini';
 
 if (!$quiet)
-	echo "Using file ".$CONFIG_FILE." as config." . PHP_EOL;
+	echo "Using file " . $CONFIG_FILE . " as config." . PHP_EOL;
 
 if (!is_readable($CONFIG_FILE))
-	die("Unable to read configuration file [".$CONFIG_FILE."]!" . PHP_EOL);
+	die("Unable to read configuration file [" . $CONFIG_FILE . "]!" . PHP_EOL);
 
 define('CONFIG_FILE', $CONFIG_FILE);
 
@@ -141,11 +154,10 @@ define('LIB_DIR', $CONFIG['directories']['lib_dir']);
 
 // Load autoloader
 $composer_autoload_path = SYS_DIR . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php';
-if (file_exists($composer_autoload_path)) {
-    require_once $composer_autoload_path;
-} else {
-    die("Composer autoload not found. Run 'composer install' command from LMS directory and try again. More informations at https://getcomposer.org/");
-}
+if (file_exists($composer_autoload_path))
+	require_once $composer_autoload_path;
+else
+	die("Composer autoload not found. Run 'composer install' command from LMS directory and try again. More informations at https://getcomposer.org/" . PHP_EOL);
 
 // Init database
 
@@ -240,7 +252,7 @@ if (!empty($mail_fname))
 //include(LIB_DIR . DIRECTORY_SEPARATOR . 'plugins' . DIRECTORY_SEPARATOR . 'mtsms.php');
 
 function parse_customer_data($data, $row) {
-	global $DB;
+	$DB = LMSDB::getInstance();
 
 	$amount = -$row['balance'];
 	$totalamount = -$row['totalbalance'];
@@ -263,10 +275,10 @@ function parse_customer_data($data, $row) {
 	$data = preg_replace("/\%cid/", $row['id'], $data);
 	if (preg_match("/\%abonament/", $data)) {
 		$saldo = $DB->GetOne("SELECT SUM(value)
-			FROM assignments, tariffs
+			FROM assignments a, tariffs
 			WHERE tariffid = tariffs.id AND customerid = ?
-				AND datefrom <= $currtime AND (dateto > $currtime OR dateto = 0)
-				AND ((datefrom < dateto) OR (datefrom = 0 AND datefrom = 0))",
+				AND a.datefrom <= $currtime AND (a.dateto > $currtime OR a.dateto = 0)
+				AND ((a.datefrom < a.dateto) OR (a.datefrom = 0 AND a.datefrom = 0))",
 			array($row['id']));
 		$data = preg_replace("/\%abonament/", $saldo, $data);
 	}
@@ -308,7 +320,7 @@ function parse_node_data($data, $row) {
 }
 
 function create_message($type, $subject, $template) {
-	global $DB;
+	$DB = LMSDB::getInstance();
 
 	$DB->Execute("INSERT INTO messages (type, cdate, subject, body)
 		VALUES (?, ?NOW?, ?, ?)",
@@ -317,8 +329,10 @@ function create_message($type, $subject, $template) {
 }
 
 function send_mail($msgid, $cid, $rmail, $rname, $subject, $body) {
-	global $LMS, $DB, $mail_from, $notify_email, $reply_email, $dsn_email, $mdn_email;
+	global $LMS, $mail_from, $notify_email, $reply_email, $dsn_email, $mdn_email;
 	global $smtp_options;
+
+	$DB = LMSDB::getInstance();
 
 	$DB->Execute("INSERT INTO messageitems
 		(messageid, customerid, destination, status)
@@ -360,7 +374,10 @@ function send_mail($msgid, $cid, $rmail, $rname, $subject, $body) {
 }
 
 function send_sms($msgid, $cid, $phone, $data) {
-	global $LMS, $DB;
+	global $LMS;
+
+	$DB = LMSDB::getInstance();
+
 	$DB->Execute("INSERT INTO messageitems
 		(messageid, customerid, destination, status)
 		VALUES (?, ?, ?, ?)",
@@ -403,7 +420,7 @@ function send_sms_to_user($phone, $data) {
 if (empty($types) || in_array('timetable', $types)) {
 	$days = $notifications['timetable']['days'];
 	$users = $DB->GetAll("SELECT id, name, (CASE WHEN ntype & ? > 0 THEN email ELSE '' END) AS email,
-			(CASE WHEN ntype & ? > 0 THEN phone ELSE '' END) AS phone FROM users
+			(CASE WHEN ntype & ? > 0 THEN phone ELSE '' END) AS phone FROM vusers
 		WHERE deleted = 0 AND access = 1 AND ntype & ? > 0 AND (email <> '' OR phone <> '')",
 		array(MSG_MAIL, MSG_SMS, (MSG_MAIL | MSG_SMS)));
 	$date = mktime(0, 0, 0);
@@ -578,7 +595,7 @@ if (empty($types) || in_array('debtors', $types)) {
 				(CASE WHEN divisions.inv_paytime IS NULL THEN $deadline ELSE divisions.inv_paytime END) ELSE c.paytime END) + ?) * 86400 < $currtime)))
 			OR (cash.docid <> 0 AND ((d.type IN (?, ?) AND cash.time < $currtime
 				OR (d.type IN (?, ?) AND d.cdate + (d.paytime + ?) * 86400 < $currtime)))))
-		GROUP BY c.id, c.pin, c.lastname, c.name, m.email, x.phone, divisions.account
+		GROUP BY c.id, c.pin, c.lastname, c.name, b.balance, m.email, x.phone, divisions.account
 		HAVING SUM(value) < ?", array(
 			CONTACT_EMAIL | CONTACT_NOTIFICATIONS | CONTACT_DISABLED,
 			CONTACT_EMAIL | CONTACT_NOTIFICATIONS,
@@ -678,7 +695,12 @@ if (empty($types) || in_array('reminder', $types)) {
 		$notifications['reminder']['customers'] = array();
 		foreach ($documents as $row) {
 			$notifications['reminder']['customers'][] = $row['id'];
-			$row['doc_number'] = docnumber($row['number'], ($row['template'] ? $row['template'] : '%N/LMS/%Y'), $row['cdate']);
+			$row['doc_number'] = docnumber(array(
+				'number' => $row['number'],
+				'template' => ($row['template'] ? $row['template'] : '%N/LMS/%Y'),
+				'cdate' => $row['cdate'],
+				'customerid' => $row['id'],
+			));
 
 			$message = parse_customer_data($notifications['reminder']['message'], $row);
 			$subject = parse_customer_data($notifications['reminder']['subject'], $row);
@@ -756,7 +778,12 @@ if (empty($types) || in_array('invoices', $types)) {
 		$notifications['invoices']['customers'] = array();
 		foreach ($documents as $row) {
 			$notifications['invoices']['customers'][] = $row['id'];
-			$row['doc_number'] = docnumber($row['number'], ($row['template'] ? $row['template'] : '%N/LMS/%Y'), $row['cdate']);
+			$row['doc_number'] = docnumber(array(
+				'number' => $row['number'],
+				'template' => ($row['template'] ? $row['template'] : '%N/LMS/%Y'),
+				'cdate' => $row['cdate'],
+				'customerid' => $row['id'],
+			));
 
 			$message = parse_customer_data($notifications['invoices']['message'], $row);
 			$subject = parse_customer_data($notifications['invoices']['subject'], $row);
@@ -833,7 +860,12 @@ if (empty($types) || in_array('notes', $types)) {
 		$notifications['notes']['customers'] = array();
 		foreach ($documents as $row) {
 			$notifications['notes']['customers'][] = $row['id'];
-			$row['doc_number'] = docnumber($row['number'], ($row['template'] ? $row['template'] : '%N/LMS/%Y'), $row['cdate']);
+			$row['doc_number'] = docnumber(array(
+				'number' => $row['number'],
+				'template' => ($row['template'] ? $row['template'] : '%N/LMS/%Y'),
+				'cdate' => $row['cdate'],
+				'customerid' => $row['id'],
+			));
 
 			$message = parse_customer_data($notifications['notes']['message'], $row);
 			$subject = parse_customer_data($notifications['notes']['subject'], $row);
@@ -949,7 +981,7 @@ if (empty($types) || in_array('events', $types)) {
 	if (!empty($events)) {
 		$customers = array();
 		$users = $DB->GetAllByKey("SELECT id, name, (CASE WHEN (ntype & ?) > 0 THEN email ELSE '' END) AS email,
-				(CASE WHEN (ntype & ?) > 0 THEN phone ELSE '' END) AS phone FROM users
+				(CASE WHEN (ntype & ?) > 0 THEN phone ELSE '' END) AS phone FROM vusers
 			WHERE deleted = 0 AND accessfrom <= ?NOW? AND (accessto = 0 OR accessto >= ?NOW?)
 			ORDER BY id",
 			'id', array(MSG_MAIL, MSG_SMS));
@@ -1142,16 +1174,6 @@ if (!empty($intersect)) {
 		if (array_key_exists('customers', $notification))
 			$customers = array_merge($customers, $notification['customers']);
 	$customers = array_unique($customers);
-/*
-	if (!empty($customers)) {
-		$customers = $DB->GetCol("SELECT id FROM customers
-			WHERE (status = ? OR status = ?) AND id IN (" . implode(',', $customers) . ")",
-			array(CSTATUS_CONNECTED, CSTATUS_DEBT_COLLECTION));
-		if (empty($customers))
-			$customers = array();
-	}
-	$customers = implode(',', $customers);
-*/
 
 	foreach (array('block', 'unblock') as $channel)
 		if (in_array($channel, $channels))
@@ -1164,33 +1186,176 @@ if (!empty($intersect)) {
 						array(CSTATUS_CONNECTED));
 					if (empty($customers))
 						break;
-					$DB->Execute("UPDATE nodes SET access = ?
-						WHERE access = ? AND ownerid IN (" . implode(',', $customers) . ")",
-						array(0, 1));
-					$DB->Execute("UPDATE assignments SET invoice = ?
-						WHERE invoice = ? AND (tariffid <> 0 OR liabilityid <> 0)
-							AND datefrom <= ?NOW? AND (dateto = 0 OR dateto >= ?NOW?)
-							AND customerid IN (" . implode(',', $customers) . ")",
-						array(0, 1));
-					$DB->Execute("UPDATE customers SET status = ? WHERE id IN (" . implode(',', $customers) . ")",
-						array(CSTATUS_CONNECTED));
+					if (in_array('node-access', $actions)) {
+						$nodes = $DB->GetAll("SELECT id, ownerid FROM nodes WHERE access = ?
+							AND ownerid IN (" . implode(',', $customers) . ")",
+							array(1));
+						if (!empty($nodes))
+							foreach ($nodes as $node) {
+								$DB->Execute("UPDATE nodes SET access = ?
+									WHERE id = ?", array(0, $node['id']));
+								if ($SYSLOG) {
+									$SYSLOG->NewTransaction('lms-notify.php');
+									$SYSLOG->AddMessage(SYSLOG::RES_NODE, SYSLOG::OPER_UPDATE,
+										array(SYSLOG::RES_NODE => $node['id'], SYSLOG::RES_CUST => $node['ownerid'],
+											'access' => 0));
+								}
+							}
+					}
+					if (in_array('assignment-invoice', $actions)) {
+						$assigns = $DB->GetAll("SELECT id, customerid FROM assignments
+							WHERE invoice = ? AND (tariffid <> 0 OR liabilityid <> 0)
+								AND datefrom <= ?NOW? AND (dateto = 0 OR dateto >= ?NOW?)
+								AND customerid IN (" . implode(',', $customers) . ")",
+							array(1));
+						if (!empty($assigns))
+							foreach ($assigns as $assign) {
+								$DB->Execute("UPDATE assignments SET invoice = ?
+									WHERE id = ?", array(0, $assign['id']));
+								if ($SYSLOG) {
+									$SYSLOG->NewTransaction('lms-notify.php');
+									$SYSLOG->AddMessage(SYSLOG::RES_ASSIGN, SYSLOG::OPER_UPDATE,
+										array(SYSLOG::RES_ASSIGN => $assign['id'], SYSLOG::RES_CUST => $assign['customerid'],
+											'invoice' => 0));
+								}
+							}
+					}
+					if (in_array('customer-status', $actions)) {
+						$custids = $DB->GetCol("SELECT id FROM customers
+							WHERE status <> ? AND id IN (" . implode(',', $customers) . ")",
+							array(CSTATUS_DEBT_COLLECTION));
+						if (!empty($custids))
+							foreach ($custids as $custid) {
+								$DB->Execute("UPDATE customers SET status = ? WHERE id = ?",
+									array(CSTATUS_DEBT_COLLECTION, $custid));
+								if ($SYSLOG) {
+									$SYSLOG->NewTransaction('lms-notify.php');
+									$SYSLOG->AddMessage(SYSLOG::RES_CUST, SYSLOG::OPER_UPDATE,
+										array(SYSLOG::RES_CUST => $custid, 'status' => CSTATUS_DEBT_COLLECTION));
+								}
+							}
+					}
+					if (in_array('all-assignment-suspension', $actions)) {
+						$args = array(
+							SYSLOG::RES_ASSIGN => null,
+							SYSLOG::RES_CUST => null,
+							'datefrom' => time(),
+							SYSLOG::RES_TARIFF => 0,
+							SYSLOG::RES_LIAB => 0,
+						);
+						foreach ($customers as $cid)
+							if (!$DB->GetOne("SELECT id FROM assignments WHERE customerid = ? AND tariffid = 0 AND liabilityid = 0",
+								array($cid))) {
+								$DB->Execute("INSERT INTO assignments (customerid, datefrom, tariffid, liabilityid)
+									VALUES (?, ?, 0, 0)", array($cid, $args['datefrom']));
+								if ($SYSLOG) {
+									$SYSLOG->NewTransaction('lms-notify.php');
+									$args[SYSLOG::RES_ASSIGN] = $DB->GetLastInsertID('assignments');
+									$args[SYSLOG::RES_CUST] = $cid;
+									$SYSLOG->AddMessage(SYSLOG::RES_ASSIGN, SYSLOG::OPER_ADD, $args);
+								}
+							}
+					}
 					break;
 				case 'unblock':
+					if (empty($customers))
+						break;
 					$customers = $DB->GetCol("SELECT id FROM customers
 						WHERE status = ?" . (empty($customers) ? '' : " AND id NOT IN (" . implode(',', $customers) . ")"),
 						array(CSTATUS_DEBT_COLLECTION));
 					if (empty($customers))
 						break;
-					$DB->Execute("UPDATE nodes SET access = ?
-						WHERE access = ? AND ownerid IN (" . implode(',', $customers) . ")",
-						array(1, 0));
-					$DB->Execute("UPDATE assignments SET invoice = ?
-						WHERE invoice = ? AND (tariffid <> 0 OR liabilityid <> 0)
-							AND datefrom <= ?NOW? AND (dateto = 0 OR dateto >= ?NOW?)
-							AND customerid IN (" . implode(',', $customers) . ")",
-						array(1, 0));
-					$DB->Execute("UPDATE customers SET status = ? WHERE id IN (" . implode(',', $customers) . ")",
-						array(CSTATUS_DEBT_COLLECTION));
+					if (in_array('node-access', $actions)) {
+						$nodes = $DB->GetAll("SELECT id, ownerid FROM nodes WHERE access = ?
+							AND ownerid IN (" . implode(',', $customers) . ")",
+							array(0));
+						if (!empty($nodes))
+							foreach ($nodes as $node) {
+								$DB->Execute("UPDATE nodes SET access = ?
+									WHERE id = ?", array(1, $node['id']));
+								if ($SYSLOG) {
+									$SYSLOG->NewTransaction('lms-notify.php');
+									$SYSLOG->AddMessage(SYSLOG::RES_NODE, SYSLOG::OPER_UPDATE,
+										array(SYSLOG::RES_NODE => $node['id'], SYSLOG::RES_CUST => $node['ownerid'],
+											'access' => 1));
+								}
+							}
+					}
+					if (in_array('assignment-invoice', $actions)) {
+						$assigns = $DB->GetAll("SELECT id, customerid FROM assignments
+							WHERE invoice = ? AND (tariffid <> 0 OR liabilityid <> 0)
+								AND datefrom <= ?NOW? AND (dateto = 0 OR dateto >= ?NOW?)
+								AND customerid IN (" . implode(',', $customers) . ")",
+							array(0));
+						if (!empty($assigns))
+							foreach ($assigns as $assign) {
+								$DB->Execute("UPDATE assignments SET invoice = ?
+									WHERE id = ?", array(1, $assign['id']));
+								if ($SYSLOG) {
+									$SYSLOG->NewTransaction('lms-notify.php');
+									$SYSLOG->AddMessage(SYSLOG::RES_ASSIGN, SYSLOG::OPER_UPDATE,
+										array(SYSLOG::RES_ASSIGN => $assign['id'], SYSLOG::RES_CUST => $assign['customerid'],
+											'invoice' => 1));
+								}
+							}
+					}
+					if (in_array('customer-status', $actions)) {
+						$custids = $DB->GetCol("SELECT id FROM customers
+							WHERE status = ? AND id IN (" . implode(',', $customers) . ")",
+							array(CSTATUS_DEBT_COLLECTION));
+						if (!empty($custids))
+							foreach ($custids as $custid) {
+								$DB->Execute("UPDATE customers SET status = ? WHERE id = ?",
+									array(CSTATUS_CONNECTED, $custid));
+								if ($SYSLOG) {
+									$SYSLOG->NewTransaction('lms-notify.php');
+									$SYSLOG->AddMessage(SYSLOG::RES_CUST, SYSLOG::OPER_UPDATE,
+										array(SYSLOG::RES_CUST => $custid, 'status' => CSTATUS_CONNECTED));
+								}
+							}
+					}
+					if (in_array('all-assignment-suspension', $actions)) {
+						$args = array(
+							SYSLOG::RES_ASSIGN => null,
+							SYSLOG::RES_CUST => null,
+							'settlement' => 1,
+							'datefrom' => time(),
+						);
+						foreach ($customers as $cid) {
+							if ($SYSLOG)
+								$SYSLOG->NewTransaction('lms-notify.php');
+							if ($datefrom = $DB->GetOne("SELECT datefrom FROM assignments WHERE customerid = ? AND tariffid = 0 AND liabilityid = 0",
+								array($cid))) {
+								$year = intval(strftime('%Y', $datefrom));
+								$month = intval(strftime('%m', $datefrom));
+								if ($year < $current_year || ($year == $current_year && $month < $current_month)) {
+									$aids = $DB->GetCol("SELECT id FROM assignments
+										WHERE customerid = ? AND (tariffid <> 0 OR liabilityid <> 0)
+											AND datefrom < ?NOW? AND (dateto = 0 OR dateto > ?NOW?)",
+										array($cid));
+									if (!empty($aids))
+										foreach ($aids as $aid) {
+											$DB->Execute("UPDATE assignments SET settlement = 1, datefrom = ?
+												WHERE id = ?", array($args['datefrom'], $aid));
+											if ($SYSLOG) {
+												$args[SYSLOG::RES_ASSIGN] = $aid;
+												$args[SYSLOG::RES_CUST] = $cid;
+												$SYSLOG->AddMessage(SYSLOG::RES_ASSIGN, SYSLOG::OPER_UPDATE, $args);
+											}
+										}
+								}
+							}
+							$aids = $DB->GetCol("SELECT id FROM assignments
+								WHERE customerid = ? AND tariffid = 0 AND liabilityid = 0", array($cid));
+							if (!empty($aids))
+								foreach ($aids as $aid) {
+									$DB->Execute("DELETE FROM assignments WHERE id = ?", array($aid));
+									if ($SYSLOG)
+										$SYSLOG->AddMessage(SYSLOG::RES_ASSIGN, SYSLOG::OPER_DELETE,
+											array(SYSLOG::RES_ASSIGN => $aid, SYSLOG::RES_CUST => $cid));
+								}
+						}
+					}
 					break;
 			}
 }

@@ -26,7 +26,7 @@
 
 /**
  * LMSLocationManagerInterface
- * 
+ *
  * @author Maciej Lew <maciej.lew.1987@gmail.com>
  */
 interface LMSLocationManagerInterface
@@ -38,4 +38,20 @@ interface LMSLocationManagerInterface
     public function GetCountries();
 
     public function GetCountryName($id);
+
+    public function DeleteAddress( $address_id );
+
+    public function InsertAddress( $args );
+
+    public function InsertCustomerAddress( $customer_id, $args );
+
+    public function UpdateAddress( $args );
+
+    public function UpdateCustomerAddress( $customer_id, $args );
+
+    public function ValidAddress( $args );
+
+    public function CopyAddress( $address_id );
+
+    public function GetAddress( $address_id );
 }

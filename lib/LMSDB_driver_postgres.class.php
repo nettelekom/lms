@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2013 LMS Developers
+ *  (C) Copyright 2001-2016 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -435,4 +435,36 @@ class LMSDB_driver_postgres extends LMSDB_common implements LMSDBDriverInterface
 		return 'DATE_PART(\'day\', ' . $date . '::timestamp)';
 	}
 
+	/**
+	* Check if database resource exists (table, view)
+	*
+	* @param string $name
+	* @param int $type
+	* @return exists boolean
+	*/
+	public function _driver_resourceexists($name, $type) {
+		switch ($type) {
+			case LMSDB::RESOURCE_TYPE_TABLE:
+			case LMSDB::RESOURCE_TYPE_VIEW:
+				if ($type == LMSDB::RESOURCE_TYPE_TABLE)
+					$table_type = 'BASE TABLE';
+				else
+					$table_type = 'VIEW';
+				return $this->GetOne('SELECT COUNT(*) FROM information_schema.tables
+					WHERE table_catalog=? AND table_name=? AND table_type=?',
+					array($this->_dbname, $name, $table_type)) > 0;
+				break;
+			case LMSDB::RESOURCE_TYPE_COLUMN:
+				list ($table_name, $column_name) = explode('.', $name);
+				return $this->GetOne('SELECT COUNT(*) FROM information_schema.columns
+					WHERE table_catalog = ? AND table_name = ? AND column_name = ?',
+					array($this->_dbname, $table_name, $column_name)) > 0;
+				break;
+			case LMSDB::RESOURCE_TYPE_CONSTRAINT:
+				return $this->GetOne('SELECT COUNT(*) FROM information_schema.table_constraints
+					WHERE table_catalog = ? AND constraint_name = ?',
+					array($this->_dbname, $name)) > 0;
+				break;
+		}
+	}
 }

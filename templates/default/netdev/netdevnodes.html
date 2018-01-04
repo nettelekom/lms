@@ -57,7 +57,7 @@
 					</TD>
 					<TD class="nobr">
 						<span id="nodelinkproperties_{$netcomplist[netcomplist].id}" onClick="javascript:netlinkpropertieschoosewin('{$netdevinfo.id}', '{$netcomplist[netcomplist].id}', false);" >
-							<IMG src="{if $netcomplist[netcomplist].linktype == 1}img/wireless.gif{elseif $netcomplist[netcomplist].linktype == 2}img/netdev_takenports.gif{else}img/netdev_takenports.gif{/if}" alt="[ {trans("Change connection properties ")} ]" title="[ {trans("Change connection properties")} ]" {tip trigger="nodelinkproperties_$netcomplist[netcomplist].id" text="<span style=\"white-space: nowrap;\">{trans("Link type:")} {$_LINKTYPES[$netcomplist[netcomplist].linktype]}<br>{if $netcomplist[netcomplist].linktype == 1 && $netcomplist[netcomplist].radiosector}{trans("Radio sector:")} {$netcomplist[netcomplist].radiosector}<br>{/if}{if $netcomplist[netcomplist].linktechnology}{trans("Link technology:")} {$_LINKTECHNOLOGIES[$netcomplist[netcomplist].linktype][$netcomplist[netcomplist].linktechnology]}<br>{/if}{trans("Link speed:")} {$_LINKSPEEDS[$netcomplist[netcomplist].linkspeed]}</span>"}>
+							<IMG src="{if $netcomplist[netcomplist].linktype == 1}img/wireless.gif{elseif $netcomplist[netcomplist].linktype == 2}img/netdev_takenports.gif{else}img/netdev_takenports.gif{/if}" alt="[ {trans("Change connection properties ")} ]" {tip trigger="nodelinkproperties_$netcomplist[netcomplist].id" text="<span style=\"white-space: nowrap;\">{trans("Link type:")} {$_LINKTYPES[$netcomplist[netcomplist].linktype]}<br>{if $netcomplist[netcomplist].linktype == 1 && $netcomplist[netcomplist].radiosector}{trans("Radio sector:")} {$netcomplist[netcomplist].radiosector}<br>{/if}{if $netcomplist[netcomplist].linktechnology}{trans("Link technology:")} {$_LINKTECHNOLOGIES[$netcomplist[netcomplist].linktype][$netcomplist[netcomplist].linktechnology]}<br>{/if}{trans("Link speed:")} {$_LINKSPEEDS[$netcomplist[netcomplist].linkspeed]}</span>"}>
 						</span>
 						<span onclick="return self.location.href='?m=nodeinfo&id={$netcomplist[netcomplist].id}';">
 						[{if $netcomplist[netcomplist].port}{$netcomplist[netcomplist].port}{/if}]
@@ -112,7 +112,7 @@
 										{/foreach}
 									</SELECT>
 									{if !isset($nodelinktype)}{$devnodeslinktype = 0}{else}{$devnodeslinktype = $nodelinktype}{/if}
-									<SELECT NAME="linktechnology" id="devnodeslinktechnology" {tip trigger="devnodeslinktechnology" text="Select link technology"} onchange="change_nodelinktechnology(this.options[this.selectedIndex].value)">
+									<SELECT NAME="linktechnology" id="devnodeslinktechnology" {tip trigger="devnodeslinktechnology" text="Select link technology"} onchange="change_nodelinktechnology()">
 										<OPTION value="0">{trans("- unknown -")}</OPTION>
 										{foreach $_LINKTECHNOLOGIES[$devnodeslinktype] as $linktechnologyidx => $linktechnology}
 										<OPTION value="{$linktechnologyidx}"{if $linktechnologyidx == $nodelinktechnology} selected{/if}>{$linktechnology}</OPTION>
@@ -167,8 +167,8 @@ function change_nodelinktype(linktype) {
 	xajax_getRadioSectorsForNetdev('radio_sectors_received_for_node', {$netdevinfo.id});
 }
 
-function change_nodelinktechnology(linktechnology) {
-	linktechnology = parseInt(linktechnology);
+function change_nodelinktechnology() {
+	linktechnology = parseInt(xjx.$('devnodeslinktechnology').options[xjx.$('devnodeslinktechnology').selectedIndex].value);
 	var linktype = xjx.$('devnodeslinktype').value;
 	if (linktype != 1)
 		return;

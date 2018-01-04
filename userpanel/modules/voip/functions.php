@@ -361,7 +361,6 @@ if($nr=$_POST['nr'])
                 if($nr['id']) $voip->wsdl->edit_nr($nr['name'],$nr['number'],$nr['id']);
                 else $voip->wsdl->add_nr($nr['name'],$nr['number'],$_GET['gr']);
         }
-
 }
 elseif($_GET['edit'])
 {

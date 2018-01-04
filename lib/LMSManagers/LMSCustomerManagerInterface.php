@@ -3,7 +3,7 @@
 /*
  *  LMS version 1.11-git
  *
- *  Copyright (C); 2001-2016 LMS Developers
+ *  Copyright (C); 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -62,6 +62,8 @@ interface LMSCustomerManagerInterface
 
     public function getCustomerNodes($id, $count = null);
 
+    public function getCustomerNetDevs( $customer_id );
+
     public function GetCustomerNetworks($id, $count = null);
 
     public function GetCustomer($id, $short = false);
@@ -69,6 +71,14 @@ interface LMSCustomerManagerInterface
     public function customerUpdate($customerdata);
 
     public function deleteCustomer($id);
-    
+
     public function deleteCustomerPermanent($id);
+
+    public function checkCustomerAddress($a_id, $c_id);
+
+    public function getCustomerAddresses( $id, $hide_deleted );
+
+    public function getAddressForCustomerStuff( $customer_id );
+
+    public function getFullAddressForCustomerStuff( $customer_id );
 }

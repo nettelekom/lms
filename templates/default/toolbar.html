@@ -1,6 +1,6 @@
 <!--// $Id$ //-->
 <hr>
-<table width="100%" cellpadding="0" cellspacing="0">
+<table width="100%" cellpadding="0" cellspacing="0" class="no-print">
 <tr>
     <td style="width: 99%" class="text-left nobr">
 	<span style="padding-right:15px;">
@@ -40,7 +40,7 @@
     </td>
     <td style="width: 1%; padding-right:5px;" class="text-right nobr">
 	<a href="?m=reload" {tip text="Reload"}><img src="img/refresh.png" width="20" alt=""></a>
-	<a href="?m=logout&amp;is_sure=1" {tip text="<B>Allows you to logout</B>" bold=1}><img src="img/Exit.png" width="20" alt=""></a>
+	<a {tip class="tip" text="Allows you to logout" bold=1} {if ConfigHelper::getConfig('phpui.logout_confirmation')}onClick="if (confirm('{trans("Are you sure that you want to logout?")}')) { return self.location.href='?m=logout&amp;is_sure=1'; }"{else}href="?m=logout&amp;is_sure=1"{/if}><img src="img/Exit.png" width="20" alt=""></a>
     </td>
 </tr>
 </table>

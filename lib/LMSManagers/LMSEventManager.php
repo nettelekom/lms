@@ -57,6 +57,7 @@ class LMSEventManager extends LMSManager implements LMSEventManagerInterface
                 . ($dateto ? " AND (date <= $dateto OR (enddate <> 0 AND enddate <= $dateto))" : '')
                 . (!empty($search['customerid']) ? ' AND customerid = ' . intval($search['customerid']) : '')
                 . (!empty($search['type']) ? ' AND events.type = ' . intval($search['type']) : '')
+                . (!is_int($search['closed']) ? ' AND closed = ' . intval($search['closed']) : '')
                 . (!empty($search['title']) ? ' AND title ?LIKE? ' . $this->db->Escape('%' . $search['title'] . '%') : '')
                 . (!empty($search['description']) ? ' AND description ?LIKE? ' . $this->db->Escape('%' . $search['description'] . '%') : '')
                 . (!empty($search['note']) ? ' AND note ?LIKE? ' . $this->db->Escape('%' . $search['note'] . '%') : '')
@@ -74,9 +75,9 @@ class LMSEventManager extends LMSManager implements LMSEventManagerInterface
         if ($list) {
             foreach ($list as $idx => $row) {
                 if (!$simple)
-                    $row['userlist'] = $this->db->GetAll('SELECT userid AS id, users.name
-						FROM eventassignments, users
-						WHERE userid = users.id AND eventid = ? ', array($row['id']));
+                    $row['userlist'] = $this->db->GetAll('SELECT userid AS id, vusers.name
+						FROM eventassignments, vusers
+						WHERE userid = vusers.id AND eventid = ? ', array($row['id']));
                 $endtime = $row['endtime'];
 
                 $userfilter = false;
@@ -125,4 +126,8 @@ class LMSEventManager extends LMSManager implements LMSEventManagerInterface
         }
     }
 
+    public function GetCustomerIdByTicketId($id)
+    {
+        return $this->db->GetOne('SELECT customerid FROM rttickets WHERE id=?', array($id));
+    }
 }

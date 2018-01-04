@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2016 LMS Developers
+ *  (C) Copyright 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -24,7 +24,7 @@
  *  $Id$
  */
 
-define('DBVERSION', '2016101000'); // here should be always the newest version of database!
+define('DBVERSION', '2017051201'); // here should be always the newest version of database!
 				 // it placed here to avoid read disk every time when we call this file.
 
 /**
@@ -512,6 +512,17 @@ abstract class LMSDB_common implements LMSDBInterface
 	*/
 	public function Day($date) {
 		return $this->_driver_day($date);
+	}
+
+	/**
+	* Check if database resource exists (table, view)
+	*
+	* @param string $name
+	* @param int $type
+	* @return exists boolean
+	*/
+	public function ResourceExists($name, $type) {
+		return $this->_driver_resourceexists($name, $type);
 	}
 
     /**

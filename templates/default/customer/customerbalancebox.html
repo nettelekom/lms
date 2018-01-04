@@ -40,7 +40,15 @@
 	}
 
 	function send_invoices() {
-		document.addbalance.action="?m=invoicesend&marks=cash";
+		var add = "";
+		if(document.addbalance.original.checked)
+			add = "&original=1";
+		if(document.addbalance.copy.checked)
+			add += "&copy=1";
+		if(document.addbalance.duplicate.checked)
+			add += "&duplicate=1";
+
+		document.addbalance.action="?m=invoicesend&marks=cash" + add;
 		document.addbalance.target="_blank";
 		document.addbalance.submit();
 	}
@@ -51,6 +59,8 @@
 
 		if (type == 'invoice')
 			document.addbalance.action = '?m=invoicelist';
+		else if (type == 'invoicepro')
+			document.addbalance.action = '?m=invoicelist&proforma=1';
 		else if (type == 'note')
 			document.addbalance.action = '?m=notelist';
 		else
@@ -110,10 +120,11 @@
 		<TD class="text-right nobr">
 			<A id="newdocanchor" href="?m=invoicenew&amp;action=init&amp;customerid={$balancelist.customerid}">{trans("New document:")}</A>
 			<SELECT name="newdocument" onchange="javascript:new_doc_type_changed(this.options[this.selectedIndex].value)">
-				<OPTION value="?m=invoicenew&amp;action=init&amp;customerid={$balancelist.customerid}">{trans("invoice")}</OPTION>
-				<OPTION value="?m=receiptadd&amp;type=in&amp;action=init&amp;customerid={$balancelist.customerid}">{trans("cash-in receipt")}</OPTION>
-				<OPTION value="?m=receiptadd&amp;type=out&amp;action=init&amp;customerid={$balancelist.customerid}">{trans("cash-out receipt")}</OPTION>
-				<OPTION value="?m=noteadd&amp;action=init&amp;customerid={$balancelist.customerid}">{trans("debit note")}</OPTION>
+				<OPTION value="?m=invoicenew&action=init&customerid={$balancelist.customerid}">{trans("invoice")}</OPTION>
+				<OPTION value="?m=invoicenew&action=init&proforma=1&customerid={$balancelist.customerid}">{trans("pro forma invoice")}</OPTION>
+				<OPTION value="?m=receiptadd&type=in&action=init&customerid={$balancelist.customerid}">{trans("cash-in receipt")}</OPTION>
+				<OPTION value="?m=receiptadd&type=out&action=init&customerid={$balancelist.customerid}">{trans("cash-out receipt")}</OPTION>
+				<OPTION value="?m=noteadd&action=init&customerid={$balancelist.customerid}">{trans("debit note")}</OPTION>
 			</SELECT>&nbsp;
 			<A href="javascript:show_list()">{trans("Show All:")}</A>
 			<INPUT type="hidden" name="cat" value="customerid">
@@ -121,6 +132,7 @@
 			<SELECT name="showlist" id="showlistselect">
 				{if $limit}<OPTION value="list">{trans("transactions")}</OPTION>{/if}
 				<OPTION value="invoice">{trans("invoices")}</OPTION>
+				<OPTION value="invoicepro">{trans("pro forma invoices")}</OPTION>
 				<OPTION value="note">{trans("debit notes")}</OPTION>
 			</SELECT>
 		</TD>
@@ -129,7 +141,8 @@
 	<TBODY class="lms-ui-multi-check">
 	<TR id="customerbalancepanel" class="dark">
 		<TD colspan="2">
-			<TABLE class="lmsbox-inner{if !empty($balancelist.list)} lms-ui-datatable{/if}"{if !empty($balancelist.list)} data-page-length="{$n}" data-display-start="{$n = count($balancelist.list) + $limit}{if $n < 0}0{else}{$n}{/if}" style="display: none;"{/if} width="100%">
+			{$datatables_max_records=intval(ConfigHelper::getConfig('phpui.datatables_max_records', 300))}
+			<TABLE id="customerbalancebox-datatable" class="lmsbox-inner{if !empty($balancelist.list) && count($balancelist.list) < $datatables_max_records} lms-ui-datatable{else} lms-ui-background-cycle{/if}"{if !empty($balancelist.list) && count($balancelist.list) < $datatables_max_records} data-page-length="{$n}" data-display-start="{$n = count($balancelist.list) + $limit}{if $n < 0}0{else}{$n}{/if}" style="display: none;"{/if} width="100%">
 				<COLGROUP>
 					<COL style="width: 1%;">
 					<COL style="width: 1%;">
@@ -156,6 +169,13 @@
 				</THEAD>
 				<TBODY>
 				{foreach $balancelist.list as $item}
+				{if count($balancelist.list) >= $datatables_max_records}
+					{if $limit < 0 && $item@iteration <= count($balancelist.list) + $limit}
+					{continue}
+					{elseif $limit > 0 && $item@iteration > $limit}
+					{continue}
+					{/if}
+				{/if}
 				<TR{if $item.docid} data-published="{$item.published}"{/if}>
 					<TD class="nobr">{$item.date}</TD>
 					<TD class="nobr">{$item.username|truncate:16:"...":true}</TD>
@@ -278,7 +298,7 @@
 						{/if}
 					</TD>
 					<TD class="ftop" colspan="5">
-						<INPUT type="text" size="30" class="text-left" name="addbalance[comment]" value="{$comment}" {tip text="Enter short description of transaction"}> 
+						<input type="text" size="30" name="addbalance[comment]" value="{$comment}" {tip text="Enter short description of transaction"}>
 					</TD>
 				</TR>
 				<TR>

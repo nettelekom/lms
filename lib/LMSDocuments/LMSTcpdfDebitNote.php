@@ -38,7 +38,12 @@ class LMSTcpdfDebitNote extends LMSTcpdfInvoice {
 	public function note_title() {
 		$this->backend->SetY(30);
 		$this->backend->SetFont('arial', 'B', 16);
-		$docnumber = docnumber($this->data['number'], $this->data['template'], $this->data['cdate']);
+		$docnumber = docnumber(array(
+			'number' => $this->data['number'],
+			'template' => $this->data['template'],
+			'cdate' => $this->data['cdate'],
+			'customerid' => $this->data['customerid'],
+		));
 		$title = trans('Debit Note No. $a', $docnumber);
 
 		$this->backend->Write(0, $title, '', 0, 'C', true, 0, false, false, 0);
@@ -72,18 +77,18 @@ class LMSTcpdfDebitNote extends LMSTcpdfInvoice {
 		$recipient .= $this->data['address'] . '<br>';
 		$recipient .= $this->data['zip'] . ' ' . $this->data['city'] . '<br>';
 		if ($this->data['ten'])
-			$recipient .= trans('TEN') . ': ' . $this->data['ten'] . '<br>';
+			$recipient .= trans('TEN') . ': ' . $this->data['ten'];
 		elseif ($this->data['ssn'])
-			$recipient .= trans('SSN') . ': ' . $this->data['ssn'] . '<br>';
+			$recipient .= trans('SSN') . ': ' . $this->data['ssn'];
 		$this->backend->SetFont('arial', '', 10);
-		$this->backend->writeHTMLCell(80, '', 125, 50, $recipient, 0, 1, 0, true, 'L');
+		$this->backend->writeHTMLCell(80, '', 120, 50, $recipient, 0, 1, 0, true, 'L');
 
 		$y = $this->backend->GetY();
 
 		if (ConfigHelper::checkValue(ConfigHelper::getConfig('invoices.customer_bankaccount', true))) {
 			$bankaccount = trans('Bank account:') .' <b>' . format_bankaccount(bankaccount($this->data['customerid'], $this->data['account'])) . '</b>';
 			$this->backend->SetFont('arial', 'B', 8);
-			$this->backend->writeHTMLCell('', '', 125,  $oldy + round(($y - $oldy - 8) / 2), $bankaccount, 0, 1, 0, true, 'L');
+			$this->backend->writeHTMLCell('', '', 120, '', $bankaccount, 0, 1, 0, true, 'L');
 		}
 
 		if (ConfigHelper::checkValue(ConfigHelper::getConfig('invoices.customer_credentials', true))) {
@@ -91,7 +96,7 @@ class LMSTcpdfDebitNote extends LMSTcpdfInvoice {
 			$pin .= '<b>PIN: ' . sprintf('%04d', $this->data['customerpin']) . '</b><br>';
 
 			$this->backend->SetFont('arial', 'B', 8);
-			$this->backend->writeHTMLCell('', '', 125, $oldy + round(($y - $oldy) / 2), $pin, 0, 1, 0, true, 'L');
+			$this->backend->writeHTMLCell('', '', 120, '', $pin, 0, 1, 0, true, 'L');
 		}
 
 		$this->backend->SetY($y);
@@ -185,7 +190,7 @@ class LMSTcpdfDebitNote extends LMSTcpdfInvoice {
 		$this->backend->writeHTMLCell(0, 0, '', '', trans('To pay:') . ' ' . moneyf($this->data['value']), 0, 1, 0, true, 'R');
 
 		$this->backend->SetFont('arial', '', 10);
-		$this->backend->writeHTMLCell(0, 6, '', '', trans('In words:') . ' ' . trans('$a dollars $b cents', to_words(floor($this->data['value'])), to_words(round(($this->data['value'] - floor($this->data['value'])) * 100))), 0, 1, 0, true, 'R');
+		$this->backend->writeHTMLCell(0, 6, '', '', trans('In words:') . ' ' . moneyf_in_words($this->data['value']), 0, 1, 0, true, 'R');
 	}
 
 	public function Draw($note) {
@@ -199,7 +204,12 @@ class LMSTcpdfDebitNote extends LMSTcpdfInvoice {
 		$this->note_data();
 		$this->invoice_to_pay();
 		$this->invoice_footnote();
-		$docnumber = docnumber($this->data['number'], $this->data['template'], $this->data['cdate']);
+		$docnumber = docnumber(array(
+			'number' => $this->data['number'],
+			'template' => $this->data['template'],
+			'cdate' => $this->data['cdate'],
+			'customerid' => $this->data['customerid'],
+		));
 		$this->backend->SetTitle(trans('Debit Note No. $a', $docnumber));
 		$this->backend->SetAuthor($this->data['division_name']);
 		$this->backend->setBarcode($docnumber);

@@ -35,10 +35,10 @@ if ($numbers_list) {
 
 		if (isset($counter[$vaccid])) {
 			++$counter[$vaccid];
-			$this->Execute("UPDATE voip_numbers SET index = ? WHERE phone ?LIKE? ?", array($counter[$vaccid], $phone));
+			$this->Execute("UPDATE voip_numbers SET `index` = ? WHERE phone ?LIKE? ?", array($counter[$vaccid], $phone));
 		} else {
 			$counter[$vaccid] = 1;
-			$this->Execute("UPDATE voip_numbers SET index = 1 WHERE phone ?LIKE? ?", array($phone));
+			$this->Execute("UPDATE voip_numbers SET `index` = 1 WHERE phone ?LIKE? ?", array($phone));
 		}
 	}
 }

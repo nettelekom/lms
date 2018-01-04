@@ -35,10 +35,11 @@ if(! $LMS->QueueExists($queuedata['id']) && $queuedata['id'] != 0)
 	$SESSION->redirect('?m=rtqueuelist');
 }
 
+
+
 if($queuedata['id'])
 {
 	$right = $LMS->GetUserRightsRT($AUTH->id, $queuedata['id']);
-
 	if(!$right)
 	{
 		$SMARTY->display('noaccess.html');
@@ -135,7 +136,7 @@ $start = ($page - 1) * $pagelimit;
 $SESSION->save('rtp', $page);
 
 $queues = $LMS->GetQueueList(false);
-$categories = $LMS->GetCategoryList(false);
+$categories = $LMS->GetCategoryListByUser($AUTH->id);
 
 $SMARTY->assign('queues', $queues);
 $SMARTY->assign('categories', $categories);

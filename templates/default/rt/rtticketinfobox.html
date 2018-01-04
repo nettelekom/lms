@@ -1,4 +1,18 @@
 <!-- $Id$ -->
+<script type="text/javascript">
+<!--
+	$(function() {
+		$('#print-anchor').click(function() {
+			window.open('?m=rtticketprint&id={$ticket.ticketid}'
+				+ ($('#messages-chkbox:checked').length ? '&messages=1' : '')
+				+ ($('#notes-chkbox:checked').length ? '&notes=1' : '')
+				+ ($('#history-chkbox:checked').length ? '&history=1' : ''),
+				'_blank');
+			return false;
+		});
+	});
+//-->
+</script>
 <TABLE class="lmsbox">
 	<THEAD>
 	<TR>
@@ -148,16 +162,29 @@
 		</TD>
 	</TR>
 	<TR>
-		<TD class="buttons" colspan="3">
+		<TD class="buttons" colspan="3" style="line-height: 180%;">
+			<label>
+				<input type="checkbox" id="messages-chkbox">
+				{trans("Messages")}
+			</label>
+			<label>
+				<input type="checkbox" id="notes-chkbox">
+				{trans("Notes<!rt>")}
+			</label>
+			<label>
+				<input type="checkbox" id="history-chkbox">
+				{trans("History<!rt>")}
+			</label>
+			<A id="print-anchor" href="?m=rtticketprint&id={$ticket.ticketid}"><IMG src="img/print.gif" alt=""> {trans("Print")}</A>
+			<br>
 			{if $ticket.owner != $layout.logid}
-			<A href="?m=rtticketedit&amp;id={$ticket.ticketid}&amp;assign">{trans("Assign to me")} <IMG src="img/users.gif" alt=""></A>
+			<A href="?m=rtticketedit&amp;id={$ticket.ticketid}&amp;assign"><IMG src="img/users.gif" alt=""> {trans("Assign to me")}</A>
 			{/if}
 			{if $ticket.state < 2}
-			<A href="?m=rtticketedit&amp;id={$ticket.ticketid}&amp;state=2">{trans("Resolve")} <IMG src="img/resolved.gif" alt=""></A>&nbsp;
+			<A href="?m=rtticketedit&amp;id={$ticket.ticketid}&amp;state=2"><IMG src="img/resolved.gif" alt=""> {trans("Resolve")}</A>&nbsp;
 			{/if}
-			<A href="?m=rtticketdel&amp;id={$ticket.ticketid}" onClick="return confirmLink(this, '{t a=$ticket.ticketid}Are you sure, you want to remove ticket $a?{/t}')">{trans("Delete")} <IMG src="img/delete.gif" alt=""></A>
-			<A href="?m=rtticketedit&amp;id={$ticket.ticketid}">{trans("Edit")} <IMG src="img/edit.gif" alt=""></A>
-			<A href="?m=rtticketprint&amp;id={$ticket.ticketid}" rel="external">{trans("Print")} <IMG src="img/print.gif" alt=""></A>
+			<A href="?m=rtticketdel&amp;id={$ticket.ticketid}" onClick="return confirmLink(this, '{t a=$ticket.ticketid}Are you sure, you want to remove ticket $a?{/t}')"><IMG src="img/delete.gif" alt=""> {trans("Delete")}</A>
+			<A href="?m=rtticketedit&amp;id={$ticket.ticketid}"><IMG src="img/edit.gif" alt=""> {trans("Edit")}</A>
 		</TD>
 	</TR>
 	</TBODY>

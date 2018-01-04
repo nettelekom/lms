@@ -86,7 +86,7 @@
 				{foreach from=$categories item=category}
 				<TR>
 					<TD style="width: 1%;" class="text-center">
-						<INPUT type="checkbox" name="ticket[categories][{$category.id}]" ID="cat{$category.id}" value="1" {if $category.checked > 0}checked{/if}>
+						<INPUT type="checkbox" name="ticket[categories][{$category.id}]" id="cat{$category.id}" value="1" {if $category.checked > 0}checked{/if}>
 					</TD>
 					<TD style="width: 99%;">
 						<label for="cat{$category.id}">{$category.name}</label>
@@ -109,7 +109,7 @@
 			<SELECT size="1" name="ticket[owner]" {tip text="Select user" trigger="owner"}>
 				<OPTION value="0">- {trans("select user")} -</OPTION>
 				{foreach from=$userlist item=item}
-				<OPTION value="{$item.id}"{if $item.id == $ticket.owner} selected{/if}>{$item.name}</OPTION>
+				<OPTION value="{$item.id}"{if $item.id == $ticket.owner} selected{/if}>{$item.rname}</OPTION>
 				{/foreach}
 			</SELECT>
 		</TD>
@@ -122,7 +122,7 @@
 		<TD style="width: 99%;">
 			<SELECT size="1" name="ticket[queue]" {tip text="Select queue" trigger="queue"}>
 				{foreach from=$queuelist item=item}
-				<OPTION value="{$item.id}" {if $item.id == $queue}SELECTED{/if}>{$item.name}</OPTION>
+				<OPTION value="{$item.id}"{if $item.newticketsubject && $item.newticketbody} data-newticket-notify="1"{/if}{if $item.id == $queue} selected{/if}>{$item.name}</OPTION>
 				{/foreach}
 			</SELECT>
 		</TD>
@@ -140,14 +140,25 @@
 			</SELECT>
 		</TD>
 	</TR>
+	<TR id="customernotify-row">
+		<TD class="bold nobr">
+			<label for="customernotify">
+				<IMG src="img/mail.gif" alt="">
+				{trans("Notify customer:")}
+			</label>
+		</TD>
+		<TD>
+			<input type="checkbox" id="customernotify" name="ticket[customernotify]" value="1"{if isset($ticket.customernotify)} checked{/if}>
+		</TD>
+	</TR>
 
 			</TABLE>
 		</TD>
 	</TR>
 	<TR>
 		<TD style="width: 100%;" class="buttons" colspan="2">
-			<A href="javascript:document.ticket.submit();" accesskey="s">{trans("Submit")} <IMG src="img/save.gif" alt=""></A>
-			<A href="?m={if $queue}rtqueueview&amp;id={$queue}{else}rtqueuelist{/if}">{trans("Cancel")} <IMG src="img/cancel.gif" alt=""></A>
+			<A href="javascript:document.ticket.submit();" accesskey="s"><IMG src="img/save.gif" alt=""> {trans("Submit")}</A>
+			<A href="?m={if $queue}rtqueueview&amp;id={$queue}{else}rtqueuelist{/if}"><IMG src="img/cancel.gif" alt=""> {trans("Cancel")}</A>
 		</TD>
 	</TR>
 	</TBODY>
@@ -157,6 +168,27 @@
 <SCRIPT type="text/javascript">
 <!--
 document.forms['ticket'].elements['ticket[subject]'].focus();
+
+$(function() {
+	$('[name="ticket[queue]"]').change(function() {
+		var newticket_notify = $(this).find(':selected').attr('data-newticket-notify');
+		if (newticket_notify === undefined) {
+			$('#customernotify-row').hide();
+			$('#customernotify').attr('checked', false);
+		} else {
+			$('#customernotify-row').show();
+			$('#customernotify').attr('checked', true);
+		}
+	});
+
+	var newticket_notify = $('[name="ticket[queue]"]').find(':selected').attr('data-newticket-notify');
+	if (newticket_notify === undefined) {
+		$('#customernotify-row').hide();
+	} else {
+		$('#customernotify-row').show();
+	}
+});
+
 //-->
 </SCRIPT>
 {/block}

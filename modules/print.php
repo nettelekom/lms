@@ -72,7 +72,7 @@ switch($type)
 				    taxes.label AS taxlabel, customerid, comment, name AS username
 				    FROM cash c
 				    LEFT JOIN taxes ON (c.taxid = taxes.id)
-				    LEFT JOIN users ON (users.id = userid)
+				    LEFT JOIN vusers ON (vusers.id = userid)
 				    WHERE c.customerid = ?
 					    AND NOT EXISTS (
 				                    SELECT 1 FROM customerassignments a
@@ -413,7 +413,7 @@ switch($type)
 			$date['from'] = mktime(0,0,0,$month,$day,$year);
 		} else {
 			$from = date('Y/m/d',time());
-			$date['from'] = mktime(0,0,0); //pocz�tek dnia dzisiejszego
+			$date['from'] = mktime(0,0,0); //początek dnia dzisiejszego
 		}
 
 		$type = '';
@@ -424,16 +424,18 @@ switch($type)
 
 		$layout['pagetitle'] = trans('Invoices');
 
-		header('Location: ?m=invoice&fetchallinvoices=1'
+		header('Location: ?m=invoice&fetchallinvoices=1' . (isset($_GET['jpk']) ? '&jpk=' . $_GET['jpk'] : '')
 			.$type
 			.'&from='.$date['from']
 			.'&to='.$date['to']
+			. (!empty($_POST['einvoice']) ? '&einvoice=' . intval($_POST['einvoice']) : '')
 			.(!empty($_POST['division']) ? '&divisionid='.intval($_POST['division']) : '')
 			.(!empty($_POST['customer']) ? '&customerid='.intval($_POST['customer']) : '')
 			.(!empty($_POST['group']) ? '&groupid='.intval($_POST['group']) : '')
 			.(!empty($_POST['numberplan']) ? '&numberplanid='.intval($_POST['numberplan']) : '')
 			.(!empty($_POST['groupexclude']) ? '&groupexclude=1' : '')
 			.(!empty($_POST['autoissued']) ? '&autoissued=1' : '')
+			.(!empty($_POST['manualissued']) ? '&manualissued=1' : '')
 		);
 	break;
 
@@ -504,6 +506,7 @@ switch($type)
 
 		$order = $_POST['order'];
 		$direction = $_POST['direction'];
+		$divisionid = (isset($_POST['division']) ? intval($_POST['division']) : 0);
 		$customerid = (isset($_POST['customer']) ? intval($_POST['customer']) : 0);
 
 		$year = date('Y', $reportday);
@@ -535,6 +538,7 @@ switch($type)
 
 		$suspension_percentage = ConfigHelper::getConfig('finances.suspension_percentage');
 
+		$reportlist = array();
 		if ($taxes = $LMS->GetTaxes($reportday, $reportday))
 		{
 			foreach($taxes as $taxidx => $tax)
@@ -567,8 +571,9 @@ switch($type)
 						OR (a.period='.QUARTERLY.' AND a.at=?)
 						OR (a.period='.HALFYEARLY.' AND a.at=?)
 						OR (a.period='.YEARLY.' AND a.at=?)) '
-					.($customerid ? 'AND a.customerid='.$customerid : '').
-					' GROUP BY a.customerid, lastname, c.name, city, address, ten ', 'id',
+					. ($customerid ? ' AND a.customerid=' . $customerid : '')
+					. ($divisionid ? ' AND c.divisionid=' . $divisionid : '')
+					. ' GROUP BY a.customerid, lastname, c.name, city, address, ten ', 'id',
 					array($tax['id'], $reportday, $reportday, $today, $weekday, $monthday, $quarterday, $halfyear, $yearday));
 
 				$list2 = $DB->GetAllByKey('SELECT a.customerid AS id, '.$DB->Concat('UPPER(lastname)',"' '",'c.name').' AS customername, '
@@ -737,7 +742,12 @@ switch($type)
 		{
 			foreach($list as $idx => $row)
 			{
-				$list[$idx]['number'] = docnumber($row['number'], $row['template'], $row['cdate'], $row['extnumber']);
+				$list[$idx]['number'] = docnumber(array(
+					'number' => $row['number'],
+					'template' => $row['template'],
+					'cdate' => $row['cdate'],
+					'ext_num' => $row['extnumber'],
+				));
 				$list[$idx]['customer'] = $row['name'].' '.$row['address'].' '.$row['zip'].' '.$row['city'];
 
 				if($row['posnumber'] > 1)
@@ -774,7 +784,7 @@ switch($type)
 		if($registry)
 			$layout['registry'] = trans('Registry: $a', ($registry ? $DB->GetOne('SELECT name FROM cashregs WHERE id=?', array($registry)) : trans('all')));
 		if($user)
-			$layout['username'] = trans('Cashier: $a', $DB->GetOne('SELECT name FROM users WHERE id=?', array($user)));
+			$layout['username'] = trans('Cashier: $a', $DB->GetOne('SELECT name FROM vusers WHERE id=?', array($user)));
 		if($group)
 		{
 			$groupname = $DB->GetOne('SELECT name FROM customergroups WHERE id=?', array($group));
@@ -868,7 +878,9 @@ switch($type)
 		$SMARTY->assign('users', $LMS->GetUserNames());
 		$SMARTY->assign('networks', $LMS->GetNetworks());
 		$SMARTY->assign('customergroups', $LMS->CustomergroupGetAll());
-		$SMARTY->assign('numberplans', $LMS->GetNumberPlans(array(DOC_INVOICE, DOC_CNOTE)));
+		$SMARTY->assign('numberplans', $LMS->GetNumberPlans(array(
+			'doctype' => array(DOC_INVOICE, DOC_CNOTE),
+		)));
 		$SMARTY->assign('cashreglist', $DB->GetAllByKey('SELECT id, name FROM cashregs ORDER BY name', 'id'));
 		$SMARTY->assign('divisions', $DB->GetAll('SELECT id, shortname FROM divisions ORDER BY shortname'));
 		$SMARTY->assign('sourcelist', $DB->GetAll('SELECT id, name FROM cashsources ORDER BY name'));

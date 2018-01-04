@@ -25,7 +25,12 @@
  */
 
 // REPLACE THIS WITH PATH TO YOU CONFIG FILE
-define('CONFIG_FILE', 'lms.ini');
+if (is_readable('lms.ini'))
+	$CONFIG_FILE = 'lms.ini';
+elseif (isset($_SERVER['HTTP_HOST']) && is_readable(DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'lms' . DIRECTORY_SEPARATOR . 'lms-' . $_SERVER['HTTP_HOST'] . '.ini'))
+	$CONFIG_FILE = DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'lms' . DIRECTORY_SEPARATOR . 'lms-' . $_SERVER['HTTP_HOST'] . '.ini';
+else
+	$CONFIG_FILE = '/etc/lms/lms.ini';
 
 ini_set('error_reporting', E_ALL&~E_NOTICE);
 

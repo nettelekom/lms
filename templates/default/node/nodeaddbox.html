@@ -1,6 +1,16 @@
 <!--// $Id$ //-->
+
+<style>
+    .tab-beautify td { padding: 3px; }
+    .tab-beautify tr td:nth-child(2) {
+        font-weight: bold;
+        white-space: nowrap;
+    }
+</style>
+
 <script type="text/javascript" src="img/netnodehelper.js"></script>
 {include file="google-maps.html"}
+
 <FORM NAME="nodeadd" ID="nodeadd" METHOD="POST" ACTION="?m=nodeadd{if $customerinfo.id}&ownerid={$customerinfo.id}{/if}">
 <INPUT type="submit" class="hiddenbtn">
 <TABLE class="lmsbox">
@@ -32,6 +42,10 @@
 				<OPTION VALUE="{$net.id}" {if $net.id == $nodedata.netid} selected{/if}{if $net.disabled == 1} class="alert"{/if}>{$net.name|truncate:20:"":true}: {$net.address}/{$net.prefix}</OPTION>
 				{/foreach}
 			</SELECT>
+			<label>
+				<input type="checkbox" name="nodedata[wholenetwork]" value="1" onchange="change_wholenetwork()"{if $nodedata.wholenetwork} checked{/if}>
+				{trans("the whole network")}
+			</label>
 		</TD>
 	</TR>
 	<TR>
@@ -39,16 +53,40 @@
 			<IMG SRC="img/ip.gif" ALT="{trans("IP address:")}">
 		</TD>
 		<TD style="width: 99%;">
-			<INPUT TYPE="TEXT" NAME="nodedataipaddr" VALUE="{$nodedata.ipaddr}" required {tip text="Enter IP address" trigger="ipaddr"}> <a href="javascript:void(0);" onClick="return ipchoosewin(document.nodeadd.nodedataipaddr, document.nodeadd.nodedatanetid);" {tip text="Click to select IP from the list"}>&raquo;&raquo;&raquo;</A>
+			<INPUT TYPE="TEXT" NAME="nodedataipaddr" VALUE="{$nodedata.ipaddr}" required {tip text="Enter IP address" trigger="ipaddr"}>
+			<a href="javascript:void(0);" onClick="return ipchoosewin({
+					ipelem: document.nodeadd.nodedataipaddr,
+					netelem: document.nodeadd.nodedatanetid,
+					ip: document.nodeadd.nodedataipaddr.value,
+					netid: document.nodeadd.nodedatanetid.value
+				});" {tip text="Click to select IP from the list"}>&raquo;&raquo;&raquo;</A>
+			<br>
+			<a href="#" id="selectfirstfreeaddress">{trans("Select first free address")}</a>
 		</TD>
 	</TR>
+	<script type="text/javascript">
+	<!--
+		$(function() {
+			$('#selectfirstfreeaddress').click(function() {
+				var netid = $('[name="nodedatanetid"]').val();
+				if (netid == 0)
+					return;
+				xajax_getFirstFreeAddress(netid, $('[name="nodedataipaddr"]').uniqueId().attr('id'));
+			});
+		});
+	//-->
+	</script>
 	{if ConfigHelper::checkValue(ConfigHelper::checkConfig('phpui.public_ip', 'true'))}
 	<TR>
 		<TD style="width: 1%;">
 			<IMG SRC="img/ip_pub.gif" ALT="{trans("Pub. IP address:")}">
 		</TD>
 		<TD style="width: 99%;">
-			<INPUT TYPE="TEXT" NAME="nodedataipaddr_pub" VALUE="{$nodedata.ipaddr_pub}" {tip text="Enter IP address (optional)" trigger="ipaddr_pub"}> <a href="javascript:void(0);" onClick="return ipchoosewin(document.nodeadd.nodedataipaddr_pub, null);" {tip text="Click to select IP from the list"}>&raquo;&raquo;&raquo;</A>
+			<INPUT TYPE="TEXT" NAME="nodedataipaddr_pub" VALUE="{$nodedata.ipaddr_pub}" {tip text="Enter IP address (optional)" trigger="ipaddr_pub"}>
+			<a href="javascript:void(0);" onClick="return ipchoosewin({
+					ipelem: document.nodeadd.nodedataipaddr_pub,
+					netelem: null
+				});" {tip text="Click to select IP from the list"}>&raquo;&raquo;&raquo;</A>
 		</TD>
 	</TR>
 	{/if}
@@ -76,34 +114,7 @@
 			<INPUT TYPE="TEXT" NAME="nodedata[passwd]" VALUE="{$nodedata.passwd}" {tip text="Enter password (optional)" trigger="passwd"}> <a href="javascript:GenPasswd();" {tip text="Click to generate random password"}>&raquo;&raquo;&raquo;</A>
 		</TD>
 	</TR>
-	<TR>
-		<TD style="width: 1%; vertical-align: top;">
-			<IMG SRC="img/home.gif" ALT="{trans("Location:")}">
-		</TD>
-		<TD style="width: 99%; white-space: nowrap;" COLSPAN="2">
-			<INPUT TYPE="TEXT" SIZE="40" VALUE="{$nodedata.location}" id="location" NAME="nodedata[location]"  {tip text="Enter location (optional)" trigger="location"}>
-			<A href="javascript:void(0);" onclick="if (check_teryt()) return locationchoosewin('nodedata', 'nodeadd', document.forms['nodeadd'].elements['nodedata[location_city]'].value,  document.forms['nodeadd'].elements['nodedata[location_street]'].value, {ConfigHelper::getConfig('phpui.default_teryt_city')})" {tip text="Click to select location"}>&raquo;&raquo;&raquo;</A>
-			<BR>
-			<INPUT type="hidden" name="nodedata[location_city]" value="{$nodedata.location_city}">
-			<INPUT type="hidden" name="nodedata[location_street]" value="{$nodedata.location_street}">
-			<INPUT type="hidden" name="nodedata[location_house]" value="{$nodedata.location_house}">
-			<INPUT type="hidden" name="nodedata[location_flat]" value="{$nodedata.location_flat}">
-			<INPUT TYPE="checkbox" name="nodedata[teryt]" id="teryt" ononchange="check_teryt('location')"{if $nodedata.teryt} checked{/if}> <label for="teryt">{trans("TERRIT-DB")}</label>
-		</TD>
-	</TR>
-	<TR>
-		<TD style="width: 1%;">
-			<IMG SRC="img/nodegroup.gif" ALT="{trans("Node group:")}">
-		</TD>
-		<TD style="width: 99%; white-space: nowrap;">
-			<SELECT SIZE="1" NAME="nodedata[nodegroup]" {tip text="Select group to attribute to node" trigger="nodegroup"} style="max-width:250px;">
-				<OPTION VALUE="0">{trans("... select group ...")}</OPTION>
-				{foreach from=$allnodegroups item=group}
-				<OPTION VALUE="{$group.id}" {if $group.id==$nodedata.nodegroup} SELECTED{/if}>{$group.name} ({$group.id|string_format:"%04d"})</OPTION>
-				{/foreach}
-			</SELECT>
-		</TD>
-	</TR>
+
 	{if $netdevices}
 	<TR>
 		<TD style="width: 1%;">
@@ -159,14 +170,33 @@
 			 
 		</TD>
 	</TR>
-	<TR>
-		<TD style="width: 1%;">
-			<IMG SRC="img/customer.gif" ALT="{trans("Customer:")}">
-		</TD>
-		<TD style="width: 99%;" class="nobr">
-			{customerlist form="nodeadd" customers=$customers selected=$nodedata.ownerid selectname="nodedata[customerid]" inputname="nodedata[ownerid]" selecttip="Assign node to customer"}
-		</TD>
-	</TR>
+	<tr>
+		<td style="width: 1%;">
+			<img src="img/customer.gif" alt="{trans("Customer:")}">
+		</td>
+		<td style="width: 99%;" class="nobr">
+			{customerlist
+				form       = "nodeadd"
+				customers  = $customers
+				selected   = $nodedata.ownerid
+				selectname = "nodedata[customerid]"
+				select_id  = "customerid_select"
+				inputname  = "nodedata[ownerid]"
+				input_id   = "customerid_input"
+				selecttip  = "Assign node to customer"
+			}
+		</td>
+	</tr>
+
+	<tr>
+		<td style="width: 1%; vertical-align: top;">
+			<img src="img/home.gif" alt="{trans("Location:")}">
+		</td>
+		<td style="width: 99%; white-space: nowrap;" colspan="2">
+			<select id="customer_addresses" name="nodedata[address_id]" {tip trigger="address_id"}></select>
+		</td>
+	</tr>
+
 	<TR>
 		<TD style="width: 1%;">
 			<IMG SRC="img/options.gif" ALT="">
@@ -184,7 +214,7 @@
 			<label>
 				<INPUT TYPE="checkbox" NAME="nodedata[authtype][{$idx}]" value="{$idx}" id="authtype{$idx}" {tip text="`$sessiontype.tip`" trigger="authtype`$idx`"}{if ($nodedata.authtype & $idx) == $idx} checked{/if}>
 				{$sessiontype.label}
-			</label>
+			</label><br>
 			{/foreach}
 		</TD>
 	</TR>
@@ -197,7 +227,7 @@
                 <img src="img/network.gif" alt="">
             </td>
             <td colspan="2" width="99%">
-                <a href="javascript:set_lat_lon()" accesskey="s">{trans("Determine GPS coordinates automatically")}</a>
+                <span class="lms-ui-button" id="set_gps">{trans("Determine GPS coordinates automatically")}</span>
             </td>
         </tr>
         <TR>
@@ -270,9 +300,15 @@
 	</TR>
     </TBODY>
 </TABLE></FORM>
-<SCRIPT type="text/javascript">
+
+<script type="text/javascript" src="img/lms-ui-iconselectmenu.js"></script>
+<script type="text/javascript">
 <!--
-	document.forms['nodeadd'].elements['nodedata[name]'].focus();
+	var customer_addresses = new LmsUiIconSelectMenu( "#customer_addresses" );
+
+	$(function() {
+		$('form[name="nodeadd"] [name="nodedata[name]"]').focus();
+	});
 
 	function GenPasswd() {
 		var length = {ConfigHelper::getConfig('phpui.nodepassword_length', '16')};
@@ -291,15 +327,24 @@
 		newrow.id = 'mac' + nr;
 		var newcell = newrow.insertCell(0);
 		newcell.style.width = '100%';
-		newcell.innerHTML = '<INPUT TYPE="TEXT" NAME="nodedata[macs][' + nr + ']" VALUE=""'
+		newcell.innerHTML = '<input type="text" name="nodedata[macs][' + nr + ']" value=""'
 			+ ' title="{trans("Enter MAC address")}">'
 			+ '<a href="javascript:void(0);" onClick="return macchoosewin(document.nodeadd.elements[\'nodedata[macs][' + nr + ']\']);"'
-			+ ' title="{trans("Click to select MAC from the list")}">&nbsp;&raquo;&raquo;&raquo;</A>';
+			+ ' title="{trans("Click to select MAC from the list")}">&nbsp;&raquo;&raquo;&raquo;</a>';
 		$(newcell).children("[title]").tooltip({
 			position: { my: "left top" }
 		});
 		macscountelem.value = parseInt(nr) + 1;
 	}
+
+	function change_wholenetwork() {
+		var wholenetwork = document.forms['nodeadd'].elements['nodedata[wholenetwork]'];
+		var display = wholenetwork.checked ? 'none' : 'table-row';
+
+		document.getElementsByName("nodedataipaddr")[0].parentNode.parentNode.style.display = display;
+		document.getElementsByName("nodedataipaddr_pub")[0].parentNode.parentNode.style.display = display;
+	}
+	change_wholenetwork();
 
 	function change_netdevice(id) {
 		if (xjx.$('linktype').value == 1) {
@@ -353,18 +398,46 @@
 		xjx.$('radiosector').style.display = (linktype == 1 ? '' : 'none');
 	}
 
-	check_teryt('location', true);
 	setNNProject();
 
-    function set_lat_lon(){
-        var loc = document.getElementById('location').value;
-        var geocoder = new google.maps.Geocoder();
-        geocoder.geocode( { 'address': loc}, function(results, status) {
-            if (status == google.maps.GeocoderStatus.OK) {
-                document.getElementById('latitude').value = results[0].geometry.location.lat();
-                document.getElementById('longitude').value = results[0].geometry.location.lng();
-            }
-        });
-    }
+    /*
+     * \brief Update address location update. Require google API key.
+     */
+	$( '#set_gps' ).click( function() {
+		if ($('#customer_addresses').val()) {
+			xajax_get_gps_coordinates({
+					address_id: $('#customer_addresses').val()
+				}, 'latitude', 'longitude');
+		}
+	});
+
+    /*!
+     * \brief Update addresses list on customer input change.
+     */
+    $( '#customerid_input' ).on('input reset_customer', function() {
+        customer_addresses.setAddressList( getCustomerAddresses($(this).val()) );
+    });
+
+    {if !ConfigHelper::checkConfig('phpui.big_networks')}
+    /*!
+     * \brief Update customer addresses list on select change.
+     * Using when big_networks is set as false.
+     */
+    $( '#customerid_select' ).on('change reset_customer', function() {
+        var id = $(this).val();
+
+        if ( id != 'undefined' && id > 0 ) {
+            customer_addresses.setAddressList( getCustomerAddresses(id) );
+        }
+    });
+    {/if}
+
+    customer_addresses.setAddressList( getCustomerAddresses( {intval($nodedata.ownerid)} ) );
+
+    {if $nodedata.address_id && $nodedata.ownerid}
+        $( '#customer_addresses' ).val( {$nodedata.address_id} );
+    {/if}
+
+    customer_addresses.init();
 //-->
-</SCRIPT>
+</script>

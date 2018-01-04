@@ -57,12 +57,21 @@ if (isset($_POST['document'])) {
 		$error['number'] = trans('Selected numbering plan doesn\'t match customer\'s division!');
 	elseif ($document['number'] == '') {
 	// check number
-		$tmp = $LMS->GetNewDocumentNumber($document['type'], $document['numberplanid']);
+		$tmp = $LMS->GetNewDocumentNumber(array(
+			'doctype' => $document['type'],
+			'planid' => $document['numberplanid'],
+			'customerid' => $document['customerid'],
+		));
 		$document['number'] = $tmp ? $tmp : 0;
 		$autonumber = true;
 	} elseif (!preg_match('/^[0-9]+$/', $document['number']))
 		$error['number'] = trans('Document number must be an integer!');
-	elseif ($LMS->DocumentExists($document['number'], $document['type'], $document['numberplanid']))
+	elseif ($LMS->DocumentExists(array(
+			'number' => $document['number'],
+			'doctype' => $document['type'],
+			'planid' => $document['numberplanid'],
+			'customerid' => $document['customerid'],
+		)))
 		$error['number'] = trans('Document with specified number exists!');
 
 	if ($document['fromdate']) {
@@ -184,21 +193,40 @@ if (isset($_POST['document'])) {
 
 		$DB->BeginTrans();
 
-		$division = $DB->GetRow('SELECT name, shortname, address, city, zip, countryid, ten, regon,
-				account, inv_header, inv_footer, inv_author, inv_cplace 
-				FROM divisions WHERE id = ? ;',array($customer['divisionid']));
+		$division = $DB->GetRow('SELECT d.name, d.shortname, d.ten, d.regon,
+									d.account, d.inv_header, d.inv_footer, d.inv_author, d.inv_cplace,
+									addr.country_id as countryid, addr.zip,
+									addr.city, addr.house, addr.flat, addr.street
+								FROM
+									divisions d
+									LEFT JOIN addresses addr ON d.address_id = addr.id
+								WHERE d.id = ?;',array($customer['divisionid']));
 
-		$fullnumber = docnumber($document['number'],
-			$DB->GetOne('SELECT template FROM numberplans WHERE id = ?', array($document['numberplanid'])),
-			$time);
-		$DB->Execute('INSERT INTO documents (type, number, numberplanid, cdate, 
+		if ($division) {
+			$tmp = array('city_name'     => $division['city'],
+						'location_house' => $division['house'],
+						'location_flat'  => $division['flat'],
+						'street_name'    => $division['street']);
+
+			$division['address'] = location_str( $tmp );
+		}
+
+		$fullnumber = docnumber(array(
+			'number' => $document['number'],
+			'template' => $DB->GetOne('SELECT template FROM numberplans WHERE id = ?', array($document['numberplanid'])),
+			'cdate' => $time,
+			'customerid' => $document['customerid'],
+		));
+		$DB->Execute('INSERT INTO documents (type, number, numberplanid, cdate, sdate, cuserid,
 			customerid, userid, name, address, zip, city, ten, ssn, divisionid, 
 			div_name, div_shortname, div_address, div_city, div_zip, div_countryid, div_ten, div_regon,
 			div_account, div_inv_header, div_inv_footer, div_inv_author, div_inv_cplace, closed, fullnumber)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', array($document['type'],
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', array($document['type'],
 				$document['number'],
 				$document['numberplanid'],
 				$time,
+				isset($document['closed']) ? $time : 0,
+				isset($document['closed']) ? $AUTH->id : 0,
 				$document['customerid'],
 				$AUTH->id,
 				trim($customer['lastname'] . ' ' . $customer['name']),
@@ -284,19 +312,12 @@ if (!$rights) {
 	die;
 }
 
-$allnumberplans = array();
-$numberplans = array();
-
-if ($templist = $LMS->GetNumberPlans())
-	foreach ($templist as $item)
-		if ($item['doctype'] < 0)
-			$allnumberplans[] = $item;
-
 if (isset($document['type'])) {
-	foreach ($allnumberplans as $plan)
-		if ($plan['doctype'] == $document['type'])
-			$numberplans[] = $plan;
-}
+	$customerid = isset($document['customerid']) ? $document['customerid'] : null;
+	$numberplans = GetDocumentNumberPlans($document['type'], $customerid);
+} else
+	$numberplans = array();
+$SMARTY->assign('numberplans', $numberplans);
 
 $docengines = GetDocumentTemplates($rights, isset($document['type']) ? $document['type'] : NULL);
 
@@ -308,9 +329,7 @@ if (!ConfigHelper::checkConfig('phpui.big_networks'))
 	$SMARTY->assign('customers', $LMS->GetCustomerNames());
 
 $SMARTY->assign('error', $error);
-$SMARTY->assign('numberplans', $numberplans);
 $SMARTY->assign('docrights', $rights);
-$SMARTY->assign('allnumberplans', $allnumberplans);
 $SMARTY->assign('docengines', $docengines);
 $SMARTY->assign('document', $document);
 $SMARTY->display('document/documentadd.html');

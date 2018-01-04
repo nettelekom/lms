@@ -57,7 +57,7 @@ function edit_producer($id) {
 
 	$obj->script("xajax.$('div_produceredit').style.display='';");
 	$obj->script("removeClass(xajax.$('id_producername'),'alert');");
-	$obj->assign("id_action_name","innerHTML", trans("Producer edit: $a", $producer['name']));
+	$obj->assign("id_action_name","innerHTML", trans('Producer edit: $a', $producer['name']));
 
 	$obj->assign("id_producer","value", $producer['id']);
 	$obj->assign("id_producername","value", $producer['name']);
@@ -73,7 +73,6 @@ function save_producer($forms) {
 
 	$form = $forms['produceredit'];
 	$formid = $form['id'];
-	$pid = $form['pid'];
 	$error = false;
 
 	$obj->script("removeClass(xajax.$('id_producername'),'alert');");
@@ -178,7 +177,7 @@ function edit_model($id) {
 }
 
 function save_model($forms) {
-	 global $DB;
+	$DB = LMSDB::getInstance();
 	$obj = new xajaxResponse();
 
 	$form = $forms['modeledit'];
@@ -233,7 +232,7 @@ function save_model($forms) {
 }
 
 function delete_model($id) {
-	global $DB;
+	$DB = LMSDB::getInstance();
 	$obj = new xajaxResponse();
 
 	$id = intval($id);
@@ -242,7 +241,8 @@ function delete_model($id) {
 		JOIN netdeviceproducers p ON (p.id = m.netdeviceproducerid) WHERE m.id = ?',
 		array($id));
 
-	$DB->Execute('DELETE FROM netdevicemodels WHERE id = ?', array($id));
+	if (!$DB->GetOne('SELECT COUNT(i.id) FROM netdevices i WHERE i.netdevicemodelid = ?', array($id)))
+		$DB->Execute('DELETE FROM netdevicemodels WHERE id = ?', array($id));
 
 	$obj->script("self.location.href='?m=netdevmodels&page=1&p_id=$pid';");
 

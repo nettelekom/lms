@@ -87,10 +87,22 @@ function openSelectWindow2(theURL, winName, myWidth, myHeight, isCenter, formfie
 	return false;
 }
 
-function ipchoosewin(formfield1, formfield2, netid, device)
-{
-	var url = '?m=chooseip' +  (netid ? '&netid=' + netid : '') + (device ? '&device=' + device : '');
-	return openSelectWindow2(url, 'chooseip', 350, 380, 'true', formfield1, formfield2);
+function ipchoosewin(hostparams) {
+	var ipelem = hostparams.ipelem;
+	var netelem = hostparams.netelem;
+	var ip = (typeof hostparams.ip === 'undefined' ? '' : hostparams.ip);
+	var netid = (typeof hostparams.netid === 'undefined' ? '' : hostparams.netid);
+	var device = (typeof hostparams.device === 'undefined' ? '' : hostparams.device);
+	var url = '?m=chooseip' +  (netid ? '&netid=' + netid : '') + (ip ? '&ip=' + ip : '') + (device ? '&device=' + device : '');
+	return openSelectWindow2(url, 'chooseip', 350, 380, 'true', ipelem, netelem);
+}
+
+function long2ip(ip) {
+    if (!isFinite(ip)) {
+        return false;
+    }
+
+    return [ip >>> 24, ip >>> 16 & 0xFF, ip >>> 8 & 0xFF, ip & 0xFF].join('.');
 }
 
 function macchoosewin(formfield)
@@ -105,8 +117,57 @@ function customerchoosewin(formfield)
 
 function locationchoosewin(varname, formname, city, street, default_city)
 {
-        if(city == '' && default_city) city = default_city;
-	return openSelectWindow('?m=chooselocation&name='+varname+'&form='+formname+'&city='+city+'&street='+street,'chooselocation',350,200,'true');
+    if (city == '' && default_city)
+        city = default_city;
+
+    return openSelectWindow('?m=chooselocation&name='+varname+'&form='+formname+'&city='+city+'&street='+street,'chooselocation',350,200,'true');
+}
+
+if ( typeof $ !== 'undefined' ) {
+    $(function() {
+        // open location dialog window if teryt is checked
+        $('body').on('click', '.teryt-address-button', function() {
+
+            var box = $( this ).closest( ".lmsui-address-box" );
+
+            // if teryt checkbox is not checked during teryt button click then
+            // we check it automatically for user convenience
+            if ( ! box.find("input[data-address='teryt-checkbox']").is(':checked') ) {
+                box.find("input[data-address='teryt-checkbox']").prop('checked', true);
+                // simulate click for update input state
+                $( '.lmsui-address-teryt-checkbox' ).trigger( 'change' );
+            }
+
+            var city   = box.find("input[data-address='city-hidden']").val();
+            if (city == '' && lmsSettings.defaultTerytCity) {
+                city = lmsSettings.defaultTerytCity;
+            }
+            var street = box.find("input[data-address='street-hidden']").val();
+
+            openSelectWindow('?m=chooselocation&city=' + city + '&street=' + street + "&boxid=" + box.attr('id'), 'chooselocation', 350, 200, 'true');
+        });
+
+        // disable and enable inputs after click
+        $('body').on('change', '.lmsui-address-teryt-checkbox', function() {
+            var boxid = $( this ).closest( ".lmsui-address-box" ).attr( 'id' );
+
+            if ( $( this ).is(':checked') ) {
+                $("#" + boxid + " input[type=text]").prop("readonly", true);
+                $("#" + boxid).find("input[data-address='zip']").attr('readonly', false);
+                $("#" + boxid).find("input[data-address='postoffice']").attr('readonly', false);
+                $("#" + boxid).find("input[data-address='location-name']").attr('readonly', false);
+                $("#" + boxid).find("select[data-address='state-select']").css('display', 'none').attr('disabled', true);
+                $("#" + boxid).find("input[data-address='state']").css('display', 'block').attr('disabled', false);
+            } else {
+                $("#" + boxid + " input[type=text]").prop("readonly", false);
+                $("#" + boxid).find("select[data-address='state-select']").css('display', 'inline-block').attr('disabled', false);
+                $("#" + boxid).find("input[data-address='state']").css('display', 'none').attr('disabled', true);
+            }
+        });
+
+        // simulate click for update input state
+        $( '.lmsui-address-teryt-checkbox' ).trigger( 'change' );
+    });
 }
 
 function netdevmodelchoosewin(varname, formname, netdevmodelid, producer, model)
@@ -286,10 +347,10 @@ function get_object_pos(obj) {
 
 function multiselect(options) {
 	var elemid = options.id;
-	var def = options.defaultValue !== undefined ? options.defaultValue : '';
-	var tiny = options.type !== undefined && options.type == 'tiny';
-	var icon = options.icon !== undefined ? options.icon : 'img/settings.gif';
-	var label = options.label !== undefined ? options.label : '';
+	var def = typeof options.defaultValue !== 'undefined' ? options.defaultValue : '';
+	var tiny = typeof options.type !== 'undefined' && options.type == 'tiny';
+	var icon = typeof options.icon !== 'undefined' ? options.icon : 'img/settings.gif';
+	var label = typeof options.label !== 'undefined' ? options.label : '';
 
 	var old_element = $('#' + elemid);
 	var form = old_element.closest('form');
@@ -318,7 +379,7 @@ function multiselect(options) {
 		new_element.html(old_selected);
 
 	new_element.data('data-multiselect-object', this)
-		.prop('style', old_element.prop('style'));
+		.attr('style', old_element.attr('style'));
 	// save onchange event handler
 	if (typeof(onchange = old_element.prop('onchange')) == 'function')
 		new_element.on('change', onchange);
@@ -474,7 +535,6 @@ function multiselect(options) {
 				}
 			} else {
 				$(this).prop('checked', false).parent().hide();
-				elems[i].parentNode.className = '';
 				elem[text] = 0;
 			}
 		});
@@ -549,16 +609,25 @@ function check_teryt(locid, init)
 {
     var checked = document.getElementById('teryt').checked;
 
-    if (locid) {
-        var loc = document.getElementById(locid);
-        if (checked) {
-            //if (!init)
-            //    loc.value = '';
-            loc.setAttribute('readonly', true);
-        }
-        else {
-            loc.removeAttribute('readonly');
-        }
+	if (typeof locid == 'undefined')
+		return checked;
+
+	if (Array.isArray(locid))
+		locids = locid;
+	else
+		locids = [ locid ];
+
+    if (locids) {
+		locids.forEach(function(locid) {
+			var loc = document.getElementById(locid);
+			if (checked) {
+				//if (!init)
+				//    loc.value = '';
+				loc.setAttribute('readonly', true);
+			} else {
+				loc.removeAttribute('readonly');
+			}
+		});
     }
 
     return checked;
@@ -630,14 +699,19 @@ function tinymce_init(ui_language) {
 }
 
 function reset_customer(form, elemname1, elemname2) {
-	if (document.forms[form].elements[elemname1].value)
+
+	if (document.forms[form].elements[elemname1].value) {
 		document.forms[form].elements[elemname2].value = document.forms[form].elements[elemname1].value;
+
+		$( document.forms[form].elements[elemname1] ).trigger( 'keyup' );
+		$( document.forms[form].elements[elemname2] ).trigger( 'reset_customer' );
+	}
 }
 
 function generate_random_string(length, characters) {
-	if (length === undefined)
+	if (typeof length === 'undefined')
 		length = 10;
-	if (characters === undefined)
+	if (typeof characters === 'undefined')
 		characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
 	charactersLength = characters.length;
 	randomString = '';
@@ -670,6 +744,9 @@ function get_size_unit(size) {
 }
 
 function _getCustomerNames(ids, success) {
+	if (!ids || String(ids).length == 0)
+		return 0;
+
 	$.ajax('?m=customerinfo&ajax=1', {
 		async: true,
 		method: 'POST',
@@ -682,10 +759,23 @@ function _getCustomerNames(ids, success) {
 }
 
 function getCustomerName(elem) {
+	if ( $(elem).val().length == 0 ) {
+		$(elem).nextAll('span').html('');
+		return 0;
+	}
+
 	_getCustomerNames([ $(elem).val() ], function(data, textStatus, jqXHR) {
+		if (typeof data.error !== 'undefined') {
+			$(elem).nextAll('span').html( data.error );
+			return 0;
+		}
+
 		$(elem).nextAll('span').html(data.customernames[$(elem).val()] === undefined ? ''
 			: '<a href="?m=customerinfo&id=' + $(elem).val() + '">' + data.customernames[$(elem).val()] + '</a>');
 	});
+
+	$(elem).trigger('reset_customer');
+	$(elem).trigger('change');
 }
 
 var customerinputs = [];
@@ -694,7 +784,7 @@ function getCustomerNameDeferred(elem) {
 	customerinputs.push(elem);
 }
 
-if (typeof $ != 'undefined') {
+if (typeof $ !== 'undefined') {
 	$(function() {
 		var cids = [];
 		$.each(customerinputs, function(index, elem) {
@@ -702,6 +792,16 @@ if (typeof $ != 'undefined') {
 		});
 		_getCustomerNames(cids, function(data, textStatus, jqXHR) {
 			$.each(customerinputs, function(index, elem) {
+				if ( $(elem).val().length == 0 ) {
+					$(elem).nextAll('span').html('');
+					return 0;
+				}
+
+				if (data.error != undefined) {
+					$(elem).nextAll('span').html( data.error );
+					return 0;
+				}
+
 				$(elem).nextAll('span').html(data.customernames[$(elem).val()] === undefined ?
 					'' : '<a href="?m=customerinfo&id=' + $(elem).val() + '">' + data.customernames[$(elem).val()] + '</a>');
 			});
@@ -715,4 +815,188 @@ if (typeof $ != 'undefined') {
 			}
 		}
 	});
+}
+
+/*!
+ * \brief Auto hide left vertical menu on print
+ */
+var show_menu_after_print = -1;
+
+var LMS_beforePrintEvent = function() {
+	if (typeof $ === 'undefined' || show_menu_after_print > -1) {
+		return;
+	}
+	if ($('#pageleftbar').hasClass('pageleftbar-hidden')) {
+		show_menu_after_print = 0;
+	} else {
+		$( "#lms-ui-main-menu-toggle" ).trigger( "click" );
+		show_menu_after_print = 1;
+	}
+};
+
+var LMS_afterPrintEvent = function() {
+	if (typeof $ === 'undefined' || show_menu_after_print == -1) {
+		return;
+	}
+	if (show_menu_after_print == 1) {
+		$( "#lms-ui-main-menu-toggle" ).trigger( "click" );
+		show_menu_after_print = -1;
+	}
+};
+
+if (window.matchMedia) {
+    var mediaQueryList = window.matchMedia('print');
+
+    mediaQueryList.addListener(function(mql) {
+        if (mql.matches) {
+            LMS_beforePrintEvent();
+        } else {
+            LMS_afterPrintEvent();
+        }
+    });
+}
+
+window.onbeforeprint = LMS_beforePrintEvent;
+window.onafterprint  = LMS_afterPrintEvent;
+
+/*!
+ * \brief Returns customer addresses by id.
+ *
+ * \param  int   id customer id
+ * \return json     customer addresses
+ * \return false    if id is incorrect
+ */
+function getCustomerAddresses( id ) {
+    return _getAddressList( 'customeraddresses', id );
+}
+
+/*!
+ * \brief Returns single address by id.
+ *
+ * \param  int   id address id
+ * \return json     address data
+ * \return false    if id is incorrect
+ */
+function getSingleAddress( address_id ) {
+    return _getAddressList( 'singleaddress', address_id );
+}
+
+function _getAddressList( action, v ) {
+    action = action.toLowerCase();
+
+    // test to check if 'id' is integer
+    if ( Math.floor(v) != v || !$.isNumeric(v) ) {
+        return false;
+    }
+
+    // check id value
+    if ( v <= 0 ) {
+        return [];
+    }
+
+    var url;
+    var addresses = null;
+
+    switch ( action ) {
+        case 'customeraddresses':
+            url = "?m=customeraddresses&action=getcustomeraddresses&id=" + v;
+        break;
+
+        case 'singleaddress':
+            url = "?m=customeraddresses&action=getsingleaddress&id=" + v;
+        break;
+    }
+
+    $.ajax({
+        url    : url,
+        async  : false,
+        success: function(data) {
+            addresses = data;
+        }
+    });
+
+    if ( addresses !== null ) {
+        var json_addr = JSON.parse( addresses );
+
+        $.each( json_addr, function( i, v ) {
+            json_addr[i]['location'] = $("<div/>").html( v['location'] ).text();
+        });
+
+        return json_addr;
+    } else {
+        return [];
+    }
+}
+
+/*!
+ * \brief Concatenate address fields to one string.
+ *
+ * \param string address
+ * \param string latitude_id id of latitude input
+ * \param string latitude_id id of longitude input
+ */
+function location_str(data) {
+	city = data.city;
+	street = data.street;
+	house = data.house;
+	flat = data.flat;
+	if (data.hasOwnProperty('zip'))
+		zip = data.zip;
+	else
+		zip = null;
+	if (data.hasOwnProperty('postoffice'))
+		postoffice = data.postoffice;
+	else
+		postoffice = null;
+	if (data.hasOwnProperty('state'))
+		state = data.state;
+	else
+		state = null;
+
+	var location = '';
+
+	if (state && state.length) {
+		location = state + ", ";
+	}
+
+	if (zip && zip.length) {
+		location += zip + " ";
+	}
+
+	if (postoffice && postoffice.length && postoffice != city) {
+		location += postoffice + ", ";
+	}
+
+	if (city.length && (!postoffice || !postoffice.length || postoffice == city || street.length)) {
+		location += city + ", ";
+	}
+	if (street.length) {
+		location += street;
+	} else
+		location += city;
+
+	if (location.length) {
+		if (house.length && flat.length) {
+			location += " " + house + "/" + flat;
+		} else if (house.length) {
+			location += " " + house;
+		}
+	}
+
+	return location;
+}
+
+/*!
+ * \brief Generate unique id.
+ *
+ * \return int
+ */
+function lms_uniqid() {
+    var uid = Date.now();
+
+    // do nothing, only wait
+    // secure for use two times in a row
+    while ( uid == Date.now() ) {}
+
+    return uid;
 }

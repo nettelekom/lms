@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2016 LMS Developers
+ *  (C) Copyright 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -32,19 +32,21 @@ if(isset($_GET['id']) && $action=='edit')
 	if ($LMS->isDocumentPublished($_GET['id']) && !ConfigHelper::checkConfig('privileges.superuser'))
 		return;
 
+	$note = $LMS->GetNoteContent($_GET['id']);
+
     $SESSION->remove('notecontents');
     $SESSION->remove('notecustomer');
 
     $i = 0;
-    foreach ($note['content'] as $item) {
-	$i++;
-	$nitem['description']	= $item['description'];
-	$nitem['value']		= $item['value'];
-	$nitem['posuid']	= $i;
-	$SESSION->restore('notecontents', $notecontents);
-	$notecontents[] = $nitem;
-	$SESSION->save('notecontents', $notecontents);
-    }
+	foreach ($note['content'] as $item) {
+		$i++;
+		$nitem['description']	= $item['description'];
+		$nitem['value']		= $item['value'];
+		$nitem['posuid']	= $i;
+		$SESSION->restore('notecontents', $notecontents);
+		$notecontents[] = $nitem;
+		$SESSION->save('notecontents', $notecontents);
+	}
 
     $SESSION->save('notecustomer', $LMS->GetCustomer($note['customerid'], true));
     $note['oldcdate'] = $note['cdate'];
@@ -57,7 +59,12 @@ $SESSION->restore('notecustomer', $customer);
 $SESSION->restore('note', $note);
 $SESSION->restore('noteediterror', $error);
 
-$ntempl = docnumber($note['number'], $note['template'], $note['cdate']);
+$ntempl = docnumber(array(
+	'number' => $note['number'],
+	'template' => $note['template'],
+	'cdate' => $note['cdate'],
+	'customerid' => $note['customerid'],
+));
 $layout['pagetitle'] = trans('Debit Note Edit: $a', $ntempl);
 
 if(!empty($_GET['customerid']) && $LMS->CustomerExists($_GET['customerid']))
@@ -145,12 +152,15 @@ switch($action)
 
 			$division = $DB->GetRow('SELECT name, shortname, address, city, zip, countryid, ten, regon,
 				account, inv_header, inv_footer, inv_author, inv_cplace 
-				FROM divisions WHERE id = ? ;',array($customer['divisionid']));
+				FROM vdivisions WHERE id = ? ;',array($customer['divisionid']));
 
 			if ($note['numberplanid'])
-				$fullnumber = docnumber($note['number'],
-					$DB->GetOne('SELECT template FROM numberplans WHERE id = ?', array($note['numberplanid'])),
-					$cdate);
+				$fullnumber = docnumber(array(
+					'number' => $note['number'],
+					'template' => $DB->GetOne('SELECT template FROM numberplans WHERE id = ?', array($note['numberplanid'])),
+					'cdate' => $cdate,
+					'customerid' => $customer['id'],
+				));
 			else
 				$fullnumber = null;
 

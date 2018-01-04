@@ -6,13 +6,18 @@
 .multiselect {
 	float: left;
 }
+.tag-bar {
+	padding: 2px;
+}
 </style>
 <H1>{$layout.pagetitle}</H1>
 <TABLE class="lmsbox">
     <THEAD>
 	<TR {tip text="Click on column name to change sorting order"}>
 		<TD WIDTH="93%" NOWRAP>
-			<IMG SRC="img/money.gif" ALT=""> <A href="?m=tarifflist&amp;o=name{if $listdata.direction == "asc" && $listdata.order == "name"},desc{/if}"><B>{trans("Name:")}</B></A> {if $listdata.order == "name"}<IMG SRC="img/{if $listdata.direction == "desc"}asc{else}desc{/if}_order.gif" alt="">{/if}<BR>
+			<IMG SRC="img/money.gif" ALT=""> <A href="?m=tarifflist&amp;o=name{if $listdata.direction == "asc" && $listdata.order == "name"},desc{/if}"><B>{trans("Name:")}</B></A> {if $listdata.order == "name"}<IMG SRC="img/{if $listdata.direction == "desc"}asc{else}desc{/if}_order.gif" alt="">{/if}
+			({trans("Effective date")})
+			<BR>
 			<IMG SRC="img/info1.gif" ALT=""> <A href="?m=tarifflist&amp;o=description{if $listdata.direction == "asc" && $listdata.order == "description"},desc{/if}">{trans("Description:")}</A> {if $listdata.order == "description"}<IMG SRC="img/{if $listdata.direction == "desc"}asc{else}desc{/if}_order.gif" alt="">{/if}
 		</TD>
 		<TD WIDTH="1%" align="right" NOWRAP>
@@ -70,20 +75,28 @@
 					<OPTION value="1"{if $listdata.state == 1} SELECTED{/if}>{trans("enabled")}</OPTION>
 					<OPTION value="2"{if $listdata.state == 2} SELECTED{/if}>{trans("disabled")}</OPTION>
 				</SELECT>
-				{trans("Group:")}
-				<SELECT SIZE="1" NAME="g" ONCHANGE="document.choosefilter.submit();">
-					<OPTION value="0"{if !$listdata.customergroupid} SELECTED{/if}>{trans("- all -")}</OPTION>
-					{section name=customergroups loop=$customergroups}
-					<OPTION value="{$customergroups[customergroups].id}" {if $listdata.customergroupid == $customergroups[customergroups].id} SELECTED {/if}>{$customergroups[customergroups].name|truncate:50:"...":true}</OPTION>
-					{/section}
-				</SELECT>
-				{trans("Tags:")}
-				</div>
-				<SELECT size="5" name="tg[]" class="lms-ui-multiselect" onchange="document.choosefilter.submit();" {tip text="Select tariff tags"} multiple>
-					{foreach $tags as $tag}
-					<OPTION value="{$tag.id}"{if !empty($listdata.tags) && in_array($tag.id, $listdata.tags)} selected{/if}>{$tag.name}</OPTION>
-					{/foreach}
-				</SELECT>
+
+				{if count($customergroups) > 0}
+					{trans("Group:")}
+					<SELECT SIZE="1" NAME="g" ONCHANGE="document.choosefilter.submit();">
+						<OPTION value="0"{if !$listdata.customergroupid} SELECTED{/if}>{trans("- all -")}</OPTION>
+						{section name=customergroups loop=$customergroups}
+						<OPTION value="{$customergroups[customergroups].id}" {if $listdata.customergroupid == $customergroups[customergroups].id} SELECTED {/if}>{$customergroups[customergroups].name|truncate:50:"...":true}</OPTION>
+						{/section}
+					</SELECT>
+				{else}
+					<input type="hidden" name="g" value="">
+				{/if}
+
+				{if count($tags) > 0}
+					{trans("Tags:")}
+					</div>
+					<SELECT size="5" name="tg[]" class="lms-ui-multiselect" onchange="document.choosefilter.submit();" {tip text="Select tariff tags"} multiple>
+						{foreach $tags as $tag}
+						<OPTION value="{$tag.id}"{if !empty($listdata.tags) && in_array($tag.id, $listdata.tags)} selected{/if}>{$tag.name}</OPTION>
+						{/foreach}
+					</SELECT>
+				{/if}
 			</FORM>
 		</TD>
 	</TR>
@@ -93,13 +106,22 @@
 	{foreach $tarifflist as $tariff}
 	<TR class="highlight {cycle}{if $tariff.disabled == 1 && !$listdata.state} blend{/if}"  >
 		<TD WIDTH="93%">
-			<IMG SRC="img/money.gif" ALT="">&nbsp;<a href="?m=tariffinfo&amp;id={$tariff.id}"><B>{$tariff.name}</B></a><BR>
+			<IMG SRC="img/money.gif" ALT="">&nbsp;<a href="?m=tariffinfo&amp;id={$tariff.id}"><B>{$tariff.name}</B></a>
+			{if $tariff.datefrom || $tariff.dateto}
+				{if $tariff.datefrom}
+				({trans("from:")} {$tariff.datefrom|date_format:"%Y/%m/%d"}{if !$tariff.dateto}){/if}
+				{/if}
+				{if $tariff.dateto}
+				{if !$tariff.datefrom}({/if}{trans("to:")} {$tariff.dateto|date_format:"%Y/%m/%d"})
+				{/if}
+			{/if}
+			<BR>
 			{if $tariff.description}<IMG SRC="img/info1.gif" ALT="">&nbsp;{$tariff.description}{/if}
 			{if !empty($tariff.tags)}
 			<br>
 			{trans("Tags:")}
 			{foreach $tariff.tags as $tag}
-			<a href="?m=tarifftaginfo&id={$tag.tag_id}" class="bold">{$tag.tag_name}</a>{if !$tag@last} / {/if}
+			<span class="dark tag-bar"><a href="?m={$layout.module}&tag={$tag.tag_id}">{$tag.tag_name}</a>&nbsp;<a href="?m=tarifftaginfo&id={$tag.tag_id}" class="bold">&raquo;</a></span>{if !$tag@last} / {/if}
 			{/foreach}
 			{/if}
 		</TD>

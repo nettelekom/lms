@@ -73,7 +73,7 @@ function GetTariffList($order = 'name,asc', $type = NULL, $customergroupid = NUL
 	$totalactivecount = 0;
 
 	if ($tarifflist = $DB->GetAllByKey('SELECT t.id, t.name, t.value,
-			taxes.label AS tax, taxes.value AS taxvalue, prodid, t.disabled,
+			taxes.label AS tax, taxes.value AS taxvalue, t.datefrom, t.dateto, prodid, t.disabled,
 			t.uprate, t.downrate, t.upceil, t.downceil, t.climit, t.plimit,
 			t.uprate_n, t.downrate_n, t.upceil_n, t.downceil_n, t.climit_n, t.plimit_n,
 			t.description, t.period, a.customerscount, a.count, a.value AS sumval
@@ -213,8 +213,10 @@ function GetTariffList($order = 'name,asc', $type = NULL, $customergroupid = NUL
 	return $tarifflist;
 }
 
-if (!isset($_POST['o']))
+if (!isset($_POST['o']) && !isset($_GET['o']))
 	$SESSION->restore('tlo', $o);
+elseif (isset($_GET['o']))
+	$o = $_GET['o'];
 else
 	$o = $_POST['o'];
 $SESSION->save('tlo', $o);
@@ -245,11 +247,19 @@ else
 	$s = $_POST['s'];
 $SESSION->save('tls', $s);
 
-if (!isset($_POST['tg']))
+if (!isset($_POST['tg']) && !is_null($_POST['tg']))
 	$SESSION->restore('tltg', $tg);
 else
 	$tg = $_POST['tg'];
-$SESSION->save('tlt', $tg);
+if (isset($_GET['tag'])) {
+	if (!is_array($tg))
+		$tg = array();
+	if ($newtag = intval($_GET['tag'])) {
+		array_push($tg, $newtag);
+		$tg = array_unique($tg);
+	}
+}
+$SESSION->save('tltg', $tg);
 
 $tarifflist = GetTariffList($o, $t, $g, $p, $s, $tg);
 

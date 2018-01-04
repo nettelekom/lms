@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2016 LMS Developers
+ *  (C) Copyright 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -24,6 +24,8 @@
  *  $Id$
  */
 
+include(MODULES_DIR . DIRECTORY_SEPARATOR . 'invoicexajax.inc.php');
+
 // Invoiceless liabilities: Zobowiazania/obciazenia na ktore nie zostala wystawiona faktura
 function GetCustomerCovenants($customerid)
 {
@@ -40,14 +42,14 @@ function GetCustomerCovenants($customerid)
 			ORDER BY time', array($customerid));
 }
 
-$layout['pagetitle'] = trans('New Invoice');
-
 $taxeslist = $LMS->GetTaxes();
 
 $SESSION->restore('invoicecontents', $contents);
 $SESSION->restore('invoicecustomer', $customer);
 $SESSION->restore('invoice', $invoice);
 $SESSION->restore('invoicenewerror', $error);
+
+$layout['pagetitle'] = !empty($invoice) && $invoice['proforma'] ? trans('New Pro Forma Invoice') : trans('New Invoice');
 
 $itemdata = r_trim($_POST);
 
@@ -68,6 +70,8 @@ switch($action)
 		$invoice['sdate'] = $currtime;
 //		$invoice['paytype'] = ConfigHelper::getConfig('invoices.paytype');
 
+		$invoice['proforma'] = isset($_GET['proforma']) ? 1 : 0;
+
 		if(!empty($_GET['customerid']) && $LMS->CustomerExists($_GET['customerid']))
 		{
 			$customer = $LMS->GetCustomer($_GET['customerid'], true);
@@ -75,7 +79,7 @@ switch($action)
 			$invoice['numberplanid'] = $DB->GetOne('SELECT n.id FROM numberplans n
 				JOIN numberplanassignments a ON (n.id = a.planid)
 				WHERE n.doctype = ? AND n.isdefault = 1 AND a.divisionid = ?',
-				array(DOC_INVOICE, $customer['divisionid']));
+				array($invoice['proforma'] ? DOC_INVOICE_PRO : DOC_INVOICE, $customer['divisionid']));
 		}
 
 		if (isset($customer) && $customer['paytime'] != -1)
@@ -85,9 +89,9 @@ switch($action)
 			$paytime = ConfigHelper::getConfig('invoices.paytime');
 		$invoice['deadline'] = $currtime + $paytime * 86400;
 
-		if(empty($invoice['numberplanid']))
+		if (empty($invoice['numberplanid']))
 			$invoice['numberplanid'] = $DB->GetOne('SELECT id FROM numberplans
-				WHERE doctype = ? AND isdefault = 1', array(DOC_INVOICE));
+				WHERE doctype = ? AND isdefault = 1', array($invoice['proforma'] ? DOC_INVOICE_PRO : DOC_INVOICE));
 	break;
 
 	case 'additem':
@@ -229,7 +233,7 @@ switch($action)
 		if($invoice['cdate'] && !isset($invoice['cdatewarning']))
 		{
 			$maxdate = $DB->GetOne('SELECT MAX(cdate) FROM documents WHERE type = ? AND numberplanid = ?', 
-					array(DOC_INVOICE, $invoice['numberplanid']));
+					array($invoice['proforma'] ? DOC_INVOICE_PRO : DOC_INVOICE, $invoice['numberplanid']));
 
 			if($invoice['cdate'] < $maxdate)
 			{
@@ -263,18 +267,24 @@ switch($action)
 		if ($invoice['deadline'] < $invoice['cdate'])
 			$error['deadline'] = trans('Deadline date should be later than consent date!');
 
+		$cid = isset($_GET['customerid']) && $_GET['customerid'] != '' ? intval($_GET['customerid']) : intval($_POST['customerid']);
+
 		if($invoice['number'])
 		{
 			if(!preg_match('/^[0-9]+$/', $invoice['number']))
 				$error['number'] = trans('Invoice number must be integer!');
-			elseif($LMS->DocumentExists($invoice['number'], DOC_INVOICE, $invoice['numberplanid'], $invoice['cdate']))
+			elseif($LMS->DocumentExists(array(
+					'number' => $invoice['number'],
+					'doctype' => $invoice['proforma'] ? DOC_INVOICE_PRO : DOC_INVOICE,
+					'planid' => $invoice['numberplanid'],
+					'cdate' => $invoice['cdate'],
+					'customerid' => $cid
+				)))
 				$error['number'] = trans('Invoice number $a already exists!', $invoice['number']);
 		}
 
 		if(!isset($error))
 		{
-    		$cid = isset($_GET['customerid']) && $_GET['customerid'] != '' ? intval($_GET['customerid']) : intval($_POST['customerid']);
-
 			if($LMS->CustomerExists($cid))
 				$customer = $LMS->GetCustomer($cid, true);
 
@@ -331,20 +341,36 @@ switch($action)
 		$DB->LockTables(array('documents', 'cash', 'invoicecontents', 'numberplans', 'divisions'));
 
 		if(!$invoice['number'])
-			$invoice['number'] = $LMS->GetNewDocumentNumber(DOC_INVOICE, $invoice['numberplanid'], $invoice['cdate']);
+			$invoice['number'] = $LMS->GetNewDocumentNumber(array(
+				'doctype' => $invoice['proforma'] ? DOC_INVOICE_PRO : DOC_INVOICE,
+				'planid' => $invoice['numberplanid'],
+				'cdate' => $invoice['cdate'],
+				'customerid' => $customer['id'],
+			));
 		else {
 			if(!preg_match('/^[0-9]+$/', $invoice['number']))
 				$error['number'] = trans('Invoice number must be integer!');
-			elseif($LMS->DocumentExists($invoice['number'], DOC_INVOICE, $invoice['numberplanid'], $invoice['cdate']))
+			elseif($LMS->DocumentExists(array(
+					'number' => $invoice['number'],
+					'doctype' => $invoice['proforma'] ? DOC_INVOICE_PRO : DOC_INVOICE,
+					'planid' => $invoice['numberplanid'],
+					'cdate' => $invoice['cdate'],
+					'customerid' => $customer['id'],
+				)))
 				$error['number'] = trans('Invoice number $a already exists!', $invoice['number']);
 
 			if($error) {
-				$invoice['number'] = $LMS->GetNewDocumentNumber(DOC_INVOICE, $invoice['numberplanid'], $invoice['cdate']);
+				$invoice['number'] = $LMS->GetNewDocumentNumber(array(
+					'doctype' => $invoice['proforma'] ? DOC_INVOICE_PRO : DOC_INVOICE, 
+					'planid' => $invoice['numberplanid'],
+					'cdate' => $invoice['cdate'],
+					'customerid' => $customer['id'],
+				));
 				$error = null;
 			}
 		}
 
-		$invoice['type'] = DOC_INVOICE;
+		$invoice['type'] = $invoice['proforma'] ? DOC_INVOICE_PRO : DOC_INVOICE;
 
 		$hook_data = array(
 			'customer' => $customer,
@@ -391,7 +417,10 @@ switch($action)
 				'original' => !empty($_GET['original']) ? 1 : 0,
 				'copy' => !empty($_GET['copy']) ? 1 : 0));
 
-		$SESSION->redirect('?m=invoicenew&action=init');
+		if (isset($_POST['reuse']))
+			$SESSION->redirect('?m=invoicenew&action=init');
+		else
+			$SESSION->redirect('?' . $SESSION->get('backto'));
 	break;
 }
 
@@ -442,7 +471,18 @@ $SMARTY->assign('contents', $contents);
 $SMARTY->assign('customer', $customer);
 $SMARTY->assign('invoice', $invoice);
 $SMARTY->assign('tariffs', $LMS->GetTariffs());
-$SMARTY->assign('numberplanlist', $LMS->GetNumberPlans(DOC_INVOICE, date('Y/m', $invoice['cdate'])));
+
+$args = array(
+	'doctype' => $invoice['proforma'] ? DOC_INVOICE_PRO : DOC_INVOICE,
+	'cdate' => date('Y/m', $invoice['cdate']),
+);
+if (isset($customer)) {
+	$args['customerid'] = $customer['id'];
+	$args['division'] = $DB->GetOne('SELECT divisionid FROM customers WHERE id = ?', array($customer['id']));
+} else
+	$args['customerid'] = null;
+$SMARTY->assign('numberplanlist', $LMS->GetNumberPlans($args));
+
 $SMARTY->assign('taxeslist', $taxeslist);
 $SMARTY->display('invoice/invoicenew.html');
 

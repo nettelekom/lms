@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2013 LMS Developers
+ *  (C) Copyright 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -23,18 +23,20 @@
  *
  *  $Id$
  */
+
 $id = intval($_GET['id']);
 
-if (!$DB->GetOne('SELECT * FROM netnodes WHERE id=?',array($id)))
+if (!$LMS->NetNodeExists($id))
 	$SESSION->redirect('?m=netnodelist');
 
 $DB->BeginTrans();
 
-$DB->Execute("DELETE FROM netnodes WHERE id=?",array($id));
+$LMS->NetNodeDelete($id);
+
 $LMS->CleanupInvprojects();
 
 $DB->CommitTrans();
 
-header('Location: ?m=netnodelist');
-		
+$SESSION->redirect('?m=netnodelist');
+
 ?>

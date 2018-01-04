@@ -4,7 +4,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2016 LMS Developers
+ *  (C) Copyright 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -33,6 +33,7 @@ $parameters = array(
 	'h' => 'help',
 	'v' => 'version',
 	'c' => 'stdout',
+	's:' => 'section:',
 );
 
 foreach ($parameters as $key => $val) {
@@ -50,7 +51,7 @@ foreach ($short_to_longs as $short => $long)
 if (array_key_exists('version', $options)) {
 	print <<<EOF
 lms-cashimport-mail.php
-(C) 2001-2016 LMS Developers
+(C) 2001-2017 LMS Developers
 
 EOF;
 	exit(0);
@@ -59,13 +60,15 @@ EOF;
 if (array_key_exists('help', $options)) {
 	print <<<EOF
 lms-cashimport-mail.php
-(C) 2001-2016 LMS Developers
+(C) 2001-2017 LMS Developers
 
 -C, --config-file=/etc/lms/lms.ini      alternate config file (default: /etc/lms/lms.ini);
 -h, --help                      print this help and exit;
 -v, --version                   print version info and exit;
 -q, --quiet                     suppress any output, except errors;
 -c, --stdout                    write cash import file contents to stdout
+-s, --section=<section-name>    section name from lms configuration where settings
+                                are stored
 
 EOF;
 	exit(0);
@@ -75,7 +78,7 @@ $quiet = array_key_exists('quiet', $options);
 if (!$quiet) {
 	print <<<EOF
 lms-cashimport-mail.php
-(C) 2001-2016 LMS Developers
+(C) 2001-2017 LMS Developers
 
 EOF;
 }
@@ -126,21 +129,21 @@ try {
 require_once(LIB_DIR . DIRECTORY_SEPARATOR . 'common.php');
 require_once(LIB_DIR . DIRECTORY_SEPARATOR . 'language.php');
 include_once(LIB_DIR . DIRECTORY_SEPARATOR . 'definitions.php');
-require_once(LIB_DIR . DIRECTORY_SEPARATOR . 'unstrip.php');
 
 // Initialize Session, Auth and LMS classes
 
-$stdout = array_key_exists('stdout', $options);
+$stdout = isset($options['stdout']);
+$config_section = isset($options['section']) && preg_match('/^[a-z0-9-_]+$/i', $options['section']) ? $options['section'] : 'cashimport';
 
-$cashimport_server = ConfigHelper::getConfig('cashimport.server');
-$cashimport_username = ConfigHelper::getConfig('cashimport.username');
-$cashimport_password = ConfigHelper::getConfig('cashimport.password');
-$cashimport_filename_pattern = ConfigHelper::getConfig('cashimport.filename_pattern', '', true);
+$cashimport_server = ConfigHelper::getConfig($config_section . '.server');
+$cashimport_username = ConfigHelper::getConfig($config_section . '.username');
+$cashimport_password = ConfigHelper::getConfig($config_section . '.password');
+$cashimport_filename_pattern = ConfigHelper::getConfig($config_section . '.filename_pattern', '', true);
 
 if (empty($cashimport_server) || empty($cashimport_username) || empty($cashimport_password))
 	die("Fatal error: mailbox credentials are not set!" . PHP_EOL);
 
-$cashimport_use_seen_flag = ConfigHelper::checkValue(ConfigHelper::getConfig('cashimport.use_seen_flag', true));
+$cashimport_use_seen_flag = ConfigHelper::checkValue(ConfigHelper::getConfig($config_section . '.use_seen_flag', true));
 
 $ih = @imap_open("{" . $cashimport_server . "}INBOX", $cashimport_username, $cashimport_password);
 if (!$ih)
@@ -160,26 +163,86 @@ foreach ($posts as $postid) {
 		$parts = $post->parts;
 		//print_r($parts);
 
-		foreach ($parts as $partid => $part)
-			if ($part->ifdisposition && in_array(strtolower($part->disposition), array('attachment', 'inline'))
-				&& $part->ifdparameters)
-				foreach ($part->dparameters as $dparameter)
-					if (strtolower($dparameter->attribute) == 'filename') {
-						$fname = $dparameter->value;
-						$body = imap_fetchbody($ih, $postid, $partid + 1);
-						if ($part->encoding == 3)
-							$body = imap_base64($body);
-						$files[] = array(
-							'name' => $fname,
-							'contents' => $body,
-						);
+		foreach ($parts as $partid => $part) {
+			if ($part->ifdisposition) {
+				if (in_array(strtolower($part->disposition), array('attachment', 'inline'))
+					&& $part->ifdparameters)
+					foreach ($part->dparameters as $dparameter)
+						if (strtolower($dparameter->attribute) == 'filename') {
+							if (preg_match('/^=\?/', $dparameter->value)) {
+								$elems = imap_mime_header_decode($dparameter->value);
+								if ($elems[0]->charset != 'default')
+									$fname = iconv($elems[0]->charset, 'utf-8', $elems[0]->text);
+								else
+									$fname = $elems[0]->text;
+							} else
+								$fname = $dparameter->value;
+							$body = imap_fetchbody($ih, $postid, $partid + 1);
+							if ($part->encoding == 3)
+								$body = imap_base64($body);
+							$files[] = array(
+								'name' => $fname,
+								'contents' => $body,
+							);
+						}
+			} elseif ($part->ifsubtype) {
+				if (strtolower($part->subtype) == 'octet-stream' && $part->ifparameters)
+					foreach ($part->parameters as $parameter) {
+						if (strtolower($parameter->attribute) == 'name') {
+							$elems = imap_mime_header_decode($parameter->value);
+							if ($elems[0]->charset != 'default')
+								$fname = iconv($elems[0]->charset, 'utf-8', $elems[0]->text);
+							else
+								$fname = $elems[0]->text;
+							$body = imap_fetchbody($ih, $postid, $partid + 1);
+							if ($part->encoding == 3)
+								$body = imap_base64($body);
+							$files[] = array(
+								'name' => $fname,
+								'contents' => $body,
+							);
+						}
 					}
-	} elseif ($post->type == 3 && $post->ifdispostion
+				elseif (strtolower($part->subtype) == 'mixed' && isset($part->parts))
+					foreach ($part->parts as $subpartid => $subpart) {
+						if ($subpart->type == 3 && $subpart->ifdisposition
+								&& in_array(strtolower($subpart->disposition), array('attachment', 'inline'))
+								&& $subpart->ifdparameters)
+								foreach ($subpart->dparameters as $dparameter) {
+									if (strtolower($dparameter->attribute) == 'filename') {
+										if (preg_match('/^=\?/', $dparameter->value)) {
+											$elems = imap_mime_header_decode($dparameter->value);
+											if ($elems[0]->charset != 'default')
+												$fname = iconv($elems[0]->charset, 'utf-8', $elems[0]->text);
+											else
+												$fname = $elems[0]->text;
+										} else
+											$fname = $dparameter->value;
+										$body = imap_fetchbody($ih, $postid, ($partid + 1) . '.' . ($subpartid + 1));
+										if ($subpart->encoding == 3)
+											$body = imap_base64($body);
+										$files[] = array(
+											'name' => $fname,
+											'contents' => $body,
+										);
+									}
+								}
+					}
+			}
+		}
+	} elseif ($post->type == 3 && $post->ifdisposition
 		&& in_array(strtolower($post->disposition), array('attachment', 'inline'))
 		&& $post->ifdparameters)
-		foreach ($part->dparameters as $dparameter)
+		foreach ($post->dparameters as $dparameter)
 			if (strtolower($dparameter->attribute) == 'filename') {
-				$fname = $dparameter->value;
+				if (preg_match('/^=\?/', $dparameter->value)) {
+					$elems = imap_mime_header_decode($dparameter->value);
+					if ($elems[0]->charset != 'default')
+						$fname = iconv($elems[0]->charset, 'utf-8', $elems[0]->text);
+					else
+						$fname = $elems[0]->text;
+				} else
+					$fname = $dparameter->value;
 				$body = imap_fetchbody($ih, $postid, '1');
 				if ($post->encoding == 3)
 					$body = imap_base64($body);

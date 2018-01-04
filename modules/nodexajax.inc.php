@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2013 LMS Developers
+ *  (C) Copyright 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -303,8 +303,38 @@ function getRadioSectors($netdev, $technology = 0) {
 	return $result;
 }
 
-$LMS->InitXajax();
+function getFirstFreeAddress($netid, $elemid) {
+	global $LMS;
+
+	$DB = LMSDB::getInstance();
+
+	$result = new xajaxResponse();
+
+	$reservedaddresses = intval(ConfigHelper::getConfig('phpui.first_reserved_addresses', 0, true));
+	$net = $LMS->GetNetworkRecord($netid);
+	$ip = '';
+
+	foreach ($net['nodes']['id'] as $idx => $nodeid) {
+		if ($idx < $reservedaddresses)
+			continue;
+		if ($nodeid) {
+			$firstnodeid = $idx;
+			$ip = '';
+		}
+		if (!$nodeid && !isset($net['nodes']['name'][$idx]) && empty($ip)) {
+			$ip = $net['nodes']['address'][$idx];
+			if (isset($firstnodeid))
+				break;
+		}
+	}
+	if (!empty($ip))
+		$result->assign($elemid, 'value', $ip);
+
+	return $result;
+}
+
 $LMS->RegisterXajaxFunction(array('getNodeLocks', 'addNodeLock', 'delNodeLock', 'getThroughput', 'getNodeStats',
-	'getManagementUrls', 'addManagementUrl', 'delManagementUrl', 'updateManagementUrl', 'getRadioSectors'));
+	'getManagementUrls', 'addManagementUrl', 'delManagementUrl', 'updateManagementUrl', 'getRadioSectors',
+	'getFirstFreeAddress'));
 
 ?>

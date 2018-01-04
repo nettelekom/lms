@@ -30,7 +30,7 @@ function RTSearch($search, $order='createtime,desc')
 
 	if(!$order)
 		$order = 'createtime,desc';
-	
+
 	$o = explode(',',$order);
 	$order = $o[0];
 
@@ -62,8 +62,8 @@ function RTSearch($search, $order='createtime,desc')
 
 	if(!empty($search['owner']))
 		$where[] = 'owner = '.intval($search['owner']);
-	if(!empty($search['customerid']))
-		$where[] = 't.customerid = '.intval($search['customerid']);
+	if(!empty($search['custid']))
+		$where[] = 't.customerid = '.intval($search['custid']);
 	if(!empty($search['subject']))
 		$where[] = 't.subject ?LIKE? '.$DB->Escape('%'.$search['subject'].'%');
 	if(!empty($search['state']))
@@ -92,21 +92,21 @@ function RTSearch($search, $order='createtime,desc')
 		$where = ' WHERE '.implode($op, $where);
 
 	if($result = $DB->GetAll('SELECT DISTINCT t.id, t.customerid, t.subject, t.state, t.owner AS ownerid,
-			users.name AS ownername, CASE WHEN customerid = 0 THEN t.requestor ELSE '
+			vusers.name AS ownername, CASE WHEN customerid = 0 THEN t.requestor ELSE '
 			.$DB->Concat('UPPER(customers.lastname)',"' '",'customers.name').'
 			END AS requestor, t.requestor AS req, t.createtime,
 			(CASE WHEN m.lastmodified IS NULL THEN 0 ELSE m.lastmodified END) AS lastmodified
 			FROM rttickets t
 			LEFT JOIN (SELECT MAX(createtime) AS lastmodified, ticketid FROM rtmessages GROUP BY ticketid) m ON m.ticketid = t.id
-			LEFT JOIN rtticketcategories tc ON t.id = tc.ticketid 
-			LEFT JOIN users ON (t.owner = users.id) 
+			LEFT JOIN rtticketcategories tc ON t.id = tc.ticketid
+			LEFT JOIN vusers ON (t.owner = vusers.id)
 			LEFT JOIN customers ON (t.customerid = customers.id)'
-			.(isset($where) ? $where : '') 
+			.(isset($where) ? $where : '')
 			.($sqlord !='' ? $sqlord.' '.$direction:'')))
 	{
 		foreach($result as $idx => $ticket)
 		{
-			if(!$ticket['customerid'])
+			if(!$ticket['custid'])
 				list($ticket['requestor'], $ticket['requestoremail']) = sscanf($ticket['req'], "%[^<]<%[^>]");
 			else
 				list($ticket['requestoremail']) = sscanf($ticket['req'], "<%[^>]");
@@ -132,14 +132,14 @@ elseif(isset($_GET['s']))
         $SESSION->restore('rtsearch', $search);
 
 if(isset($_GET['id']))
-	$search['customerid'] = $_GET['id'];
+	$search['custid'] = $_GET['id'];
 
 if(isset($_GET['state']))
 {
 	$search = array(
 		'state' => $_GET['state'],
 		'subject' => '',
-		'customerid' => '0',
+		'custid' => '0',
 		'name' => '',
 		'email' => '',
 		'owner' => '0',
@@ -198,7 +198,7 @@ if(isset($search) || isset($_GET['s']))
 		unset($queue['order']);
 		unset($queue['direction']);
 
-		$page = (! isset($_GET['page']) ? 1 : $_GET['page']); 
+		$page = (! isset($_GET['page']) ? 1 : $_GET['page']);
 		$pagelimit = ConfigHelper::getConfig('phpui.ticketlist_pagelimit', $queuedata['total']);
 		$start = ($page - 1) * $pagelimit;
 

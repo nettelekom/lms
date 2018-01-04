@@ -240,7 +240,7 @@ function module_main()
 
 				$sms_body .= "\n";
 				$sms_body .= trans('Customer:').' '.$info['customername'];
-				$sms_body .= ' '.sprintf('(%04d)', $ticket['customerid']).'. ';
+				$sms_body .= ' '.sprintf('(%04d)', $info['customerid']).'. ';
 				$sms_body .= $info['address'].', '.$info['zip'].' '.$info['city'].'. ';
 				if (!empty($phones))
 					$sms_body .= '. ' . trans('Phone:') . ' ' . preg_replace('/([0-9])[\s-]+([0-9])/', '\1\2', implode(',', $phones));
@@ -417,13 +417,12 @@ function module_main()
 
 			$sms_body .= "\n";
 			$sms_body .= trans('Customer:').' '.$info['customername'];
-			$sms_body .= ' '.sprintf('(%04d)', $ticket['customerid']).'. ';
+			$sms_body .= ' '.sprintf('(%04d)', $info['customerid']).'. ';
 			$sms_body .= $info['address'].', '.$info['zip'].' '.$info['city'].'. ';
 			if (!empty($phones))
 				$sms_body .= '. ' . trans('Phone:') . ' ' . preg_replace('/([0-9])[\s-]+([0-9])/', '\1\2', implode(',', $phones));
 		}
 
-		//print_r($headers);die;
 		// send email
 		if ($recipients = $DB->GetCol('SELECT DISTINCT email
 			FROM users, rtrights

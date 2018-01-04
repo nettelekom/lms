@@ -66,20 +66,14 @@
                             <td>
                                 <div>
                                     {$pool_number_select}
-                                    <span class="ui-icon ui-icon-closethick remove-number lms-ui-visibility-hidden"></span>
+                                    <span class="ui-icon ui-icon-closethick remove-number{if !isset($voipaccountdata.phone) || empty($voipaccountdata.phone)} lms-ui-visibility-hidden{/if}"></span>
                                 </div>
                             </td>
                         </tr>
 
                         {if isset($voipaccountdata['phone'])}
-                            {assign var=phone_next_index value=1}
-                            {foreach from=$voipaccountdata['phone'] key=k item=phone}
-                                {if $k==0 || $phone==''}{continue}{/if}
-
-                                {if $k > $phone_next_index}
-                                    {assign var=phone_next_index value=$k}
-                                {/if}
-
+                            {foreach $voipaccountdata['phone'] as $k => $phone}
+                                {if $phone@first || $phone==''}{continue}{/if}
                                 <tr class="row">
                                     <td><input type="tel" name="voipaccountdata[phone][{$k}]" value="{$phone}" {tip trigger="phone{$k}"}></td>
                                     <td><div>{$pool_number_select} {$remove_number}</div></td>
@@ -139,7 +133,7 @@
                     {trans("Customer:")}
                 </td>
                 <td>
-                    <select name="voipaccountdata[ownerid]" {tip text="Assign voip account to customer" trigger="customer"} style="max-width:250px;">
+                    <select name="voipaccountdata[ownerid]" {tip text="Assign voip account to customer" trigger="customer"} style="max-width:250px;" id="customer">
                         {foreach from=$customers item=c}
                         <option value="{$c.id}"{if $voipaccountdata.ownerid == $c.id} selected{/if}>{$c.customername|truncate:40:"...":true} ({$c.id|string_format:"%04d"})</option>
                         {/foreach}
@@ -154,15 +148,7 @@
                     {trans("Location:")}
                 </td>
                 <td>
-                    <div id="location-box" style="display: none;">
-                        <input type="text" size="40" value="{$voipaccountdata.location}" id="location" name="voipaccountdata[location]"  {tip text="Enter location (optional)" trigger="location"}>
-                        <a href="javascript:void(0);" onclick="if (check_teryt()) return locationchoosewin('voipaccountdata', 'voipaccountadd', document.forms['voipaccountadd'].elements['voipaccountdata[location_city]'].value,  document.forms['voipaccountadd'].elements['voipaccountdata[location_street]'].value, {ConfigHelper::getConfig('phpui.default_teryt_city')})" {tip text="Click to select location"}>&raquo;&raquo;&raquo;</a>
-                    </div>
-                    <input type="hidden" name="voipaccountdata[location_city]" value="{$voipaccountdata.location_city}">
-                    <input type="hidden" name="voipaccountdata[location_street]" value="{$voipaccountdata.location_street}">
-                    <input type="hidden" name="voipaccountdata[location_house]" value="{$voipaccountdata.location_house}">
-                    <input type="hidden" name="voipaccountdata[location_flat]" value="{$voipaccountdata.location_flat}">
-                    <input type="checkbox" name="voipaccountdata[teryt]" id="teryt" onchange="check_teryt('location')"{if $voipaccountdata.teryt} checked{/if}><label for="teryt">{trans("TERRIT-DB")}</label>
+                    <select id="customer_addresses" name="voipaccountdata[address_id]" {tip text="Select address" trigger="address_id"}></select>
                 </td>
             </tr>
             {/block}
@@ -198,28 +184,34 @@
     </table>
 </form>
 
-<SCRIPT type="text/javascript">
+<script type="text/javascript" src="img/lms-ui-iconselectmenu.js"></script>
+<script type="text/javascript">
 <!--
-    document.getElementById("voip-login").focus();
-    check_teryt('location', true);
-    var remove_number = '{$remove_number}';
+    var remove_number      = '{$remove_number}';
     var pool_number_select = '{$pool_number_select}';
+    var customer_addresses = new LmsUiIconSelectMenu( "#customer_addresses" );
 
     $( function() {
-        $('#teryt').change(function () {
-            $("#location-box").toggle();
-        });
+        $('#voip-login').focus();
 
-        $i = {if !isset($phone_next_index)}0{else}{$phone_next_index}{/if};
+        var i = {if !isset($phone_next_index)}0{else}{$phone_next_index}{/if};
 
         $('#add_number').on('click', function () {
-            ++$i;
-            var phone_number_input = '<input type="tel" name="voipaccountdata[phone]['+$i+']" {tip trigger="phone'+i+'"}>';
+            ++i;
+            var phone_number_input = '<input type="tel" name="voipaccountdata[phone]['+i+']" {tip trigger="phone'+i+'"}>';
             $('#phone_numbers_table').append('<tr class="row"><td>' + phone_number_input + '</td><td><div>' + pool_number_select + ' ' + remove_number + '</div></td></tr>');
+            if ($('#phone_numbers_table .remove-number').length < 2)
+                $('#phone_numbers_table .remove-number').addClass('lms-ui-visibility-hidden');
+            else
+                $('#phone_numbers_table .remove-number').removeClass('lms-ui-visibility-hidden');
         });
 
         $( "body" ).on('click', '.remove-number', function() {
             $(this).closest('tr').remove();
+            if ($('#phone_numbers_table .remove-number').length < 2)
+                $('#phone_numbers_table .remove-number').addClass('lms-ui-visibility-hidden');
+            else
+                $('#phone_numbers_table .remove-number').removeClass('lms-ui-visibility-hidden');
         });
 
         $( "#phone_numbers_table" ).sortable({
@@ -234,7 +226,22 @@
                 });
             }
         });
-        $( "#phone_numbers_table" ).disableSelection();
+
+        /*!
+         * \brief Update addresses list on customer change.
+         */
+        $( '#customer' ).change( function() {
+            customer_addresses.setAddressList( getCustomerAddresses($(this).val()) );
+        });
+
+        // refresh customer addresses on page load
+        $( '#customer' ).trigger( 'change' );
+
+        {if $voipaccountdata.address_id}
+            $( '#customer_addresses' ).val( {$voipaccountdata.address_id} );
+        {/if}
+
+        customer_addresses.init();
     } );
 //-->
 </SCRIPT>

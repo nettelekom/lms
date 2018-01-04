@@ -174,7 +174,7 @@
 					<TD style="width: 1%;" class="multiselect">
 						<SELECT name="message[customergroup][]" multiple class="lms-ui-multiselect" {tip trigger="customergroup" text="Select customers group"} data-default-value="{trans("- all groups -")}">
 							{foreach $customergroups as $customergroup}
-							<option value="{$customergroup.id}"{if in_array($customergroup.id, $message.customergroup)} selected{/if}>{$customergroup.name|truncate:"30":"...":true}</option>
+							<option value="{$customergroup.id}"{if isset($message.customergroup) && in_array($customergroup.id, $message.customergroup)} selected{/if}>{$customergroup.name|truncate:"30":"...":true}</option>
 							{/foreach}
 						</SELECT>
 					</TD>
@@ -320,7 +320,7 @@
 		<TD style="width: 98%;">
 			<SELECT size="4" name="message[users][]" multiple class="lms-ui-multiselect" {tip text="Select users"} data-default-value="{trans("- none -")}">
 				{foreach $users as $user}
-				<OPTION value="{$user.phone}"{if in_array($user.phone, $message.users)} selected{/if}>{$user.name|truncate:30:"...":true}</OPTION>
+				<OPTION value="{$user.phone}"{if isset($message.users) && in_array($user.phone, $message.users)} selected{/if}>{$user.name|truncate:30:"...":true}</OPTION>
 				{/foreach}
 			</select>
 		</TD>
@@ -413,10 +413,10 @@
 			<IMG src="img/attach.gif" alt="">
 		</TD>
 		<TD style="width: 1%;" class="bold nobr">
-			{trans("Attachment:")}
+			{trans("Attachments:")}
 		</TD>
 		<TD style="width: 98%;">
-			<INPUT name="file[]" type="file" size="60" multiple {tip text="Enter path to file or click 'Browse' button" trigger="file"}>
+			{fileupload id="files" fileupload=$fileupload}
 		</TD>
 	</TR>
 	<TR>
@@ -429,7 +429,9 @@
 </FORM>
 <SCRIPT type="text/javascript">
 <!--
-document.forms['message'].elements['message[sender]'].focus();
+$(function() {
+	$('form[name="message"] [name="message[sender]"]').focus();
+});
 countChars(document.getElementById('smstext'));
 
 document.getElementById('smstext').onmouseout = function() {

@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2013 LMS Developers
+ *  (C) Copyright 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -52,6 +52,31 @@ if(isset($_POST['tariff']))
         }
     }
 
+	if ($tariff['datefrom'] == '')
+		$tariff['from'] = 0;
+	elseif (preg_match('/^[0-9]{4}\/[0-9]{2}\/[0-9]{2}$/', $tariff['datefrom'])) {
+		list ($y, $m, $d) = explode('/', $tariff['datefrom']);
+		if (checkdate($m, $d, $y))
+			$tariff['from'] = mktime(0, 0, 0, $m, $d, $y);
+		else
+			$error['datefrom'] = trans('Incorrect effective start time!');
+	} else
+		$error['datefrom'] = trans('Incorrect effective start time!');
+
+	if ($tariff['dateto'] == '')
+		$tariff['to'] = 0;
+	elseif (preg_match('/^[0-9]{4}\/[0-9]{2}\/[0-9]{2}$/', $tariff['dateto'])) {
+		list ($y, $m, $d) = explode('/', $tariff['dateto']);
+		if (checkdate($m, $d, $y))
+			$tariff['to'] = mktime(23, 59, 59, $m, $d, $y);
+		else
+			$error['dateto'] = trans('Incorrect effective end time!');
+	} else
+		$error['dateto'] = trans('Incorrect effective end time!');
+
+	if ($tariff['to'] != 0 && $tariff['from'] != 0 && $tariff['to'] < $tariff['from'])
+		$error['dateto'] = trans('Incorrect date range!');
+
 	$items = array('uprate', 'downrate', 'upceil', 'downceil', 'climit', 'plimit', 'dlimit');
 
 	foreach($items as $item)
@@ -93,11 +118,11 @@ if(isset($_POST['tariff']))
 	if(!isset($tariff['taxid']))
 		$tariff['taxid'] = 0;
 
-	$items = array('domain_limit', 'alias_limit', 
-			'sh_limit', 'mail_limit', 'www_limit', 'ftp_limit', 'sql_limit', 
-			'quota_sh_limit', 'quota_mail_limit', 'quota_www_limit', 
-			'quota_ftp_limit', 'quota_sql_limit', 
-	);
+	$items = array('domain_limit', 'alias_limit');
+	foreach ($ACCOUNTTYPES as $typeidx => $type) {
+		$items[] = $type['alias'] . '_limit';
+		$items[] = 'quota_' . $type['alias'] . '_limit';
+	}
 
 	foreach($items as $item)
 	{
@@ -109,7 +134,7 @@ if(isset($_POST['tariff']))
 
 	if(!$error)
 	{
-		$SESSION->redirect('?m=tarifflist&id='.$LMS->TariffAdd($tariff));
+		$SESSION->redirect('?m=tariffinfo&id='.$LMS->TariffAdd($tariff));
 	}
 
 	$SMARTY->assign('error',$error);
@@ -123,16 +148,10 @@ else
 {
 	$tariff['domain_limit'] = 0;
 	$tariff['alias_limit'] = 0;
-	$tariff['sh_limit'] = 0;
-	$tariff['www_limit'] = 0;
-	$tariff['mail_limit'] = 0;
-	$tariff['ftp_limit'] = 0;
-	$tariff['sql_limit'] = 0;
-	$tariff['quota_sh_limit'] = 0;
-	$tariff['quota_www_limit'] = 0;
-	$tariff['quota_mail_limit'] = 0;
-	$tariff['quota_ftp_limit'] = 0;
-	$tariff['quota_sql_limit'] = 0;
+	foreach ($ACCOUNTTYPES as $typeidx => $type) {
+		$tariff[$type['alias'] . '_limit'] = 0;
+		$tariff['quota_' . $type['alias'] . '_limit'] = 0;
+	}
 
 	$default_assignment_period = ConfigHelper::getConfig('phpui.default_assignment_period');
 	if (!empty($default_assignment_period))
@@ -145,7 +164,9 @@ $SMARTY->assign('taxeslist',$LMS->GetTaxes());
 $SMARTY->assign('tariff', $tariff);
 $SMARTY->assign('voip_tariffs', $LMS->getVoipTariffs());
 $SMARTY->assign('voip_tariffrules', $LMS->getVoipTariffRuleGroups());
-$SMARTY->assign('numberplanlist', $LMS->GetNumberPlans(DOC_INVOICE));
+$SMARTY->assign('numberplanlist', $LMS->GetNumberPlans(array(
+	'doctype' => DOC_INVOICE,
+)));
 $SMARTY->display('tariff/tariffadd.html');
 
 ?>

@@ -47,11 +47,32 @@ $.ajax("img/jquery-datatables-i18n/" + lmsSettings.language + ".json", {
 $(function() {
 	var autocomplete = "off";
 
-	$('.calendar').datepicker({
+	$.datepicker._gotoToday = function(id) {
+		var target = $(id);
+		var inst = this._getInst(target[0]);
+		if (this._get(inst, 'gotoCurrent') && inst.currentDay) {
+			inst.selectedDay = inst.currentDay;
+			inst.drawMonth = inst.selectedMonth = inst.currentMonth;
+			inst.drawYear = inst.selectedYear = inst.currentYear;
+		} else {
+			var date = new Date();
+			inst.selectedDay = date.getDate();
+			inst.drawMonth = inst.selectedMonth = date.getMonth();
+			inst.drawYear = inst.selectedYear = date.getFullYear();
+			// the below two lines are new
+			this._setDateDatepicker(target, date);
+			this._selectDate(id, this._getDateDatepicker(target));
+		}
+		this._notifyChange(inst);
+		this._adjustDate(target);
+	}
+
+	$('div.calendar input,input.calendar').datepicker({
+		showButtonPanel: true,
 		dateFormat: "yy/mm/dd",
 		changeYear: true,
 		beforeShow: function(input, inst) {
-			if ($(input).hasClass('ui-tooltip')) {
+			if ($(input).is('[data-tooltip]')) {
 				$(input).tooltip('disable');
 				$(this).data('tooltip', input);
 			}
@@ -65,7 +86,7 @@ $(function() {
 	.attr("autocomplete", autocomplete);
 
 	$.datetimepicker.setLocale(lmsSettings.language);
-	$('.calendar-time').datetimepicker({
+	$('div.calendar-time input,input.calendar-time').datetimepicker({
 		step: 30,
 		closeOnDateSelect: true
 	})
@@ -131,6 +152,8 @@ $(function() {
 					async: true,
 					success: function(data) {
 						callback(data);
+						elem.tooltip('disable');
+						elem.tooltip('enable');
 					}
 				});
 			}
@@ -262,7 +285,7 @@ $(function() {
 
 		$.each(allcheckboxes, function(index, elem) {
 			var checkbox = $(elem)[0];
-			var row = $(checkbox.closest('tr'));
+			var row = $(checkbox).closest('tr');
 			row.click(function(e) {
 				if (e.shiftKey) {
 					checkElements(checkbox);
@@ -336,26 +359,45 @@ $(function() {
 			});
 			$('thead input', elem).on('keyup change search', function() {
 				$(elem).DataTable().column($(this).parent().index() + ':visible')
-					.search(this.value).draw();
+					.search(this.value.length ? this.value : '', true).draw();
 			});
 			$('thead select', elem).on('change', function() {
 				var value = this.value;
 				$(elem).DataTable().column($(this).parent().index() + ':visible')
-					.search(value).draw();
+					.search(value.length ? '^' + value + '$' : '', true).draw();
 			});
 		}
 
 		$(elem).on('init.dt', function(e, settings) {
+			var searchColumns = $(this).data('init').searchColumns;
 			var api = new $.fn.dataTable.Api(settings);
+			$(this).data('api', api);
 			var state = api.state.loaded();
+
 			if (state && columnSearch) {
-				$('thead input[type="search"]', elem).each(function(index, input) {
-					var column = $(input).parent().index();
-					$(input).attr('value', state.columns[column].search.search);
-				});
-				$('thead select', elem).each(function(index, select) {
-					var column = $(select).parent().index();
-					$(select).val(state.columns[column].search.search);
+				var i = 0;
+				var searchFields = $('thead input[type="search"],thead select', elem);
+				api.columns().every(function(index) {
+					var columnState = state.columns[index];
+					var searchValue = '';
+					if (!columnState.visible) {
+						return;
+					}
+					if (typeof searchColumns[index].search === 'undefined') {
+						$(searchFields[i]).val(state.columns[index].search.search.replace(/[\^\$]/g, ''));
+					} else {
+						$(searchFields[i]).val(searchColumns[index].search.replace(/[\^\$]/g, ''));
+						if (searchColumns[index].search.length) {
+							if ($(searchFields[i]).is('thead select')) {
+								searchValue = '^' + searchColumns[index].search + '$';
+							} else {
+								searchValue = searchColumns[index].search;
+							}
+						}
+						//console.log(searchValue);
+						api.column(index).search(searchValue, true).draw();
+					}
+					i++;
 				});
 			}
 
@@ -436,6 +478,23 @@ $(function() {
 					$('div#pagecontent').show();
 				}
 			}
+		}).on('column-visibility.dt', function(e, settings, column, visible) {
+			if (!visible)
+				return;
+			var api = $(this).data('api');
+			var searchValue = api.columns(column).search()[0];
+			var columnStates = api.state().columns;
+			var i = 0;
+			api.columns().every(function(index) {
+				if (index == column) {
+					$('thead tr:last-child th:nth-child(' + (i + 1) + ') :input', elem).val(searchValue.replace(/[\^\$]/g, ''));
+					//console.log(i + ' ' + index + ' ' + column);
+				}
+				if (!columnStates[index].visible) {
+					return;
+				}
+				i++;
+			});
 		});
 
 		$(elem).DataTable({
@@ -453,9 +512,26 @@ $(function() {
 			stateDuration: lmsSettings.settingsTimeout,
 			lengthMenu: [[ 10, 25, 50, 100, -1 ], [ 10, 25, 50, 100, lmsMessages.all ]],
 			displayStart: init.displayStart,
+			searchCols: init.searchColumns,
 			stateSave: init.stateSave,
+			stateSaveProps: init.stateSaveProps,
 			ordering: init.ordering,
-			orderCellsTop: init.orderCellsTop
+			orderCellsTop: init.orderCellsTop,
+			stateSaveParams: function(settings, data) {
+				var api = new $.fn.dataTable.Api(settings);
+				var stateSaveProps = api.init().stateSaveProps;
+				if (!Array.isArray(stateSaveProps)) {
+					return;
+				}
+				for (var property in data) {
+					if (data.hasOwnProperty(property)) {
+						if (property == "time" || stateSaveProps.indexOf(property) >= 0) {
+							continue;
+						}
+						delete data[property];
+					}
+				}
+			}
 		})
 		.on('mouseenter', 'tbody > tr', function() {
 			$(this).siblings('tr').removeClass('highlight');
@@ -470,9 +546,20 @@ $(function() {
 		if (init.displayStart === undefined) {
 			init.displayStart = 0;
 		}
+		init.searchColumns = $(this).attr('data-search-columns');
+		if (init.searchColumns === undefined) {
+			init.searchColumns = [];
+		} else {
+			init.searchColumns = eval(init.searchColumns);
+		}
 		init.stateSave = $(this).attr('data-state-save');
+		init.stateSaveProps = true;
 		if (init.stateSave === undefined) {
 			init.stateSave = false;
+		} else if (init.stateSave.match(/^\[(.+)\]$/)) {
+			init.stateSaveProps = JSON.parse(RegExp.$1);
+		} else {
+			init.stateSave = true;
 		}
 		init.ordering = $(this).attr('data-ordering');
 		if (init.ordering === undefined) {
@@ -689,15 +776,15 @@ $(function() {
 			skin: "lms",
 		});
 
-		editors.each(function() {
-			function toggle_visual_editor(id) {
-				if (tinyMCE.get(id)) {
-					tinyMCE.execCommand('mceToggleEditor', false, id);
-				} else {
-					tinyMCE.execCommand('mceAddControl', true, id);
-				}
+		function toggle_visual_editor(id) {
+			if (tinyMCE.get(id)) {
+				tinyMCE.execCommand('mceToggleEditor', false, id);
+			} else {
+				tinyMCE.execCommand('mceAddControl', true, id);
 			}
+		}
 
+		editors.each(function() {
 			var parent = $(this).parent();
 			var textareaid = $(this).uniqueId().attr('id');
 			var wysiwyg = $(this).attr('data-wysiwyg');
@@ -713,6 +800,13 @@ $(function() {
 				lmsMessages.visualEditor + '</label></TD></TR>' +
 				'<TR><TD>' + textarea + '</TD></TR>' +
 				'</TBODY>'));
+			// it is required as textarea changed value is not propagated automatically to editor instance content
+			$('textarea', parent).change(function(e) {
+				if (ed = tinyMCE.get(textareaid)) {
+					//console.log(e.target.value);
+					ed.load();
+				}
+			});
 			$('[name="' + inputname + '"]:checkbox', parent).click(function() {
 				toggle_visual_editor(textareaid);
 			});
@@ -737,22 +831,12 @@ $(function() {
 			'?m=quicksearch&ajax=1&mode=' + $(input).attr('data-mode') + '&what=', lmsSettings.quickSearchAutoSubmit);
 	});
 
-	qs_inputs.prev().addClass('lms-ui-quick-search')
-		.on('mouseenter click', function(e) {
-		if (e.type == 'mouseenter') {
-			if (qs_timer != null) {
-				clearTimeout(qs_timer);
-			}
-			var qs_img = this;
-			qs_timer = setTimeout(function() {
-				('input.lms-ui-quick-search-active', qs_inputs).removeClass('lms-ui-quick-search-active');
-				$(qs_img).next().addClass('lms-ui-quick-search-active').focus();
-				qs_timer = null;
-			}, 300);
-		} else {
-			('input.lms-ui-quick-search-active', qs_inputs).removeClass('lms-ui-quick-search-active');
-			$(this).next().addClass('lms-ui-quick-search-active').focus();
-		}
+	qs_inputs.on('click', function(e) {
+		('input.lms-ui-quick-search-active', qs_inputs).removeClass('lms-ui-quick-search-active');
+		$(this).addClass('lms-ui-quick-search-active').focus();
+	}).prev().on('click', function(e) {
+		('input.lms-ui-quick-search-active', qs_inputs).removeClass('lms-ui-quick-search-active');
+		$(this).next().addClass('lms-ui-quick-search-active').focus();
 	});
 	qs_inputs.first().addClass('lms-ui-quick-search-active').focus();
 

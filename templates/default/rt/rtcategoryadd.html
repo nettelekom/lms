@@ -67,15 +67,17 @@
 	</TR>
 	<TR>
 	    <TD width="100%" COLSPAN="3" ALIGN="RIGHT"> 
-	    	<A HREF="javascript:document.category.submit();" accesskey="s">{trans("Submit")}<IMG src="img/save.gif" alt=""></A>
-		<A HREF="?m=rtcategorylist">{trans("Cancel")}<IMG src="img/cancel.gif" alt=""></A>
+	    	<A HREF="javascript:document.category.submit();" accesskey="s"><IMG src="img/save.gif" alt=""> {trans("Submit")}</A>
+		<A HREF="?m=rtcategorylist"><IMG src="img/cancel.gif" alt=""> {trans("Cancel")}</A>
 	    </TD>
 	</TR>
     </TBODY>
 </TABLE></FORM>
 <SCRIPT type="text/javascript">
 <!--
-document.forms['category'].elements['category[name]'].focus();
+$(function() {
+	$('form[name="category"] [name="category[name]"]').focus();
+});
 //-->
 </SCRIPT>
 {/block}

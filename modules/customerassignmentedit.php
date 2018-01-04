@@ -31,7 +31,7 @@ $customer = $DB->GetRow('SELECT a.customerid AS id, c.divisionid, '
     JOIN customerview c ON (c.id = a.customerid)
     WHERE a.id = ?', array($_GET['id']));
 
-if(!$customer)
+if (!$customer)
 {
 	$SESSION->redirect('?'.$SESSION->get('backto'));
 }
@@ -41,12 +41,12 @@ if ($_GET['action'] == 'suspend') {
 	$SESSION->redirect('?'.$SESSION->get('backto'));
 }
 
-if(isset($_POST['assignment']))
+if (isset($_POST['assignment']))
 {
 	$a = $_POST['assignment'];
 
 	foreach($a as $key => $val)
-		if(!is_array($val))
+		if (!is_array($val))
 			$a[$key] = trim($val);
 
 	$a['id'] = $_GET['id'];
@@ -67,7 +67,7 @@ if(isset($_POST['assignment']))
 			if (ConfigHelper::checkConfig('phpui.use_current_payday') && $at == 0)
 				$at = strftime('%u', time());
 
-			if($at < 1 || $at > 7)
+			if ($at < 1 || $at > 7)
 				$error['at'] = trans('Incorrect day of week (1-7)!');
 		break;
 
@@ -82,7 +82,7 @@ if(isset($_POST['assignment']))
 
 			$a['at'] = $at;
 
-			if($at > 28 || $at < 1)
+			if ($at > 28 || $at < 1)
 				$error['at'] = trans('Incorrect day of month (1-28)!');
 		break;
 
@@ -92,7 +92,7 @@ if(isset($_POST['assignment']))
 				$m = date('n', time());
 				$a['at'] = $d.'/'.$m;
 			}
-			elseif(!preg_match('/^[0-9]{2}\/[0-9]{2}$/', $a['at']))
+			elseif (!preg_match('/^[0-9]{2}\/[0-9]{2}$/', $a['at']))
 			{
 				$error['at'] = trans('Incorrect date format! Enter date in DD/MM format!');
 			}
@@ -101,11 +101,11 @@ if(isset($_POST['assignment']))
 				list($d,$m) = explode('/',$a['at']);
 			}
 
-			if(!$error)
+			if (!$error)
 			{
-				if($d>30 || $d<1 || ($d>28 && $m==2))
+				if ($d>30 || $d<1 || ($d>28 && $m==2))
 					$error['at'] = trans('This month doesn\'t contain specified number of days');
-				if($m>3 || $m<1)
+				if ($m>3 || $m<1)
 					$error['at'] = trans('Incorrect month number (max.3)!');
 
 				$at = ($m-1) * 100 + $d;
@@ -125,11 +125,11 @@ if(isset($_POST['assignment']))
 				list($d,$m) = explode('/',$a['at']);
 			}
 
-			if(!$error)
+			if (!$error)
 			{
-				if($d>30 || $d<1 || ($d>28 && $m==2))
+				if ($d>30 || $d<1 || ($d>28 && $m==2))
 					$error['at'] = trans('This month doesn\'t contain specified number of days');
-				if($m>6 || $m<1)
+				if ($m>6 || $m<1)
 					$error['at'] = trans('Incorrect month number (max.6)!');
 
 				$at = ($m-1) * 100 + $d;
@@ -142,7 +142,7 @@ if(isset($_POST['assignment']))
 				$m = date('n', time());
 				$a['at'] = $d.'/'.$m;
 			}
-			elseif(!preg_match('/^[0-9]{2}\/[0-9]{2}$/', $a['at']))
+			elseif (!preg_match('/^[0-9]{2}\/[0-9]{2}$/', $a['at']))
 			{
 				$error['at'] = trans('Incorrect date format! Enter date in DD/MM format!');
 			}
@@ -151,11 +151,11 @@ if(isset($_POST['assignment']))
 				list($d,$m) = explode('/',$a['at']);
 			}
 
-			if(!$error)
+			if (!$error)
 			{
-				if($d>30 || $d<1 || ($d>28 && $m==2))
+				if ($d>30 || $d<1 || ($d>28 && $m==2))
 					$error['at'] = trans('This month doesn\'t contain specified number of days');
-				if($m>12 || $m<1)
+				if ($m>12 || $m<1)
 					$error['at'] = trans('Incorrect month number');
 
 				$ttime = mktime(12, 0, 0, $m, $d, 1990);
@@ -166,10 +166,10 @@ if(isset($_POST['assignment']))
 		default: // DISPOSABLE
             $period = DISPOSABLE;
 
-	        if(preg_match('/^[0-9]{4}\/[0-9]{2}\/[0-9]{2}$/', $a['at']))
+	        if (preg_match('/^[0-9]{4}\/[0-9]{2}\/[0-9]{2}$/', $a['at']))
 			{
 				list($y, $m, $d) = explode('/', $a['at']);
-				if(checkdate($m, $d, $y))
+				if (checkdate($m, $d, $y))
 				{
 					$at = mktime(0, 0, 0, $m, $d, $y);
 					if ($at < mktime(0, 0, 0) && !$a['atwarning']) {
@@ -185,12 +185,12 @@ if(isset($_POST['assignment']))
 		break;
 	}
 
-	if($a['datefrom'] == '')
+	if ($a['datefrom'] == '')
 		$from = 0;
-	elseif(preg_match('/^[0-9]{4}\/[0-9]{2}\/[0-9]{2}$/', $a['datefrom']))
+	elseif (preg_match('/^[0-9]{4}\/[0-9]{2}\/[0-9]{2}$/', $a['datefrom']))
 	{
 		list($y, $m, $d) = explode('/', $a['datefrom']);
-		if(checkdate($m, $d, $y))
+		if (checkdate($m, $d, $y))
 			$from = mktime(0, 0, 0, $m, $d, $y);
 		else
 			$error['datefrom'] = trans('Incorrect charging start time!');
@@ -203,7 +203,7 @@ if(isset($_POST['assignment']))
 	elseif (preg_match('/^[0-9]{4}\/[0-9]{2}\/[0-9]{2}$/', $a['dateto']))
 	{
 		list($y, $m, $d) = explode('/', $a['dateto']);
-		if(checkdate($m, $d, $y))
+		if (checkdate($m, $d, $y))
 			$to = mktime(23, 59, 59, $m, $d, $y);
 		else
 			$error['dateto'] = trans('Incorrect charging end time!');
@@ -239,22 +239,29 @@ if(isset($_POST['assignment']))
 		elseif (!preg_match('/^[-]?[0-9.,]+$/', $a['value']))
 			$error['value'] = trans('Incorrect value!');
 	}
-        
-        $hook_data = $LMS->executeHook(
-            'customerassignmentedit_validation_before_submit', 
-            array(
-                'a' => $a,
-                'error' => $error
-            )
-        );
-        $a = $hook_data['a'];
-        $error = $hook_data['error'];
 
-	if(!$error) 
+	if ($a['tarifftype'] == TARIFF_PHONE) {
+		unset($a['nodes']);
+	} else {
+		unset($a['phones']);
+	}
+
+    $hook_data = $LMS->executeHook(
+        'customerassignmentedit_validation_before_submit',
+        array(
+            'a' => $a,
+            'error' => $error
+        )
+    );
+
+    $a = $hook_data['a'];
+    $error = $hook_data['error'];
+
+	if (!$error)
 	{
 		$DB->BeginTrans();
 
-		if($a['liabilityid'])
+		if ($a['liabilityid'])
 		{
 				if ($a['tariffid']) {
 					$DB->Execute('DELETE FROM liabilities WHERE id=?', array($a['liabilityid']));
@@ -288,7 +295,7 @@ if(isset($_POST['assignment']))
 				SYSLOG::RES_TAX => intval($a['taxid']),
 				'prodid' => $a['prodid']
 			);
-			$DB->Execute('INSERT INTO liabilities (name, value, taxid, prodid) 
+			$DB->Execute('INSERT INTO liabilities (name, value, taxid, prodid)
 				VALUES (?, ?, ?, ?)', array_values($args));
 
 			$a['liabilityid'] = $DB->GetLastInsertID('liabilities');
@@ -324,11 +331,13 @@ if(isset($_POST['assignment']))
 			SYSLOG::RES_LIAB => $a['liabilityid'],
 			SYSLOG::RES_NUMPLAN => !empty($a['numberplanid']) ? $a['numberplanid'] : NULL,
 			'paytype' => !empty($a['paytype']) ? $a['paytype'] : NULL,
+			'recipient_address_id' => ($a['recipient_address_id'] >= 0) ? $a['recipient_address_id'] : NULL,
 			SYSLOG::RES_ASSIGN => $a['id']
 		);
+
 		$DB->Execute('UPDATE assignments SET tariffid=?, customerid=?, attribute=?, period=?, at=?,
 			invoice=?, settlement=?, datefrom=?, dateto=?, pdiscount=?, vdiscount=?,
-			liabilityid=?, numberplanid=?, paytype=?
+			liabilityid=?, numberplanid=?, paytype=?, recipient_address_id=?
 			WHERE id=?', array_values($args));
 		if ($SYSLOG) {
 			$SYSLOG->AddMessage(SYSLOG::RES_ASSIGN, SYSLOG::OPER_UPDATE, $args);
@@ -346,8 +355,9 @@ if(isset($_POST['assignment']))
 				}
 		}
 		$DB->Execute('DELETE FROM nodeassignments WHERE assignmentid=?', array($a['id']));
+		$DB->Execute('DELETE FROM voip_number_assignments WHERE assignment_id = ?', array($a['id']));
 
-		if (isset($a['nodes']) && sizeof($a['nodes']))
+		if (!empty($a['nodes']))
 		{
 			foreach($a['nodes'] as $nodeid) {
 				$DB->Execute('INSERT INTO nodeassignments (nodeid, assignmentid) VALUES (?,?)',
@@ -365,18 +375,25 @@ if(isset($_POST['assignment']))
 				}
 			}
 		}
-                
-                $LMS->executeHook(
-                    'customerassignmentedit_after_submit', 
-                    array(
-                        'a' => $a,
-                    )
-                );
+
+		if (!empty($a['phones'])) {
+			foreach($a['phones'] as $p) {
+				$DB->Execute('INSERT INTO voip_number_assignments (number_id, assignment_id) VALUES (?,?)',
+					array($p, $a['id']));
+			}
+		}
+
+        $LMS->executeHook(
+        	'customerassignmentedit_after_submit',
+            array('a' => $a)
+        );
 
 		$DB->CommitTrans();
 
 		$SESSION->redirect('?'.$SESSION->get('backto'));
 	}
+
+	$a['alltariffs'] = isset($a['alltariffs']);
 
 	$SMARTY->assign('error', $error);
 }
@@ -384,9 +401,10 @@ else
 {
 	$a = $DB->GetRow('SELECT a.id AS id, a.customerid, a.tariffid, a.period,
 				a.at, a.datefrom, a.dateto, a.numberplanid, a.paytype,
-				a.invoice, a.settlement, a.pdiscount, a.vdiscount, a.attribute, a.liabilityid, 
-				(CASE liabilityid WHEN 0 THEN tariffs.name ELSE liabilities.name END) AS name, 
-				liabilities.value AS value, liabilities.prodid AS prodid, liabilities.taxid AS taxid
+				a.invoice, a.settlement, a.pdiscount, a.vdiscount, a.attribute, a.liabilityid,
+				(CASE liabilityid WHEN 0 THEN tariffs.name ELSE liabilities.name END) AS name,
+				liabilities.value AS value, liabilities.prodid AS prodid, liabilities.taxid AS taxid,
+				recipient_address_id
 				FROM assignments a
 				LEFT JOIN tariffs ON (tariffs.id = a.tariffid)
 				LEFT JOIN liabilities ON (liabilities.id = a.liabilityid)
@@ -404,9 +422,10 @@ else
 		$a['discount_type'] = DISCOUNT_AMOUNT;
 	}
 
-	if($a['dateto']) 
+	if ($a['dateto'])
 		$a['dateto'] = date('Y/m/d', $a['dateto']);
-	if($a['datefrom'])
+
+	if ($a['datefrom'])
 		$a['datefrom'] = date('Y/m/d', $a['datefrom']);
 
 	switch($a['period'])
@@ -421,7 +440,7 @@ else
 			$a['at'] = date('d/m',($a['at']-1)*86400);
 			break;
 		case DISPOSABLE:
-			if($a['at'])
+			if ($a['at'])
 				$a['at'] = date('Y/m/d', $a['at']);
 			break;
 	}
@@ -431,6 +450,9 @@ else
 
 	// nodes assignments
 	$a['nodes'] = $DB->GetCol('SELECT nodeid FROM nodeassignments WHERE assignmentid=?', array($a['id']));
+
+	// phone numbers assignments
+	$a['phones'] = $DB->GetCol('SELECT number_id FROM voip_number_assignments WHERE assignment_id=?', array($a['id']));
 }
 
 $expired = isset($_GET['expired']) ? $_GET['expired'] : false;
@@ -439,24 +461,50 @@ $layout['pagetitle'] = trans('Liability Edit: $a', '<A href="?m=customerinfo&id=
 
 $SESSION->save('backto', $_SERVER['QUERY_STRING']);
 
-$customernodes = $LMS->GetCustomerNodes($customer['id']);
+$customerNodes = $LMS->GetCustomerNodes( $customer['id']);
+
 unset($customernodes['total']);
 
 $LMS->executeHook(
-    'customerassignmentedit_before_display', 
+    'customerassignmentedit_before_display',
     array(
         'a' => $a,
         'smarty' => $SMARTY,
     )
 );
 
-$SMARTY->assign('customernodes', $customernodes);
-$SMARTY->assign('tariffs', $LMS->GetTariffs());
-$SMARTY->assign('taxeslist', $LMS->GetTaxes());
-$SMARTY->assign('expired', $expired);
-$SMARTY->assign('assignment', $a);
-$SMARTY->assign('assignments', $LMS->GetCustomerAssignments($customer['id'], $expired));
-$SMARTY->assign('numberplanlist', $LMS->GetNumberPlans(DOC_INVOICE, NULL, $customer['divisionid'], false));
+// -----
+// remove duplicated customer nodes
+// -----
+
+$netdevnodes = $LMS->getCustomerNetDevNodes($customer['id']);
+
+if ($customerNodes) {
+    foreach ($customerNodes as $v) {
+        if (isset($netdevnodes[$v['id']]))
+            unset($netdevnodes[$v['id']]);
+    }
+}
+
+$SMARTY->assign('customernetdevnodes', $netdevnodes);
+
+// -----
+
+$SMARTY->assign('customernodes'      , $customerNodes);
+$SMARTY->assign('customernetdevnodes', $netdevnodes);
+$SMARTY->assign('customervoipaccs'   , $LMS->getCustomerVoipAccounts($customer['id']));
+$SMARTY->assign('customeraddresses'  , $LMS->getCustomerAddresses($customer['id']));
+$SMARTY->assign('tariffs'            , $LMS->GetTariffs($a['tariffid']));
+$SMARTY->assign('taxeslist'          , $LMS->GetTaxes());
+$SMARTY->assign('expired'            , $expired);
+$SMARTY->assign('assignment'         , $a);
+$SMARTY->assign('assignments'        , $LMS->GetCustomerAssignments($customer['id'], $expired));
+$SMARTY->assign('numberplanlist'     , $LMS->GetNumberPlans(array(
+	'doctype' => DOC_INVOICE,
+	'cdate' => null,
+	'division' => $customer['divisionid'],
+	'next' => false,
+)));
 $SMARTY->assign('customerinfo', $customer);
 $SMARTY->display('customer/customerassignmentsedit.html');
 

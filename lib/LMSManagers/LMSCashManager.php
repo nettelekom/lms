@@ -71,7 +71,10 @@ class LMSCashManager extends LMSManager implements LMSCashManagerInterface
 					$theline = $line;
 
 					if (strtoupper($pattern['encoding']) != 'UTF-8')
-						$theline = @iconv($pattern['encoding'], 'UTF-8//TRANSLIT', $theline);
+						if (strtoupper($pattern['encoding']) == 'MAZOVIA')
+							$theline = mazovia_to_utf8($theline);
+						else
+							$theline = @iconv($pattern['encoding'], 'UTF-8//TRANSLIT', $theline);
 
 					if (preg_match($pattern['pattern'], $theline, $matches))
 						break;
@@ -340,7 +343,9 @@ class LMSCashManager extends LMSManager implements LMSCashManagerInterface
 								WHERE d.customerid = ?
 						) x ORDER BY x.cdate',
 						array($balance['customerid'], DOC_INVOICE, $balance['customerid']))) {
-						foreach ($invoices as $inv)
+
+					    $sum = 0;
+					    foreach ($invoices as $inv)
 							$sum += $inv['value'];
 
 						$bval = $customer_manager->GetCustomerBalance($balance['customerid']);
