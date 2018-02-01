@@ -401,7 +401,7 @@ if(is_array($customers)) foreach($customers as $val)
 		$docid = $this->lmsdb->GetLastInsertID("documents");
 		$itemid = 1;
 	}
-	$this->lmsdb->Execute('INSERT INTO invoicecontents (docid, value, taxid, prodid, content, count, description, tariffid, itemid, pdiscount, vdiscount) VALUES (?, ?, ?, \'\', \'szt\', 1, ?, 0, ?, 0, 0)', array($docid, round($tax * $netto, 2), $taxid, $invdesc, $itemid));
+	$this->lmsdb->Execute('INSERT INTO invoicecontents (docid, value, taxid, prodid, content, count, description, itemid, pdiscount, vdiscount) VALUES (?, ?, ?, \'\', \'szt\', 1, ?, ?, 0, 0)', array($docid, round($tax * $netto, 2), $taxid, $invdesc, $itemid));
 	
 	$this->lmsdb->Execute('INSERT INTO cash (time, value, taxid, customerid, comment, docid, itemid) VALUES (?, ?, ?, ?, ?, ?, ?)', array($now, round($tax * $netto, 2) * -1, $taxid, $val['lmsid'], $invdesc, $docid, $itemid));
 	
