@@ -446,8 +446,8 @@ if(isset($this->config['voip_timeswitch']) and $this->config['voip_timeswitch'] 
 
 function export_user($lmsid, $type = 'postpaid') {
 	$u = $this->lmsdb->GetRow('SELECT c.lastname, c.name, cs.contact as email, c.street, c.building, c.apartment, c.zip, c.city, c.ten, c.pin
-	       	FROM customers c 
-		LEFT JOIN customercontacts cs ON c.id = cs.customerid AND cs.type = ? WHERE c.id = ? LIMIT 1', array(CONTACT_EMAIL, $lmsid));
+	       	FROM customerview c 
+		LEFT JOIN customercontacts cs ON c.id = cs.customerid WHERE c.id = ? ORDER BY cs.type LIMIT 1', array($lmsid));
 	$u['address'] = $u['street'] . ' ' . $u['building'];
 	if($u['apartment']) {
 		$u['address'] .= '/' . $u['apartment'];
