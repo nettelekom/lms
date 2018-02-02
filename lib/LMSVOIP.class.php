@@ -152,9 +152,9 @@ return $tslist;
 function update_user($d)
 {
 	$u = $this->lmsdb->GetRow('SELECT c.lastname, c.name, cs.contact as email, c.street, c.building, c.apartment, c.zip, c.city, c.ten, c.pin
-	       	FROM customers c 
-		LEFT JOIN customercontacts cs ON c.id = cs.customerid AND cs.type = ? WHERE c.id = ? LIMIT 1',
-		array(CONTACT_EMAIL, $d['id']));
+	       	FROM customerview c 
+		LEFT JOIN customercontacts cs ON c.id = cs.customerid WHERE c.id = ? ORDER BY cs.type LIMIT 1',
+		array($d['id']));
 	$u['address'] = $u['street'] . ' ' . $u['building'];
 	if($u['apartment']) {
 		$u['address'] .= '/' . $u['apartment'];
