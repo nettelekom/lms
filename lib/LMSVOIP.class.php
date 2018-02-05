@@ -354,20 +354,21 @@ if(is_array($customers)) foreach($customers as $val)
 		} else {
 			$numbertemplate = $this->lmsdb->GetOne('SELECT template FROM numberplans WHERE id = ?', array($numberplan));
 		}
-		$number = $LMS->GetNewDocumentNumber(DOC_INVOICE, $numberplan, $now);
+		$number = $LMS->GetNewDocumentNumber(array('doctype' => DOC_INVOICE,
+			'planid' => $numberplan, 'cdate' => $now));
 		$fullnumber = docnumber($number, $numbertemplate, $now);
 		$urow = $this->lmsdb->GetRow('SELECT lastname, name, street, building, apartment,
 		       	city, zip, ssn, ten, divisionid, paytime, paytype, countryid
-			FROM customers WHERE id = ?', array($val['lmsid']));
+			FROM customerview WHERE id = ?', array($val['lmsid']));
 		$urow['address'] = $urow['street'] . ' ' . $urow['building'];
 		if($urow['apartment']) {
 			$urow['address'] .= '/' . $urow['apartment'];
 		}
 		$paytime = $urow['paytime'];
 		if ($paytime == -1) $paytime = $deadline;
-		$division = $this->lmsdb->GetRow('SELECT name, address, city, zip, countryid, ten, regon,
-				account, inv_header, inv_footer, inv_author, inv_cplace, inv_paytype, shortname
-				FROM divisions WHERE id = ? ;',array($urow['divisionid']));
+		$division = $this->lmsdb->GetRow('SELECT name, shortname, address, city, zip, countryid, ten, regon,
+				account, inv_header, inv_footer, inv_author, inv_cplace
+				FROM vdivisions WHERE id = ? ;', array($urow['divisionid']));
 		if ($urow['paytype'])
 			$inv_paytype = $urow['paytype'];
 		elseif ($division['inv_paytype'])
