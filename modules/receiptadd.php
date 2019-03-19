@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2016 LMS Developers
+ *  (C) Copyright 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -30,14 +30,14 @@ function GetCustomerCovenants($id)
 
 	if(!$id) return NULL;
 
-	if($invoicelist = $DB->GetAllByKey('SELECT docid AS id, cdate, SUM(value)*-1 AS value, number, template,
+	if($invoicelist = $DB->GetAllByKey('SELECT docid AS id, cdate, SUM(value)*-1 AS value, number, numberplans.template,
 				d.customerid, reference AS ref,
 				(SELECT dd.id FROM documents dd WHERE dd.reference = docid AND dd.closed = 0 LIMIT 1) AS reference
 			FROM cash
 			LEFT JOIN documents d ON (docid = d.id)
 			LEFT JOIN numberplans ON (numberplanid = numberplans.id)
 			WHERE cash.customerid = ? AND d.type IN (?,?) AND d.closed = 0
-			GROUP BY docid, cdate, number, template, reference, d.customerid
+			GROUP BY docid, cdate, number, numberplans.template, reference, d.customerid
 			HAVING SUM(value) < 0
 			ORDER BY cdate DESC', 'id', array($id, DOC_INVOICE, DOC_CNOTE)))
 	{
@@ -60,12 +60,12 @@ function GetCustomerCovenants($id)
 			if($row['reference'])
 			{
 				// get cnotes values if those values decreases invoice value
-				if($cnotes = $DB->GetAll('SELECT SUM(value) AS value, cdate, number, template, d.customerid
+				if($cnotes = $DB->GetAll('SELECT SUM(value) AS value, cdate, number, numberplans.template, d.customerid
 						FROM cash
 						LEFT JOIN documents d ON (docid = d.id)
 						LEFT JOIN numberplans ON (numberplanid = numberplans.id)
 						WHERE reference = ? AND d.closed = 0
-						GROUP BY docid, cdate, number, template, d.customerid',
+						GROUP BY docid, cdate, number, numberplans.template, d.customerid',
 						array($row['id'])))
 				{
 					$invoicelist[$idx]['number'] .= ' (';
@@ -89,7 +89,7 @@ function GetCustomerCovenants($id)
 		$invoicelist = array();
 
 	if($notelist = $DB->GetAllByKey('
-		SELECT d.id, d.cdate, number, template, d.customerid, SUM(value) AS value
+		SELECT d.id, d.cdate, number, np.template, d.customerid, SUM(value) AS value
 		FROM documents d
 		LEFT JOIN debitnotecontents n ON (n.docid = d.id)
 		LEFT JOIN numberplans np ON (numberplanid = np.id)
@@ -118,12 +118,12 @@ function GetCustomerNotes($id)
 
 	if(!$id) return NULL;
 
-	if($invoicelist = $DB->GetAll('SELECT docid AS id, cdate, SUM(value) AS value, number, template, documents.customerid
+	if($invoicelist = $DB->GetAll('SELECT docid AS id, cdate, SUM(value) AS value, number, numberplans.template, documents.customerid
 			FROM cash
 			LEFT JOIN documents ON (docid = documents.id)
 			LEFT JOIN numberplans ON (numberplanid = numberplans.id)
 			WHERE cash.customerid = ? AND documents.type = ? AND documents.closed = 0
-			GROUP BY docid, cdate, number, template, documents.customerid
+			GROUP BY docid, cdate, number, numberplans.template, documents.customerid
 			HAVING SUM(value) > 0
 			ORDER BY cdate DESC', array($id, DOC_CNOTE)))
 	{
@@ -141,33 +141,12 @@ function GetCustomerNotes($id)
 	}
 }
 
-function GetCashRegistries($cid = null) {
-	$DB = LMSDB::getInstance();
-	$userid = Auth::GetCurrentUser();
-
-	if (empty($cid)) {
-		$where = '';
-		$join = '';
-	} else {
-		$divisionid = $DB->GetOne('SELECT divisionid FROM customers WHERE id = ?', array($cid));
-		$join = ' JOIN numberplanassignments npa ON npa.planid = in_numberplanid ';;
-		$where = ' AND npa.divisionid = ' . intval($divisionid);
-	}
-
-	$result = $DB->GetAllByKey('SELECT r.id, name FROM cashregs r
-		JOIN cashrights cr ON regid = r.id
-		' . $join . '
-		WHERE rights > 1 AND userid = ? ' . $where . '
-		ORDER BY name', 'id', array($userid));
-	return $result;
-}
-
 function GetCashRegistriesXajax($cid, $regid) {
-	global $SMARTY;
+	global $LMS, $SMARTY;
 
 	$result = new xajaxResponse();
 
-	$cashreglist = GetCashRegistries($cid);
+	$cashreglist = $LMS->GetCashRegistries($cid);
 	$SMARTY->assign('cashreglist', $cashreglist);
 	$SMARTY->assign('regid', $regid);
 	$contents = $SMARTY->fetch('receipt/receiptcashregistries.html');
@@ -176,8 +155,21 @@ function GetCashRegistriesXajax($cid, $regid) {
 	return $result;
 }
 
+function GetCashRegistryBalance($regid) {
+	$result = new xajaxResponse();
+
+	$DB = LMSDB::getInstance();
+
+	$balance = $DB->GetOne('SELECT SUM(value) FROM receiptcontents
+				WHERE regid = ?', array($regid));
+
+	$result->script("$('form[name=\"movecash\"] input[name=\"value\"]').val(" . $balance . ")");
+
+	return $result;
+}
+
 $LMS->InitXajax();
-$LMS->RegisterXajaxFunction(array('GetCashRegistriesXajax'));
+$LMS->RegisterXajaxFunction(array('GetCashRegistriesXajax', 'GetCashRegistryBalance'));
 $SMARTY->assign('xajax', $LMS->RunXajax());
 
 // receipt positions adding with double click protection
@@ -217,9 +209,9 @@ switch($action)
 		// get default receipt's numberplanid and next number
 		$receipt['regid'] = isset($_GET['regid']) ? $_GET['regid'] : $oldreg;
 		$receipt['type'] = isset($_GET['type']) ? $_GET['type'] : (isset($_POST['type']) ? $_POST['type'] : 0);
-		$receipt['customerid'] = isset($_GET['customerid']) ? $_GET['customerid'] : 0;
+		$receipt['customerid'] = isset($_GET['customerid']) ? $_GET['customerid'] : null;
 
-		$cashreglist = GetCashRegistries($receipt['customerid']);
+		$cashreglist = $LMS->GetCashRegistries($receipt['customerid']);
 
 		// when registry is not selected but we've got only one registry in database
 		if(!$receipt['regid'] && count($cashreglist) == 1)
@@ -309,12 +301,12 @@ switch($action)
 
 		// get default receipt's numberplanid and next number
 		$receipt = ($_POST['receipt']) ? $_POST['receipt'] : NULL;
-		$receipt['customerid'] = isset($_POST['customerid']) ? $_POST['customerid'] : 0;
+		$receipt['customerid'] = isset($_POST['customerid']) ? $_POST['customerid'] : null;
 		$receipt['type'] = isset($receipt['type']) ? $receipt['type'] : $_POST['type'];
 
 		if(!$receipt['regid'])
 			$error['regid'] = trans('Registry not selected!');
-		else if($DB->GetOne('SELECT rights FROM cashrights WHERE userid=? AND regid=?', array($AUTH->id, $receipt['regid']))<=1)
+		else if($DB->GetOne('SELECT rights FROM cashrights WHERE userid=? AND regid=?', array(Auth::GetCurrentUser(), $receipt['regid']))<=1)
 			$error['regid'] = trans('You have no write rights to selected registry!');
 
 		if(isset($error)) break;
@@ -373,13 +365,13 @@ switch($action)
 
 			foreach($_POST['marks'] as $id)
 			{
-				$row = $DB->GetRow('SELECT SUM(value) AS value, number, cdate, template, documents.type AS type, documents.customerid,
+				$row = $DB->GetRow('SELECT SUM(value) AS value, number, cdate, numberplans.template, documents.type AS type, documents.customerid,
 						    (SELECT dd.id FROM documents dd WHERE dd.reference = docid AND dd.closed = 0 LIMIT 1) AS reference
 						    FROM cash 
 						    LEFT JOIN documents ON (docid = documents.id)
 						    LEFT JOIN numberplans ON (numberplanid = numberplans.id)
 						    WHERE docid = ?
-						    GROUP BY docid, number, cdate, template, documents.type, documents.customerid', array($id));
+						    GROUP BY docid, number, cdate, numberplans.template, documents.type, documents.customerid', array($id));
 
 				$itemdata['value'] = $receipt['type']=='in' ? -$row['value'] : $row['value'];
 				$itemdata['docid'] = $id;
@@ -410,13 +402,13 @@ switch($action)
 				if($row['reference'] && $receipt['type']=='in')
 				{
 					// get cnotes values if those values decreases invoice value
-					if($cnotes = $DB->GetAll('SELECT SUM(value) AS value, docid, cdate, number, template
+					if($cnotes = $DB->GetAll('SELECT SUM(value) AS value, docid, cdate, number, numberplans.template,
 							d.customerid
 						FROM cash
 						LEFT JOIN documents d ON (docid = d.id)
 						LEFT JOIN numberplans ON (numberplanid = numberplans.id)
 						WHERE reference = ? AND d.closed = 0
-						GROUP BY docid, cdate, number, template, d.customerid',
+						GROUP BY docid, cdate, number, numberplans.template, d.customerid',
 						array($id)))
 					{
 						$itemdata['description'] .= ' (';
@@ -489,21 +481,16 @@ switch($action)
 				$receipt['numberplanid'] = $DB->GetOne('SELECT out_numberplanid FROM cashregs WHERE id=?', array($receipt['regid']));
 		}
 
-		if(isset($receipt['cdate']) && $receipt['cdate'])
-		{
+		if (isset($receipt['cdate']) && $receipt['cdate']) {
 			list($year, $month, $day) = explode('/',$receipt['cdate']);
-			if(checkdate($month, $day, $year)) 
-			{
+			if (checkdate($month, $day, $year)) {
 				$receipt['cdate'] = mktime(date('G',time()),date('i',time()),date('s',time()),$month,$day,$year);
-			}
-			else
-			{
+			} else {
 				$error['cdate'] = trans('Incorrect date format!');
 				$receipt['cdate'] = time();
 				break;
 			}
-		}
-		else
+		} else
 			$receipt['cdate'] = time();
 
 		if($receipt['cdate'] && !isset($receipt['cdatewarning']))
@@ -535,7 +522,7 @@ switch($action)
 			if(strpos($DB->GetOne('SELECT template FROM numberplans WHERE id=?', array($receipt['numberplanid'])), '%I')!==FALSE)
 				$receipt['extended'] = TRUE;
 
-		$rights = $DB->GetOne('SELECT rights FROM cashrights WHERE regid=? AND userid=?', array($receipt['regid'], $AUTH->id));
+		$rights = $DB->GetOne('SELECT rights FROM cashrights WHERE regid=? AND userid=?', array($receipt['regid'], Auth::GetCurrentUser()));
 
 		if(isset($receipt['o_type'])) switch($receipt['o_type'])
 		{
@@ -554,7 +541,7 @@ switch($action)
 
 		if($receipt['o_type'] != 'customer')
 		{
-			$receipt['customerid'] = 0;
+			$receipt['customerid'] = null;
 
 			switch($receipt['o_type'])
 			{
@@ -576,7 +563,7 @@ switch($action)
 		if(isset($_GET['customerid']) && $_GET['customerid'] != '')
 			$cid = intval($_GET['customerid']);
 		else
-			$cid = isset($_POST['customerid']) ? intval($_POST['customerid']) : 0;
+			$cid = isset($_POST['customerid']) ? intval($_POST['customerid']) : null;
 
 		$receipt['customerid'] = $cid;
 
@@ -655,147 +642,16 @@ switch($action)
 
 	case 'save':
 
-		if($contents && $customer)
-		{
-			$DB->BeginTrans();
-			$DB->LockTables(array('documents', 'numberplans'));
-
-			if(!$receipt['number'])
-				$receipt['number'] = $LMS->GetNewDocumentNumber(array(
-					'doctype' => DOC_RECEIPT,
-					'planid' => $receipt['numberplanid'],
-					'cdate' => $receipt['cdate'],
-					'customerid' => $customer['id'],
-				));
+		if ($contents && $customer) {
+			$receipt['customer'] = $customer;
+			$receipt['contents'] = $contents;
+			$result = $LMS->AddReceipt($receipt);
+			if (is_array($result))
+				$error = array_merge($error, $result);
 			else
-			{
-				if(!preg_match('/^[0-9]+$/', $receipt['number']))
-					$error['number'] = trans('Receipt number must be integer!');
-				elseif($LMS->DocumentExists(array(
-						'number' => $receipt['number'],
-						'doctype' => DOC_RECEIPT,
-						'planid' => $receipt['numberplanid'],
-						'cdate' => $receipt['cdate'],
-						'customerid' => $customer['id'],
-					)))
-					$error['number'] = trans('Receipt number $a already exists!', $receipt['number']);
+				$rid = $result;
 
-				if($error)
-					$receipt['number'] = $LMS->GetNewDocumentNumber(array(
-						'doctype' => DOC_RECEIPT,
-						'planid' => $receipt['numberplanid'],
-						'cdate' => $receipt['cdate'],
-						'customerid' => $customer['id'],
-					));
-			}
 
-			$fullnumber = docnumber(array(
-				'number' => $receipt['number'],
-				'template' => $DB->GetOne('SELECT template FROM numberplans WHERE id = ?', array($receipt['numberplanid'])),
-				'cdate' => $receipt['cdate'],
-				'customerid' => $customer['id'],
-			));
-
-			$args = array(
-				'type' => DOC_RECEIPT,
-				'number' => $receipt['number'],
-				'extnumber' => isset($receipt['extnumber']) ? $receipt['extnumber'] : '',
-				SYSLOG::RES_NUMPLAN => $receipt['numberplanid'],
-				'cdate' => $receipt['cdate'],
-				SYSLOG::RES_CUST => $customer['id'],
-				SYSLOG::RES_USER => $AUTH->id,
-				'name' => $customer['customername'],
-				'address' => ($customer['postoffice'] && $customer['postoffice'] != $customer['city'] && $customer['street']
-					? $customer['city'] . ', ' : '') . $customer['address'],
-				'zip' => $customer['zip'],
-				'city' => $customer['postoffice'] ? $customer['postoffice'] : $customer['city'],
-				'fullnumber' => $fullnumber,
-			);
-			$DB->Execute('INSERT INTO documents (type, number, extnumber, numberplanid, cdate, customerid, userid, name, address, zip, city, closed,
-					fullnumber)
-					VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)', array_values($args));
-			$DB->UnLockTables();
-
-			$rid = $DB->GetLastInsertId('documents');
-
-			if ($SYSLOG) {
-				$args[SYSLOG::RES_DOC] = $rid;
-				$args['closed'] = 1;
-				unset($args[SYSLOG::RES_USER]);
-				$SYSLOG->AddMessage(SYSLOG::RES_DOC, SYSLOG::OPER_ADD, $args);
-			}
-
-			$iid = 0;
-			foreach ($contents as $item) {
-				$iid++;
-
-				if ($receipt['type'] == 'in')
-					$value = str_replace(',', '.', $item['value']);
-				else
-					$value = str_replace(',', '.', $item['value'] * -1);
-
-				$args = array(
-					SYSLOG::RES_DOC => $rid,
-					'itemid' =>  $iid,
-					'value' => $value,
-					'description' => $item['description'],
-					SYSLOG::RES_CASHREG => $receipt['regid'],
-				);
-				$DB->Execute('INSERT INTO receiptcontents (docid, itemid, value, description, regid)
-					VALUES(?, ?, ?, ?, ?)', array_values($args));
-				if ($SYSLOG)
-					$SYSLOG->AddMessage(SYSLOG::RES_RECEIPTCONT, SYSLOG::OPER_ADD, $args);
-
-				$args = array(
-					'time' => $receipt['cdate'],
-					'type' => 1,
-					SYSLOG::RES_DOC => $rid,
-					'itemid' => $iid,
-					'value' => $value,
-					'comment' => $item['description'],
-					SYSLOG::RES_USER => $AUTH->id,
-					SYSLOG::RES_CUST => $customer['id'],
-				);
-				$DB->Execute('INSERT INTO cash (time, type, docid, itemid, value, comment, userid, customerid)
-						VALUES(?, ?, ?, ?, ?, ?, ?, ?)', array_values($args));
-				if ($SYSLOG) {
-					$args[SYSLOG::RES_CASH] = $DB->GetLastInsertID('cash');
-					unset($args[SYSLOG::RES_USER]);
-					$SYSLOG->AddMessage(SYSLOG::RES_CASH, SYSLOG::OPER_ADD, $args);
-				}
-
-				if (isset($item['docid'])) {
-					$DB->Execute('UPDATE documents SET closed=1 WHERE id=?', array($item['docid']));
-					if ($SYSLOG) {
-						list ($customerid, $numplanid) = array_values($DB->GetRow('SELECT customerid, numberplanid
-							FROM documents WHERE id = ?', array($item['docid'])));
-						$args = array(
-							SYSLOG::RES_DOC => $item['docid'],
-							SYSLOG::RES_NUMPLAN => $numplanid,
-							SYSLOG::RES_CUST => $customerid,
-							'closed' => 1,
-						);
-						$SYSLOG->AddMessage(SYSLOG::RES_DOC, SYSLOG::OPER_UPDATE, $args);
-					}
-				}
-				if (isset($item['references']))
-					foreach ($item['references'] as $ref) {
-						$DB->Execute('UPDATE documents SET closed=1 WHERE id=?', array($ref));
-						if ($SYSLOG) {
-							list ($customerid, $numplanid) = array_values($DB->GetRow('SELECT customerid, numberplanid
-								FROM documents WHERE id = ?', array($ref)));
-							$args = array(
-								SYSLOG::RES_DOC => $ref,
-								SYSLOG::RES_NUMPLAN => $numplanid,
-								SYSLOG::RES_CUST => $customerid,
-								'closed' => 1,
-							);
-							$SYSLOG->AddMessage(SYSLOG::RES_DOC, SYSLOG::OPER_UPDATE, $args);
-						}
-					}
-			}
-
-			$DB->CommitTrans();
 			$hook_data = $LMS->executeHook(
 				'receiptadd_after_submit',
 				array(
@@ -803,108 +659,14 @@ switch($action)
 				)
 			);
 			$print = TRUE;
-		}
-		elseif($contents && ($receipt['o_type'] == 'other' || $receipt['o_type'] == 'advance'))
-		{
-			$DB->BeginTrans();
-			$DB->LockTables(array('documents', 'numberplans'));
-
-			if(!$receipt['number'])
-				$receipt['number'] = $LMS->GetNewDocumentNumber(array(
-					'doctype' => DOC_RECEIPT,
-					'planid' => $receipt['numberplanid'],
-					'cdate' => $receipt['cdate'],
-				));
+		} elseif ($contents && ($receipt['o_type'] == 'other'
+				|| $receipt['o_type'] == 'advance')) {
+			$receipt['contents'] = $contents;
+			$result = $LMS->AddReceipt($receipt);
+			if (is_array($result))
+				$error = array_merge($error, $result);
 			else
-			{
-				if(!preg_match('/^[0-9]+$/', $receipt['number']))
-					$error['number'] = trans('Receipt number must be integer!');
-				elseif($LMS->DocumentExists(array(
-						'number' => $receipt['number'],
-						'doctype' => DOC_RECEIPT,
-						'planid' => $receipt['numberplanid'],
-						'cdate' => $receipt['cdate'],
-					)))
-					$error['number'] = trans('Receipt number $a already exists!', $receipt['number']);
-
-				if($error)
-					$receipt['number'] = $LMS->GetNewDocumentNumber(array(
-						'doctype' => DOC_RECEIPT,
-						'planid' => $receipt['numberplanid'],
-						'cdate' => $receipt['cdate'],
-					));
-			}
-
-			$fullnumber = docnumber(array(
-				'number' => $receipt['number'],
-				'template' => $DB->GetOne('SELECT template FROM numberplans WHERE id = ?', array($receipt['numberplanid'])),
-				'cdate' => $receipt['cdate'],
-				'customerid' => $customer['id'],
-			));
-
-			$args = array(
-				'type' => DOC_RECEIPT,
-				'number' => $receipt['number'],
-				'extnumber' => isset($receipt['extnumber']) ? $receipt['extnumber'] : '',
-				SYSLOG::RES_NUMPLAN => $receipt['numberplanid'],
-				'cdate' => $receipt['cdate'],
-				SYSLOG::RES_USER => $AUTH->id,
-				'name' => $receipt['o_type'] == 'advance' ? $receipt['adv_name'] : $receipt['other_name'],
-				'closed' => $receipt['o_type'] == 'advance' ? 0 : 1,
-				'fullnumber' => $fullnumber,
-			);
-			$DB->Execute('INSERT INTO documents (type, number, extnumber, numberplanid, cdate, userid, name, closed, fullnumber)
-					VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)', array_values($args));
-			$DB->UnLockTables();
-
-			$rid = $DB->GetLastInsertId('documents');
-
-			if ($SYSLOG) {
-				$args[SYSLOG::RES_DOC] = $rid;
-				unset($args[SYSLOG::RES_USER]);
-				$SYSLOG->AddMessage(SYSLOG::RES_DOC, SYSLOG::OPER_ADD, $args);
-			}
-
-			$iid = 0;
-			foreach ($contents as $item) {
-				$iid++;
-
-				if($receipt['type'] == 'in')
-					$value = str_replace(',','.',$item['value']);
-				else
-					$value = str_replace(',','.',$item['value']*-1);
-
-					$args = array(
-						SYSLOG::RES_DOC => $rid,
-						'itemid' => $iid, 
-						'value' => $value, 
-						'description' => $item['description'],
-						SYSLOG::RES_CASHREG => $receipt['regid'],
-					);
-					$DB->Execute('INSERT INTO receiptcontents (docid, itemid, value, description, regid)
-						VALUES(?, ?, ?, ?, ?)', array_values($args));
-					if ($SYSLOG)
-						$SYSLOG->AddMessage(SYSLOG::RES_RECEIPTCONT, SYSLOG::OPER_ADD, $args);
-
-					$args = array(
-						'cdate' => $receipt['cdate'],
-						'type' => 1,
-						SYSLOG::RES_DOC => $rid,
-						'itemid' => $iid,
-						'value' => $value,
-						'comment' => $item['description'],
-						SYSLOG::RES_USER => $AUTH->id,
-					);
-					$DB->Execute('INSERT INTO cash (time, type, docid, itemid, value, comment, userid)
-						VALUES(?, ?, ?, ?, ?, ?, ?)', array_values($args));
-					if ($SYSLOG) {
-						$args[SYSLOG::RES_CASH] = $DB->GetLastInsertID('cash');
-						unset($args[SYSLOG::RES_USER]);
-						$SYSLOG->AddMessage(SYSLOG::RES_CASH, SYSLOG::OPER_ADD, $args);
-					}
-			}
-
-			$DB->CommitTrans();
+				$rid = $result;
 
 			$print = TRUE;
 		}
@@ -983,7 +745,7 @@ switch($action)
 				'extnumber' => isset($receipt['extnumber']) ? $receipt['extnumber'] : '',
 				SYSLOG::RES_NUMPLAN => $receipt['numberplanid'],
 				'cdate' => $receipt['cdate'],
-				SYSLOG::RES_USER => $AUTH->id,
+				SYSLOG::RES_USER => Auth::GetCurrentUser(),
 				'name' => '',
 				'closed' => 1,
 				'fullnumber' => $fullnumber,
@@ -1043,9 +805,9 @@ switch($action)
 			$args = array(
 				'type' => DOC_RECEIPT,
 				'number' => $number,
-				SYSLOG::RES_NUMPLAN => $numberplan ? $numberplan : 0,
+				SYSLOG::RES_NUMPLAN => !empty($numberplan) ? $numberplan : null,
 				'cdate' => $receipt['cdate'],
-				SYSLOG::RES_USER => $AUTH->id,
+				SYSLOG::RES_USER => Auth::GetCurrentUser(),
 				'closed' => 1,
 				'fullnumber' => $fullnumber,
 			);
@@ -1089,7 +851,7 @@ switch($action)
 }
 
 if (!isset($cashreglist))
-	$cashreglist = GetCashRegistries($receipt['customerid']);
+	$cashreglist = $LMS->GetCashRegistries($receipt['customerid']);
 
 $SESSION->save('receipt', $receipt);
 $SESSION->save('receiptregid', $receipt['regid']);
@@ -1140,7 +902,7 @@ if (!ConfigHelper::checkConfig('phpui.big_networks'))
 	$SMARTY->assign('customerlist', $LMS->GetCustomerNames());
 
 $SMARTY->assign('invoicelist', $invoicelist);
-$SMARTY->assign('rights', $DB->GetOne('SELECT rights FROM cashrights WHERE userid=? AND regid=?', array($AUTH->id, $receipt['regid'])));
+$SMARTY->assign('rights', $DB->GetOne('SELECT rights FROM cashrights WHERE userid=? AND regid=?', array(Auth::GetCurrentUser(), $receipt['regid'])));
 $SMARTY->assign('cashreglist', $cashreglist);
 $SMARTY->assign('cashregcount', sizeof($cashreglist));
 $SMARTY->assign('contents', $contents);

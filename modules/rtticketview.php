@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2016 LMS Developers
+ *  (C) Copyright 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -33,8 +33,8 @@ else
 	$id = $_GET['id'];
 }
 
-$rights = $LMS->GetUserRightsRT($AUTH->id, 0, $id);
-$catrights = $LMS->GetUserRightsToCategory($AUTH->id, 0, $id);
+$rights = $LMS->GetUserRightsRT(Auth::GetCurrentUser(), 0, $id);
+$catrights = $LMS->GetUserRightsToCategory(Auth::GetCurrentUser(), 0, $id);
 
 if(!$rights || !$catrights)
 {
@@ -44,13 +44,21 @@ if(!$rights || !$catrights)
 }
 
 $ticket = $LMS->GetTicketContents($id);
-$categories = $LMS->GetCategoryListByUser($AUTH->id);
+$categories = $LMS->GetCategoryListByUser(Auth::GetCurrentUser());
+if (empty($categories))
+	$categories = array();
+
+if($ticket['deluserid'])
+	$ticket['delusername'] = $LMS->GetUserName($ticket['deluserid']);
 
 if ($ticket['customerid'] && ConfigHelper::checkConfig('phpui.helpdesk_stats')) {
 	$yearago = mktime(0, 0, 0, date('n'), date('j'), date('Y')-1);
-	$stats = $DB->GetAllByKey('SELECT COUNT(*) AS num, cause FROM rttickets 
-			    WHERE customerid = ? AND createtime >= ? 
-			    GROUP BY cause', 'cause', array($ticket['customerid'], $yearago));
+	//$del = 0;
+	$stats = $DB->GetAllByKey('SELECT COUNT(*) AS num, cause FROM rttickets
+				WHERE 1=1'
+				. (!ConfigHelper::checkPrivilege('helpdesk_advanced_operations') ? ' AND rttickets.deleted = 0' : '')
+				. ' AND customerid = ? AND createtime >= ?'
+				. ' GROUP BY cause', 'cause', array($ticket['customerid'], $yearago));
 
 	$SMARTY->assign('stats', $stats);
 }

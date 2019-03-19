@@ -112,17 +112,102 @@ $CONFIG_TYPES = array(
 	CONFIG_TYPE_DATE_FORMAT => trans('date format'),
 );
 
+$CATEGORY_DEFAULT_STYLE = 'border: 1px black solid; color: black; background: #FFFFFF; padding: 2px; height: 40px;';
+
 // Helpdesk ticket status
 define('RT_NEW', 0);
 define('RT_OPEN', 1);
 define('RT_RESOLVED', 2);
 define('RT_DEAD', 3);
+define('RT_SCHEDULED', 4);
+define('RT_WAITING', 5);
 
 $RT_STATES = array(
-    RT_NEW      => trans('new'),
-    RT_OPEN     => trans('opened'),
-    RT_RESOLVED => trans('resolved'),
-    RT_DEAD     => trans('dead')
+	RT_NEW => array(
+		'label' => trans('new'),
+		'color' => 'red',
+		'img' => 'img/new.gif',
+		'name' => 'RT_NEW'
+	),
+
+	RT_OPEN => array(
+		'label' => trans('opened'),
+		'color' => 'black',
+		'img' => 'img/open.gif',
+		'name' => 'RT_OPEN'
+	),
+
+	RT_RESOLVED => array(
+		'label' => trans('resolved'),
+		'color' => 'grey',
+		'img' => 'img/resolved.gif',
+		'name' => 'RT_RESOLVED'
+	),
+
+	RT_DEAD => array(
+		'label' => trans('dead'),
+		'color' => '#8B0000',
+		'img' => 'img/dead.gif',
+		'name' => 'RT_DEAD'
+	),
+
+	RT_SCHEDULED => array(
+		'label' => trans('scheduled'),
+		'color' => '#4169E1',
+		'img' => 'img/calendar.gif',
+		'name' => 'RT_SCHEDULED'
+	),
+
+	RT_WAITING => array(
+		'label' => trans('waiting'),
+		'color' => '#b26b00',
+		'img' => 'img/calendar.gif',
+		'name' => 'RT_WAITING'
+	)
+);
+
+//Helpdesk ticket source
+define('RT_SOURCE_UNKNOWN', 0);
+define('RT_SOURCE_PHONE', 1);
+define('RT_SOURCE_EMAIL', 2);
+define('RT_SOURCE_USERPANEL', 3);
+define('RT_SOURCE_PERSONAL', 4);
+define('RT_SOURCE_MESSCHAT', 5);
+define('RT_SOURCE_PAPER', 6);
+define('RT_SOURCE_SMS', 7);
+
+$RT_SOURCES = array(
+	RT_SOURCE_UNKNOWN => trans('unknown/other'),
+	RT_SOURCE_PHONE => trans('Phone'),
+	RT_SOURCE_EMAIL => trans('e-mail'),
+	RT_SOURCE_USERPANEL => trans('Userpanel'),
+	RT_SOURCE_PERSONAL => trans('Personal'),
+	RT_SOURCE_MESSCHAT => trans('Instant messengers'),
+	RT_SOURCE_PAPER => trans('Letter complaint'),
+	RT_SOURCE_SMS => trans('SMS'),
+);
+
+//Helpdesk ticket priority
+define('RT_PRIORITY_VERYLOW', -2);
+define('RT_PRIORITY_LOW', -1);
+define('RT_PRIORITY_NORMAL', 0);
+define('RT_PRIORITY_URGENT', 1);
+define('RT_PRIORITY_CRITICAL', 2);
+
+$RT_PRIORITIES = array(
+	RT_PRIORITY_VERYLOW => trans('very low'),
+	RT_PRIORITY_LOW => trans('low'),
+	RT_PRIORITY_NORMAL => trans('normal'),
+	RT_PRIORITY_URGENT => trans('urgent'),
+	RT_PRIORITY_CRITICAL => trans('critical'),
+);
+
+$RT_PRIORITY_STYLES = array(
+	RT_PRIORITY_VERYLOW => 'background-color: lightgreen; color: black;',
+	RT_PRIORITY_LOW => 'background-color: yellow; color: black;',
+	RT_PRIORITY_NORMAL => 'background-color: transparent; color: black;',
+	RT_PRIORITY_URGENT => 'background-color: orange; color: white;',
+	RT_PRIORITY_CRITICAL => 'background-color: red; color: white;',
 );
 
 // Helpdesk cause type
@@ -145,6 +230,10 @@ define('RTMESSAGE_STATE_CHANGE', 8);
 define('RTMESSAGE_CAUSE_CHANGE', 16);
 define('RTMESSAGE_CUSTOMER_CHANGE', 32);
 define('RTMESSAGE_SUBJECT_CHANGE', 64);
+define('RTMESSAGE_CATEGORY_CHANGE', 128);
+define('RTMESSAGE_LOCATION_CHANGE', 256);
+define('RTMESSAGE_NODE_CHANGE', 512);
+define('RTMESSAGE_NETNODE_CHANGE', 1024);
 
 // Messages status and type
 define('MSG_NEW', 1);
@@ -500,6 +589,7 @@ $LINKSPEEDS = array(
 	300000		=> trans('300Mbit/s'),
 	1000000		=> trans('1Gbit/s'),
 	10000000	=> trans('10Gbit/s'),
+	40000000	=> trans('40Gbit/s'),
 );
 
 $BOROUGHTYPES = array(
@@ -554,22 +644,31 @@ $NETELEMENTOWNERSHIPS = array(
 	2	=> 'Węzeł obcy',
 );
 
-$USERPANEL_ID_TYPES = array(
+$USERPANEL_AUTH_TYPES = array(
 	1	=> array(
 		'label' => trans('Customer ID:'),
+		'label_secret' => trans('PIN:'),
 		'selection' => trans('Customer ID and PIN'),
 	),
 	2	=> array(
 		'label' => trans('Phone number:'),
+		'label_secret' => trans('PIN:'),
 		'selection' => trans('Phone number and PIN'),
 	),
 	3	=> array(
 		'label' => trans('Document number:'),
+		'label_secret' => trans('PIN:'),
 		'selection' => trans('Document number and PIN'),
 	),
 	4	=> array(
 		'label' => trans('Customer e-mail:'),
+		'label_secret' => trans('PIN:'),
 		'selection' => trans('Customer e-mail and PIN'),
+	),
+	5	=> array(
+		'label' => trans('PPPoE login:'),
+		'label_secret' => trans('PPPoE password:'),
+		'selection' => trans('PPPoE login and password'),
 	),
 );
 
@@ -580,6 +679,8 @@ define('EVENT_INSTALLATION', 4);
 define('EVENT_MEETING', 5);
 define('EVENT_VACATION', 6);
 define('EVENT_DUTY', 7);
+define('EVENT_PHONE', 8);
+define('EVENT_TV', 9);
 
 $EVENTTYPES = array(
 	EVENT_OTHER => trans('other'),
@@ -588,7 +689,9 @@ $EVENTTYPES = array(
 	EVENT_INSTALLATION => trans('installation'),
 	EVENT_MEETING => trans('meeting'),
 	EVENT_VACATION => trans('vacation'),
-	EVENT_DUTY => trans('duty')
+	EVENT_DUTY => trans('duty'),
+	EVENT_PHONE => trans('phone'),
+	EVENT_TV => trans('tv'),
 );
 
 $EVENTSTYLES = array(
@@ -598,7 +701,9 @@ $EVENTSTYLES = array(
 	EVENT_INSTALLATION => 'background-color: green; color: white;',
 	EVENT_MEETING => 'background-color: yellow; color: black;',
 	EVENT_VACATION => 'background-color: white; color: black;',
-	EVENT_DUTY => 'background-color: brown; color: white;'
+	EVENT_DUTY => 'background-color: brown; color: white;',
+	EVENT_PHONE => 'background-color: white; color: black;',
+	EVENT_TV => 'background-color: white; color: blue;',
 );
 
 define('SESSIONTYPE_PPPOE', 1);
@@ -635,6 +740,18 @@ $SESSIONTYPES = array(
 	),
 );
 
+define('EXISTINGASSIGNMENT_KEEP', 0);
+define('EXISTINGASSIGNMENT_SUSPEND', 1);
+define('EXISTINGASSIGNMENT_CUT', 2);
+define('EXISTINGASSIGNMENT_DELETE', 3);
+
+$EXISTINGASSIGNMENTS = array(
+	EXISTINGASSIGNMENT_KEEP => trans('<!existingassignment>keep'),
+	EXISTINGASSIGNMENT_SUSPEND => trans('<!existingassignment>suspend'),
+	EXISTINGASSIGNMENT_CUT => trans('<!existingassignment>cut'),
+	EXISTINGASSIGNMENT_DELETE => trans('<!existingassignment>delete'),
+);
+
 if(isset($SMARTY))
 {
 	$SMARTY->assign('_CTYPES',$CTYPES);
@@ -645,6 +762,9 @@ if(isset($SMARTY))
 	$SMARTY->assign('_GUARANTEEPERIODS', $GUARANTEEPERIODS);
 	$SMARTY->assign('_NUM_PERIODS', $NUM_PERIODS);
 	$SMARTY->assign('_RT_STATES', $RT_STATES);
+	$SMARTY->assign('_RT_SOURCES', $RT_SOURCES);
+	$SMARTY->assign('_RT_PRIORITIES', $RT_PRIORITIES);
+	$SMARTY->assign('_RT_PRIORITY_STYLES', $RT_PRIORITY_STYLES);
 	$SMARTY->assign('_CONFIG_TYPES', $CONFIG_TYPES);
 	$SMARTY->assign('_TARIFFTYPES', $TARIFFTYPES);
 	$SMARTY->assign('_PAYTYPES', $PAYTYPES);
@@ -659,10 +779,12 @@ if(isset($SMARTY))
 	$SMARTY->assign('_NETELEMENTSTATUSES', $NETELEMENTSTATUSES);
 	$SMARTY->assign('_NETELEMENTTYPES', $NETELEMENTTYPES);
 	$SMARTY->assign('_NETELEMENTOWNERSHIPS', $NETELEMENTOWNERSHIPS);
-	$SMARTY->assign('_USERPANEL_ID_TYPES', $USERPANEL_ID_TYPES);
+	$SMARTY->assign('_USERPANEL_AUTH_TYPES', $USERPANEL_AUTH_TYPES);
 	$SMARTY->assign('_EVENTTYPES', $EVENTTYPES);
 	$SMARTY->assign('_EVENTSTYLES', $EVENTSTYLES);
 	$SMARTY->assign('_SESSIONTYPES', $SESSIONTYPES);
+	$SMARTY->assign('_CATEGORY_DEFAULT_STYLE', $CATEGORY_DEFAULT_STYLE);
+	$SMARTY->assign('_EXISTINGASSIGNMENTS', $EXISTINGASSIGNMENTS);
 }
 
 define('DEFAULT_NUMBER_TEMPLATE', '%N/LMS/%Y');

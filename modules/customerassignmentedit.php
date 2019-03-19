@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2016 LMS Developers
+ *  (C) Copyright 2001-2018 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -51,7 +51,7 @@ if (isset($_POST['assignment']))
 
 	$a['id'] = $_GET['id'];
 	$a['customerid'] = $customer['id'];
-	$a['liabilityid'] = isset($_GET['lid']) ? $_GET['lid'] : 0;
+	$a['liabilityid'] = isset($_GET['lid']) ? $_GET['lid'] : null;
 
 	$period = sprintf('%d',$a['period']);
 
@@ -238,6 +238,16 @@ if (isset($_POST['assignment']))
 			$error['value'] = trans('Liability value is required!');
 		elseif (!preg_match('/^[-]?[0-9.,]+$/', $a['value']))
 			$error['value'] = trans('Incorrect value!');
+		elseif ($a['discount_type'] == 2 && $a['discount'] && $a['value'] - $a['discount'] < 0) {
+			$error['value'] = trans('Value less than discount are not allowed!');
+			$error['discount'] = trans('Value less than discount are not allowed!');
+		}
+	} else {
+		if ($a['discount_type'] == 2 && $a['discount']
+			&& $DB->GetOne('SELECT value FROM tariffs WHERE id = ?', array($a['tariffid'])) - $a['discount'] < 0) {
+			$error['value'] = trans('Value less than discount are not allowed!');
+			$error['discount'] = trans('Value less than discount are not allowed!');
+		}
 	}
 
 	if ($a['tarifftype'] == TARIFF_PHONE) {
@@ -271,7 +281,7 @@ if (isset($_POST['assignment']))
 							SYSLOG::RES_CUST => $customer['id']);
 						$SYSLOG->AddMessage(SYSLOG::RES_LIAB, SYSLOG::OPER_DELETE, $args);
 					}
-					$a['liabilityid'] = 0;
+					$a['liabilityid'] = null;
 				}
 				else {
 					$args = array(
@@ -317,13 +327,14 @@ if (isset($_POST['assignment']))
 		}
 
 		$args = array(
-			SYSLOG::RES_TARIFF => intval($a['tariffid']),
+			SYSLOG::RES_TARIFF => empty($a['tariffid']) ? null : intval($a['tariffid']),
 			SYSLOG::RES_CUST => $customer['id'],
 			'attribute' => !empty($a['attribute']) ? $a['attribute'] : NULL,
 			'period' => $period,
 			'at' => $at,
-			'invoice' => isset($a['invoice']) ? 1 : 0,
-			'settlement' => isset($a['settlement']) ? 1 : 0,
+			'invoice' => isset($a['invoice']) ? $a['invoice'] : 0,
+			'separatedocument' => isset($a['separatedocument']) ? 1 : 0,
+			'settlement' => !isset($a['settlement']) || empty($a['settlement']) ? 0 : 1,
 			'datefrom' => $from,
 			'dateto' => $to,
 			'pdiscount' => str_replace(',', '.', $a['pdiscount']),
@@ -336,7 +347,7 @@ if (isset($_POST['assignment']))
 		);
 
 		$DB->Execute('UPDATE assignments SET tariffid=?, customerid=?, attribute=?, period=?, at=?,
-			invoice=?, settlement=?, datefrom=?, dateto=?, pdiscount=?, vdiscount=?,
+			invoice=?, separatedocument=?, settlement=?, datefrom=?, dateto=?, pdiscount=?, vdiscount=?,
 			liabilityid=?, numberplanid=?, paytype=?, recipient_address_id=?
 			WHERE id=?', array_values($args));
 		if ($SYSLOG) {
@@ -401,8 +412,8 @@ else
 {
 	$a = $DB->GetRow('SELECT a.id AS id, a.customerid, a.tariffid, a.period,
 				a.at, a.datefrom, a.dateto, a.numberplanid, a.paytype,
-				a.invoice, a.settlement, a.pdiscount, a.vdiscount, a.attribute, a.liabilityid,
-				(CASE liabilityid WHEN 0 THEN tariffs.name ELSE liabilities.name END) AS name,
+				a.invoice, a.separatedocument, a.settlement, a.pdiscount, a.vdiscount, a.attribute, a.liabilityid,
+				(CASE WHEN liabilityid IS NULL THEN tariffs.name ELSE liabilities.name END) AS name,
 				liabilities.value AS value, liabilities.prodid AS prodid, liabilities.taxid AS taxid,
 				recipient_address_id
 				FROM assignments a
@@ -461,10 +472,6 @@ $layout['pagetitle'] = trans('Liability Edit: $a', '<A href="?m=customerinfo&id=
 
 $SESSION->save('backto', $_SERVER['QUERY_STRING']);
 
-$customerNodes = $LMS->GetCustomerNodes( $customer['id']);
-
-unset($customernodes['total']);
-
 $LMS->executeHook(
     'customerassignmentedit_before_display',
     array(
@@ -473,38 +480,26 @@ $LMS->executeHook(
     )
 );
 
-// -----
-// remove duplicated customer nodes
-// -----
-
-$netdevnodes = $LMS->getCustomerNetDevNodes($customer['id']);
-
-if ($customerNodes) {
-    foreach ($customerNodes as $v) {
-        if (isset($netdevnodes[$v['id']]))
-            unset($netdevnodes[$v['id']]);
-    }
-}
-
-$SMARTY->assign('customernetdevnodes', $netdevnodes);
-
-// -----
-
-$SMARTY->assign('customernodes'      , $customerNodes);
-$SMARTY->assign('customernetdevnodes', $netdevnodes);
-$SMARTY->assign('customervoipaccs'   , $LMS->getCustomerVoipAccounts($customer['id']));
-$SMARTY->assign('customeraddresses'  , $LMS->getCustomerAddresses($customer['id']));
-$SMARTY->assign('tariffs'            , $LMS->GetTariffs($a['tariffid']));
-$SMARTY->assign('taxeslist'          , $LMS->GetTaxes());
-$SMARTY->assign('expired'            , $expired);
-$SMARTY->assign('assignment'         , $a);
-$SMARTY->assign('assignments'        , $LMS->GetCustomerAssignments($customer['id'], $expired));
+$SMARTY->assign('customernodes', $LMS->GetCustomerNodes($customer['id']));
+$SMARTY->assign('customernetdevnodes', $LMS->getCustomerNetDevNodes($customer['id']));
+$SMARTY->assign('voipaccounts', $LMS->GetCustomerVoipAccounts($customer['id']));
+$SMARTY->assign('customeraddresses', $LMS->getCustomerAddresses($customer['id']));
 $SMARTY->assign('numberplanlist'     , $LMS->GetNumberPlans(array(
 	'doctype' => DOC_INVOICE,
 	'cdate' => null,
 	'division' => $customer['divisionid'],
 	'next' => false,
 )));
+
+// -----
+
+$SMARTY->assign('tags', $LMS->TarifftagGetAll());
+
+$SMARTY->assign('tariffs'            , $LMS->GetTariffs($a['tariffid']));
+$SMARTY->assign('taxeslist'          , $LMS->GetTaxes());
+$SMARTY->assign('expired'            , $expired);
+$SMARTY->assign('assignment'         , $a);
+$SMARTY->assign('assignments'        , $LMS->GetCustomerAssignments($customer['id'], $expired));
 $SMARTY->assign('customerinfo', $customer);
 $SMARTY->display('customer/customerassignmentsedit.html');
 

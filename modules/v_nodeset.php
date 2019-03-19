@@ -4,7 +4,7 @@ $id = isset($_GET['id']) ? $_GET['id'] : 0;
 
 if($voip->CustomerExists($ownerid))
 {
-	$voip->wsdl->NodeSetU($ownerid, $_GET['access'], $AUTH->id);
+    $voip->wsdl->NodeSetU($ownerid, $_GET['access'], Auth::GetCurrentUser());
 
 	$backid = $ownerid;
 	$redir = $SESSION->get('backto');
@@ -16,7 +16,7 @@ if($voip->CustomerExists($ownerid))
 
 if($voip->wsdl->NodeExists($id))
 {
-	$voip->wsdl->NodeSet($id, $AUTH->id);
+    $voip->wsdl->NodeSet($id, Auth::GetCurrentUser());
 	$backid = $id;
 }
 

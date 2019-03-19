@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2013 LMS Developers
+ *  (C) Copyright 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -29,17 +29,17 @@ if(isset($_GET['id']))
 	$id = intval($_GET['id']);
 	$regid = $DB->GetOne('SELECT DISTINCT regid FROM receiptcontents WHERE docid=?', array($id));
 
-	if($DB->GetOne('SELECT rights FROM cashrights WHERE userid=? AND regid=?', array($AUTH->id, $regid))<256)
+	if($DB->GetOne('SELECT rights FROM cashrights WHERE userid=? AND regid=?', array(Auth::GetCurrentUser(), $regid))<256)
 	{
 	        $SMARTY->display('noaccess.html');
 	        $SESSION->close();
 	        die;
 	}			
 
-	$record = $DB->GetRow('SELECT documents.*, template 
-			    FROM documents 
+	$record = $DB->GetRow('SELECT documents.*, numberplans.template
+			    FROM documents
 			    LEFT JOIN numberplans ON (numberplanid = numberplans.id)
-			    WHERE documents.id = ? AND type = ? AND closed = 0', 
+			    WHERE documents.id = ? AND type = ? AND closed = 0',
 			    array($id, DOC_RECEIPT));
 
 	if(!$record)
@@ -83,21 +83,16 @@ if(isset($_POST['receipt']))
 	if($receipt['type'] == 'return')
 		$receipt['cdate'] = $_POST['receiptr']['cdate'];
 
-	if($receipt['cdate'])
+	if(isset($receipt['cdate']))
 	{
-	        list($year, $month, $day) = explode('/',$receipt['cdate']);
-		if(checkdate($month, $day, $year))
-		{
-		        $receipt['cdate'] = mktime(date('G',time()),date('i',time()),date('s',time()),$month,$day,$year);
+		$cdate = date_to_timestamp($receipt['cdate']);
+		if(empty($cdate)) {
+			$error['cdate'] = trans('Incorrect date format!');
+			$receipt['cdate'] = time();
 		}
-		else
-		{
-		        $error['cdate'] = trans('Incorrect date format!');
-		        $receipt['cdate'] = time();
-                }
-        }
-        else
-        	$receipt['cdate'] = time();
+	}
+	else
+		$receipt['cdate'] = time();
 
 	$in_plan = $DB->GetOne('SELECT in_numberplanid FROM cashregs WHERE id = ?', array($regid));
 
@@ -209,7 +204,7 @@ if(isset($_POST['receipt']))
 						$in_extnumber,
 						$in_plan,
 						$receipt['cdate'],
-						$AUTH->id,
+						Auth::GetCurrentUser(),
 						$record['name'],
 						$fullnumber,
 						));
@@ -239,7 +234,7 @@ if(isset($_POST['receipt']))
 						isset($receipt['out_extnumber']) ? $receipt['out_extnumber'] : '',
 						$record['numberplanid'],
 						$receipt['cdate'],
-						$AUTH->id,
+						Auth::GetCurrentUser(),
 						$receipt['name'],
 						$fullnumber,
 						));
@@ -247,42 +242,42 @@ if(isset($_POST['receipt']))
 			$rid2 = $DB->GetLastInsertId('documents');
 		}
 		
-		$DB->UnLockTables();				
+		$DB->UnLockTables();
 			
 		$DB->Execute('INSERT INTO receiptcontents (docid, itemid, value, description, regid)
-					VALUES(?, 1, ?, ?, ?)', 
-					array($rid, 
-						str_replace(',', '.', $record['value'] * -1), 
+					VALUES(?, 1, ?, ?, ?)',
+					array($rid,
+						str_replace(',', '.', $record['value'] * -1),
 						trans('Advance return').' - '.$titlenumber,
 						$regid
 					));
 
 		$DB->Execute('INSERT INTO cash (time, type, docid, itemid, value, comment, userid)
-					VALUES(?, 1, ?, 1, ?, ?, ?)', 
+					VALUES(?, 1, ?, 1, ?, ?, ?)',
 					array($receipt['cdate'],
-						$rid, 
-						str_replace(',', '.', $record['value'] * -1), 
+						$rid,
+						str_replace(',', '.', $record['value'] * -1),
 						trans('Advance return').' - '.$titlenumber,
-						$AUTH->id
+						Auth::GetCurrentUser()
 					));
 
 		if($receipt['type'] == 'settle')
 		{
 			$DB->Execute('INSERT INTO receiptcontents (docid, itemid, value, description, regid)
-					VALUES(?, 1, ?, ?, ?)', 
+					VALUES(?, 1, ?, ?, ?)',
 					array($rid2, 
-						str_replace(',', '.', $value * -1), 
+						str_replace(',', '.', $value * -1),
 						$receipt['description'],
 						$regid
 					));
 
 			$DB->Execute('INSERT INTO cash (time, type, docid, itemid, value, comment, userid)
-					VALUES(?, 1, ?, 1, ?, ?, ?)', 
+					VALUES(?, 1, ?, 1, ?, ?, ?)',
 					array($receipt['cdate'],
-						$rid, 
-						str_replace(',', '.', $value * -1), 
+						$rid,
+						str_replace(',', '.', $value * -1),
 						$receipt['description'],
-						$AUTH->id
+						Auth::GetCurrentUser()
 					));
 		}
 

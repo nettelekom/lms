@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2016 LMS Developers
+ *  (C) Copyright 2001-2018 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -28,7 +28,7 @@ $id = intval($_GET['id']);
 
 if (!empty($_GET['changestatus'])) {
 	if ($SYSLOG) {
-		$div = $DB->GetRow('SELECT countryid, status FROM divisions WHERE id = ?', array($id));
+		$div = $DB->GetRow('SELECT countryid, status FROM vdivisions WHERE id = ?', array($id));
 		$args = array(
 			SYSLOG::RES_DIV => $id,
 			SYSLOG::RES_COUNTRY => $div['countryid'],
@@ -47,7 +47,8 @@ $olddiv = $DB->GetRow('SELECT d.*,
 		addr.city_id as location_city, addr.street_id as location_street,
 		addr.house as location_house, addr.flat as location_flat,
 		addr.zip as location_zip, addr.state as location_state_name,
-		addr.state_id as location_state, addr.country_id as location_country_id
+		addr.state_id as location_state, addr.country_id as location_country_id,
+		addr.postoffice AS location_postoffice
 	FROM divisions d
 		LEFT JOIN addresses addr           ON addr.id = d.address_id
 		LEFT JOIN location_cities lc       ON lc.id = addr.city_id
@@ -104,35 +105,7 @@ if ( !empty($_POST['division']) ) {
 		$error['tax_office_code'] = trans('Invalid format of Tax Office Code!');
 
 	if (!$error) {
-		$LMS->UpdateAddress( $division );
-
-		$args = array(
-			'name'        => $division['name'],
-			'shortname'   => $division['shortname'],
-			'ten'         => $division['ten'],
-			'regon'       => $division['regon'],
-			'rbename'     => $division['rbename'] ? $division['rbename'] : '',
-			'account'     => $division['account'],
-			'inv_header'  => $division['inv_header'],
-			'inv_footer'  => $division['inv_footer'],
-			'inv_author'  => $division['inv_author'],
-			'inv_cplace'  => $division['inv_cplace'],
-			'inv_paytime' => $division['inv_paytime'],
-			'inv_paytype' => $division['inv_paytype'] ? $division['inv_paytype'] : null,
-			'description' => $division['description'],
-			'status'      => !empty($division['status']) ? 1 : 0,
-			'tax_office_code' => $division['tax_office_code'],
-			SYSLOG::RES_DIV   => $division['id']
-		);
-
-		$DB->Execute('UPDATE divisions SET name=?, shortname=?,
-			ten=?, regon=?, rbename=?, account=?, inv_header=?,
-			inv_footer=?, inv_author=?, inv_cplace=?, inv_paytime=?,
-			inv_paytype=?, description=?, status=?, tax_office_code = ?
-			WHERE id=?', array_values($args));
-
-		if ($SYSLOG)
-			$SYSLOG->AddMessage(SYSLOG::RES_DIV, SYSLOG::OPER_UPDATE, $args);
+		$LMS->UpdateDivision($division);
 
 		$SESSION->redirect('?m=divisionlist');
 	}

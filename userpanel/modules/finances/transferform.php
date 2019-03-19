@@ -68,8 +68,7 @@ if($SHORT_TO_WORDS)
 }
 else
 {
-	$KWOTA_ZL = to_words(floor($KWOTA_NR));
-	$KWOTA_GR = to_words($KWOTA_GR);
+	$KWOTA_ZL = floor($KWOTA_NR);
 	$KWOTA_X = moneyf_in_words($KWOTA_ZL + ($KWOTA_GR / 100));
 }
 
@@ -182,7 +181,7 @@ for ( $j=0; $j<2; $j++ ) // pętla główna
 // kwota słownie:
 
      $posx=205+$j*$SHIFT;
-     echo('<span style="position: absolute; top: '. $posx .'px; left: 62px; font-family: Courier, Arial, Helvetica; font-size: 8pt; font-weight: bold;">'.$KWOTA_X.'</span>');
+     echo('<span style="position: absolute; top: '. $posx .'px; left: 62px; font-family: Courier, Arial, Helvetica; font-size: 8pt; font-weight: bold;">'.$KWOTA_ZL .' zł '.$KWOTA_GR.' gr</span>');
 
 // dane płatnika:
 

@@ -174,16 +174,27 @@ if(isset($_POST['networkdata']))
 
 	if (!$error) {
 		if (isset($networkdata['needshft']) && $networkdata['needshft'])
-			$LMS->NetworkShift($network['hostid'], $network['address'], $network['mask'], $networkdata['addresslong'] - $network['addresslong']);
+			$LMS->NetworkShift($networkdata['id'], $network['address'], $network['mask'], $networkdata['addresslong'] - $network['addresslong']);
 
 		if($networkdata['ownerid'] != $network['ownerid']) {
 			$vnetwork = $DB->GetRow('SELECT nodeid, ownerid FROM vnetworks WHERE id = ?', array($networkdata['id']));
 			if($networkdata['ownerid'] == '' && $vnetwork) {
 				$DB->Execute('DELETE FROM nodes WHERE id = ?', array($vnetwork['nodeid']));
 			} elseif($vnetwork) {
-				$DB->Execute('UPDATE nodes SET ownerid = ? WHERE id = ?', array($networkdata['ownerid'], $vnetwork['nodeid']));
+				$DB->Execute('UPDATE nodes SET ownerid = ? WHERE id = ?',
+					array(
+						empty($networkdata['ownerid']) ? null : $networkdata['ownerid'],
+						$vnetwork['nodeid'],
+					)
+				);
 			} else {
-				$DB->Execute('INSERT INTO nodes (name, ownerid, netid) VALUES(?, ?, ?)', array($networkdata['name'], $networkdata['ownerid'], $networkdata['id']));
+				$DB->Execute('INSERT INTO nodes (name, ownerid, netid) VALUES(?, ?, ?)',
+					array(
+						$networkdata['name'],
+						empty($networkdata['ownerid']) ? null : $networkdata['ownerid'],
+						$networkdata['id'],
+					)
+				);
 			}
 		}
 

@@ -31,6 +31,22 @@ function removeClass(theElem, theClass)
 	theElem.className = str.replace(regexp, '');
 }
 
+function get_object_pos(obj) {
+	// get old element size/position
+	var x = obj.offsetLeft;
+	var y = obj.offsetTop;
+
+	// calculate element position
+	var elm = obj.offsetParent;
+	while (elm && window.getComputedStyle(elm).position != 'relative') {
+		x += elm.offsetLeft;
+		y += elm.offsetTop;
+		elm = elm.offsetParent;
+	}
+
+	return { x: x, y: y };
+}
+
 // LMS: function to autoresize iframe and parent div container (overlib)
 function autoiframe_setsize(id, width, height)
 {
@@ -58,7 +74,7 @@ function autoiframe_setsize(id, width, height)
     var pos = get_object_pos(frame),
         parent_frame = doc.getElementById('overDiv'),
         dw = doc.body.offsetWidth,
-        dh = doc.body.offsetWidth;
+        dh = doc.body.offsetHeight;
 
     if (width < dw && pos.x + width > dw - 15) {
         parent_frame.style.left = (dw - width - 15) + 'px';
@@ -177,7 +193,10 @@ function netdevmodelchoosewin(varname, formname, netdevmodelid, producer, model)
 
 function gpscoordschoosewin(formfield1, formfield2)
 {
-	return openSelectWindow2('?m=choosegpscoords', 'choosegpscoords', 450, 300, 'true', formfield1, formfield2);
+	return openSelectWindow2('?m=choosegpscoords', 'choosegpscoords',
+		window.screen.availWidth * 0.4,
+		window.screen.availHeight * 0.4,
+		'true', formfield1, formfield2);
 }
 
 function netdevfrommapchoosewin(netdevid)
@@ -249,7 +268,7 @@ function getCookie(name)
 			a[0] = a[0].trim();
 			a[1] = a[1].trim();
 			if (a[0] == name)
-				return unescape(a[1]);
+				return decodeURIComponent(a[1]);
 		}
 	}
 	return null;
@@ -257,7 +276,7 @@ function getCookie(name)
 
 function setCookie(name, value, permanent)
 {
-	var cookie = name + '=' + escape(value);
+	var cookie = name + '=' + encodeURIComponent(value);
 	if (permanent != null) {
 		var d = new Date();
 		d.setTime(d.getTime() + 365 * 24 * 3600 * 1000);
@@ -327,221 +346,6 @@ function CheckAll(form, elem, excl)
 
         e.checked = elem.checked;
     }
-}
-
-function get_object_pos(obj) {
-	// get old element size/position
-	var x = obj.offsetLeft;
-	var y = obj.offsetTop;
-
-	// calculate element position
-	var elm = obj.offsetParent;
-	while (elm && window.getComputedStyle(elm).position != 'relative') {
-		x += elm.offsetLeft;
-		y += elm.offsetTop;
-		elm = elm.offsetParent;
-	}
-
-	return { x: x, y: y };
-}
-
-function multiselect(options) {
-	var elemid = options.id;
-	var def = typeof options.defaultValue !== 'undefined' ? options.defaultValue : '';
-	var tiny = typeof options.type !== 'undefined' && options.type == 'tiny';
-	var icon = typeof options.icon !== 'undefined' ? options.icon : 'img/settings.gif';
-	var label = typeof options.label !== 'undefined' ? options.label : '';
-
-	var old_element = $('#' + elemid);
-	var form = old_element.closest('form');
-
-	if (!old_element.length || !form.length)
-		return 0;
-
-	// create new multiselect div
-	var new_element = $('<div/>', {
-		class: 'lms-ui-multiselect' + (tiny ? '-tiny' : ''),
-		id: elemid,
-		// save title for tooltips
-		title: old_element.attr('title')
-	});
-	if (tiny)
-		new_element.html('<img src="' + icon + '">&nbsp' + label);
-
-	var elem = [];
-	$('option', old_element).each(function(index) {
-		elem[$(this).text().replace(' ', '&nbsp;')] =
-			$(this).prop('selected') ? 1 : 0;
-	});
-
-	var old_selected = new_selected = generateSelectedString(elem);
-	if (!tiny)
-		new_element.html(old_selected);
-
-	new_element.data('data-multiselect-object', this)
-		.attr('style', old_element.attr('style'));
-	// save onchange event handler
-	if (typeof(onchange = old_element.prop('onchange')) == 'function')
-		new_element.on('change', onchange);
-	// save onitemclick event handler
-	if (typeof(itemclick = old_element.prop('onitemclick')) == 'function')
-		new_element.on('itemclick', onchange);
-
-	// replace select with multiselect
-	old_element.replaceWith(new_element);
-
-	// create multiselect list div (hidden)
-	var div = $('<div/>', {
-		class: 'lms-ui-multiselectlayer',
-		id: elemid + '-layer'
-	}).hide().appendTo(form);
-	var ul = $('<ul/>').appendTo(div);
-
-	$('option', old_element).each(function(i) {
-		var li = $('<li/>').appendTo(ul);
-
-		// add elements
-		var box = $('<input/>', {
-			type: 'checkbox',
-			name: old_element.attr('name'),
-			value: $(this).val()
-		}).appendTo(li);
-
-		var text = $(this).text().replace(' ', '&nbsp;');
-		var span = $('<span/>').html(text)
-			.appendTo(li);
-
-		if (elem[text]) {
-			box.prop('checked', true);
-			li.addClass('selected');
-		}
-
-		// add some mouse/key events handlers
-		li.click(function(e) {
-			if ($(e.target).is('input'))
-				return;
-
-			$(this).toggleClass('selected');
-			var box = $(':checkbox', this);
-			box.prop('checked', !box.prop('checked'));
-
-			var optionValue = '';
-			if (/<span>(.*?)<\/span>/i.exec(this.innerHTML) !== null)
-				optionValue = RegExp.$1;
-
-			if (box.is(':checked'))
-				elem[optionValue] = 1; //mark option as selected
-			else
-				elem[optionValue] = 0; //mark option as unselected
-
-			new_selected = generateSelectedString(elem);
-			if (!tiny)
-				new_element.html(new_selected);
-
-			new_element.triggerHandler('itemclick', {
-				index: $(this).index(),
-				value: box.val(),
-				checked: box.is(':checked')
-			});
-		});
-		// TODO: keyboard events
-	});
-
-	// add some mouse/key event handlers
-	new_element.click(function() {
-		var list = $('#' + this.id + '-layer');
-		if (!list.is(':visible')) {
-			var pos = get_object_pos(this);
-			list.css('left', (pos.x + this.offsetWidth) + 'px')
-				.css('top', pos.y + 'px').show();
-/*
-			list.position({
-				my: 'left top',
-				at: 'right top',
-				of: new_element
-			});
-*/
-		} else {
-			list.hide();
-			if (new_selected != old_selected)
-				new_element.triggerHandler('change');
-			old_selected = new_selected;
-		}
-	});
-
-	// hide combobox after click out of the window
-	$(document).click(function(e) {
-		var elem = e.target;
-		if (tiny)
-			while (elem && (elem.nodeName != 'DIV' || elem.className.match(/^lms-ui-multiselect/) === null))
-				elem = elem.parentNode;
-
-		if (!$(div).is(':visible') || (elem && elem.id == old_element.attr('id')))
-			return 0;
-
-		var parent = $(e.target).parent().html().indexOf(old_element.attr('name'));
-
-		if ($(e.target).html().indexOf("<head>") > -1 || parent == -1
-			|| (parent > -1 && e.target.nodeName != 'INPUT' && e.target.nodeName != 'LI' && e.target.nodeName != 'SPAN')) {
-			$(div).hide();
-			if (new_selected != old_selected)
-				new_element.triggerHandler('change');
-			old_selected = new_selected;
-		}
-	});
-
-	// TODO: keyboard events
-
-	function generateSelectedString(objArray) {
-		var selected = [];
-
-		for (var k in objArray)
-			if (objArray.hasOwnProperty(k) && objArray[k] == 1)
-				selected.push(k);
-
-		if (!selected.length)
-			return def;
-
-		return selected.join(', ');
-	}
-
-	this.updateSelection = function(idArray) {
-		var selected = [];
-		$('input:checkbox', div).each(function() {
-			var text = $(this).siblings('span').html();
-			if (idArray == null || idArray.indexOf($(this).val()) != -1) {
-				$(this).prop('checked', true).parent().addClass('selected');
-				selected.push(text);
-				elem[text] = 1;
-			} else {
-				$(this).prop('checked', false).parent().removeClass('selected');
-				elem[text] = 0;
-			}
-		});
-		new_selected = selected.join(', ');
-		if (!tiny)
-			new_element.html(new_selected);
-	}
-
-	this.filterSelection = function(idArray) {
-		var selected = [];
-		$('input:checkbox', div).each(function() {
-			var text = $(this).siblings('span').html();
-			if (idArray == null || idArray.indexOf($(this).val()) != -1) {
-				$(this).parent().show();
-				if ($(this).prop('checked')) {
-					elem[text] = 1;
-					selected.push(text);
-				}
-			} else {
-				$(this).prop('checked', false).parent().hide();
-				elem[text] = 0;
-			}
-		});
-		new_selected = selected.join(', ');
-		if (!tiny)
-			new_element.html(new_selected);
-	}
 }
 
 var lms_login_timeout_value,
@@ -720,15 +524,25 @@ function generate_random_string(length, characters) {
 	return randomString;
 }
 
+function validate_random_string(string, min_size, max_size, characters) {
+	if (string.length < min_size || string.length > max_size) {
+		return false;
+	}
+	for (var i = 0; i < characters.length; i++) {
+		string = string.split(characters[i]).join('');
+	}
+	return !string.length;
+}
+
 function get_size_unit(size) {
 	if (size > 10 * 1024 * 1024 * 1024)
 		return {
-			size: (size / 1024 * 1024 * 1024).toFixed(2),
+			size: (size / (1024 * 1024 * 1024)).toFixed(2),
 			unit: 'GiB'
 		};
 	else if (size > 10 * 1024 * 1024)
 		return {
-			size: (size / 1024 * 1024).toFixed(2),
+			size: (size / (1024 * 1024)).toFixed(2),
 			unit: 'MiB'
 		};
 	else if (size > 10 * 1024)
@@ -747,7 +561,7 @@ function _getCustomerNames(ids, success) {
 	if (!ids || String(ids).length == 0)
 		return 0;
 
-	$.ajax('?m=customerinfo&ajax=1', {
+	$.ajax('?m=customerinfo&api=1&ajax=1', {
 		async: true,
 		method: 'POST',
 		data: {
@@ -866,8 +680,8 @@ window.onafterprint  = LMS_afterPrintEvent;
  * \return json     customer addresses
  * \return false    if id is incorrect
  */
-function getCustomerAddresses( id ) {
-    return _getAddressList( 'customeraddresses', id );
+function getCustomerAddresses( id, on_success ) {
+    return _getAddressList( 'customeraddresses', id, on_success );
 }
 
 /*!
@@ -877,55 +691,61 @@ function getCustomerAddresses( id ) {
  * \return json     address data
  * \return false    if id is incorrect
  */
-function getSingleAddress( address_id ) {
-    return _getAddressList( 'singleaddress', address_id );
+function getSingleAddress( address_id, on_success ) {
+    return _getAddressList( 'singleaddress', address_id, on_success );
 }
 
-function _getAddressList( action, v ) {
+function _getAddressList( action, v, on_success ) {
     action = action.toLowerCase();
+
+    var addresses = [];
+    var async = typeof on_success === 'function';
 
     // test to check if 'id' is integer
     if ( Math.floor(v) != v || !$.isNumeric(v) ) {
-        return false;
+        if (async) {
+            on_success(addresses);
+        }
+        return addresses;
     }
 
     // check id value
     if ( v <= 0 ) {
-        return [];
+        if (async) {
+            on_success(addresses);
+        }
+        return addresses;
     }
 
     var url;
-    var addresses = null;
 
     switch ( action ) {
         case 'customeraddresses':
-            url = "?m=customeraddresses&action=getcustomeraddresses&id=" + v;
+            url = "?m=customeraddresses&action=getcustomeraddresses&api=1&id=" + v;
         break;
 
         case 'singleaddress':
-            url = "?m=customeraddresses&action=getsingleaddress&id=" + v;
+            url = "?m=customeraddresses&action=getsingleaddress&api=1&id=" + v;
         break;
     }
 
+
     $.ajax({
         url    : url,
-        async  : false,
-        success: function(data) {
+        dataType: "json",
+        async  : async
+    }).done(function(data) {
+        $.each( data, function( i, v ) {
+            data[i]['location'] = $("<div/>").html( v['location'] ).text();
+        });
+        if (async) {
+            on_success(data);
+        } else {
             addresses = data;
         }
     });
 
-    if ( addresses !== null ) {
-        var json_addr = JSON.parse( addresses );
-
-        $.each( json_addr, function( i, v ) {
-            json_addr[i]['location'] = $("<div/>").html( v['location'] ).text();
-        });
-
-        return json_addr;
-    } else {
-        return [];
-    }
+    return addresses;
 }
 
 /*!
@@ -999,4 +819,77 @@ function lms_uniqid() {
     while ( uid == Date.now() ) {}
 
     return uid;
+}
+
+function GusApiGetCompanyDetails(searchType, searchData, on_success) {
+	$.ajax({
+		url: '?m=gusapi',
+		data: {
+			searchtype: searchType,
+			searchdata: searchData
+		}
+	}).done(function(data) {
+		if (data.hasOwnProperty('error')) {
+			alert(data.error);
+			return;
+		}
+		if (data.hasOwnProperty('warning')) {
+			return;
+		}
+		on_success(data);
+	});
+}
+
+function GusApiFinished(fieldPrefix, details) {
+	$.each(details, function(key, value) {
+		if (key == 'addresses') {
+			$.each(value, function(addressnr, address) {
+				$.each(address, function(addresskey, addressvalue) {
+					$('[name="' + fieldPrefix + '[addresses][' + addressnr + '][' + addresskey + ']"]').val(
+						typeof(addressvalue) == 'string' ? addressvalue : '');
+				});
+				if ((address.location_state > 0) != $('[name="' + fieldPrefix + '[addresses][' + addressnr + '][teryt]"]').prop('checked')) {
+					$('[name="' + fieldPrefix + '[addresses][' + addressnr + '][teryt]"]').click();
+				}
+				$('[name="' + fieldPrefix + '[addresses][' + addressnr + '][location_city_name]"]').trigger('input');
+			});
+		} else {
+			$('[name="' + fieldPrefix + '[' + key + ']"]').val(typeof(value) == 'string' ? value : '');
+		}
+	});
+}
+
+function osm_get_zip_code(city, street, house, on_success) {
+	$.ajax({
+		url: 'https://nominatim.openstreetmap.org/search',
+		data: {
+			format: 'json',
+			"city": city,
+			"street": house + (street.length ? ' ' + street : ''),
+			addressdetails: 1
+		}
+	}).done(function(data) {
+		if (typeof(on_success) == 'function') {
+			if (data[0].hasOwnProperty('address') && data[0].address.hasOwnProperty('postcode')) {
+				on_success(data[0].address.postcode);
+			}
+		}
+	});
+}
+
+function pna_get_zip_code(city, cityid, street, streetid, house, on_success) {
+	$.ajax({
+		url: '?m=zipcode&api=1',
+		data: {
+			"city": city,
+			"cityid": cityid,
+			"street": street,
+			"streetid": streetid,
+			"house": house
+		}
+	}).done(function(data) {
+		if (typeof(on_success) == 'function') {
+			on_success(data);
+		}
+	});
 }

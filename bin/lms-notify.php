@@ -4,7 +4,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2016 LMS Developers
+ *  (C) Copyright 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -55,7 +55,7 @@ foreach ($short_to_longs as $short => $long)
 if (array_key_exists('version', $options)) {
 	print <<<EOF
 lms-notify.php
-(C) 2001-2016 LMS Developers
+(C) 2001-2017 LMS Developers
 
 EOF;
 	exit(0);
@@ -64,7 +64,7 @@ EOF;
 if (array_key_exists('help', $options)) {
 	print <<<EOF
 lms-notify.php
-(C) 2001-2016 LMS Developers
+(C) 2001-2017 LMS Developers
 
 -C, --config-file=/etc/lms/lms.ini      alternate config file (default: /etc/lms/lms.ini);
 -h, --help                      print this help and exit;
@@ -90,7 +90,7 @@ $quiet = array_key_exists('quiet', $options);
 if (!$quiet) {
 	print <<<EOF
 lms-notify.php
-(C) 2001-2016 LMS Developers
+(C) 2001-2017 LMS Developers
 
 EOF;
 }
@@ -148,9 +148,13 @@ $CONFIG = (array) parse_ini_file($CONFIG_FILE, true);
 // Check for configuration vars and set default values
 $CONFIG['directories']['sys_dir'] = (!isset($CONFIG['directories']['sys_dir']) ? getcwd() : $CONFIG['directories']['sys_dir']);
 $CONFIG['directories']['lib_dir'] = (!isset($CONFIG['directories']['lib_dir']) ? $CONFIG['directories']['sys_dir'] . DIRECTORY_SEPARATOR . 'lib' : $CONFIG['directories']['lib_dir']);
+$CONFIG['directories']['plugin_dir'] = (!isset($CONFIG['directories']['plugin_dir']) ? $CONFIG['directories']['sys_dir'] . DIRECTORY_SEPARATOR . 'plugins' : $CONFIG['directories']['plugin_dir']);
+$CONFIG['directories']['plugins_dir'] = $CONFIG['directories']['plugin_dir'];
 
 define('SYS_DIR', $CONFIG['directories']['sys_dir']);
 define('LIB_DIR', $CONFIG['directories']['lib_dir']);
+define('PLUGIN_DIR', $CONFIG['directories']['plugin_dir']);
+define('PLUGINS_DIR', $CONFIG['directories']['plugin_dir']);
 
 // Load autoloader
 $composer_autoload_path = SYS_DIR . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php';
@@ -196,7 +200,8 @@ $script_service = ConfigHelper::getConfig($config_section . '.service', '', true
 if ($script_service)
 	LMSConfig::getConfig()->getSection('sms')->addVariable(new ConfigVariable('service', $script_service));
 
-// contracts - contracts being finished some day before notify
+// documents - contracts (or annexes) which expire some day before notify
+// contracts - contracts which customer assignment max(dateto) is some day before notify
 // debtors - debtors notify
 // reminder - reminder notify
 // invoices - new invoice notify
@@ -205,7 +210,7 @@ if ($script_service)
 // messages - send message to customers which have awaiting www messages
 // timetable - send event notify to users
 $notifications = array();
-foreach (array('contracts', 'debtors', 'reminder', 'invoices', 'notes', 'warnings', 'messages', 'timetable') as $type) {
+foreach (array('documents', 'contracts', 'debtors', 'reminder', 'invoices', 'notes', 'warnings', 'messages', 'timetable') as $type) {
 	$notifications[$type] = array();
 	$notifications[$type]['limit'] = intval(ConfigHelper::getConfig($config_section . '.' . $type . '_limit', 0));
 	$notifications[$type]['message'] = ConfigHelper::getConfig($config_section . '.' . $type . '_message', $type . ' notification');
@@ -235,7 +240,6 @@ $deadline = ConfigHelper::getConfig('payments.deadline', ConfigHelper::getConfig
 require_once(LIB_DIR . DIRECTORY_SEPARATOR . 'common.php');
 require_once(LIB_DIR . DIRECTORY_SEPARATOR . 'language.php');
 include_once(LIB_DIR . DIRECTORY_SEPARATOR . 'definitions.php');
-require_once(LIB_DIR . DIRECTORY_SEPARATOR . 'unstrip.php');
 
 $SYSLOG = SYSLOG::getInstance();
 
@@ -246,16 +250,22 @@ $LMS = new LMS($DB, $AUTH, $SYSLOG);
 $LMS->ui_lang = $_ui_language;
 $LMS->lang = $_language;
 
+$plugin_manager = new LMSPluginManager();
+$LMS->setPluginManager($plugin_manager);
+
 if (!empty($mail_fname))
 	$mail_from = qp_encode($mail_fname) . ' <' . $mail_from . '>';
 
 //include(LIB_DIR . DIRECTORY_SEPARATOR . 'plugins' . DIRECTORY_SEPARATOR . 'mtsms.php');
 
 function parse_customer_data($data, $row) {
+	global $LMS;
 	$DB = LMSDB::getInstance();
 
 	$amount = -$row['balance'];
 	$totalamount = -$row['totalbalance'];
+	$hook_data = $LMS->executeHook('notify_parse_customer_data', array('data' => $data, 'customer' => $row));
+	$data = $hook_data['data'];
 	$data = preg_replace("/\%bankaccount/",
 		format_bankaccount(bankaccount($row['id'], $row['account'])), $data);
 	$data = preg_replace("/\%b/", $amount, $data);
@@ -359,6 +369,7 @@ function send_mail($msgid, $cid, $rmail, $rname, $subject, $body) {
 		if (!empty($dsn_email))
 			$headers['Delivery-Status-Notification-To'] = true;
 		$headers['X-LMS-Message-Item-Id'] = $msgitemid;
+		$headers['Message-ID'] = '<messageitem-' . $msgitemid . '@rtsystem.' . gethostname() . '>';
 	}
 
 	$result = $LMS->SendMail($rmail, $headers, $body, null, $smtp_options);
@@ -432,9 +443,9 @@ if (empty($types) || in_array('timetable', $types)) {
 
 		$contents = '';
 		$events = $DB->GetAll("SELECT DISTINCT title, description, begintime, endtime,
-			customerid, UPPER(lastname) AS lastname, customers.name AS name, street, city, zip
+			customerid, UPPER(lastname) AS lastname, c.name AS name, address
 			FROM events
-			LEFT JOIN customers ON (customers.id = customerid)
+			LEFT JOIN customeraddressview c ON (c.id = customerid)
 			LEFT JOIN eventassignments ON (events.id = eventassignments.eventid)
 			WHERE date=? AND
 			((private=1 AND (events.userid=? OR eventassignments.userid=?)) OR
@@ -465,9 +476,9 @@ if (empty($types) || in_array('timetable', $types)) {
 				$sms_contents .=  ' (' . $event['description'] . ')';
 				if ($event['customerid']) {
 					$mail_contents .= trans('Customer:') . "\t" . $event['lastname'] . " " . $event['name']
-						. ", " . $event['zip'] . " " . $event['city'] . " " . $event['street'] . PHP_EOL;
+						. ", " . $event['address'] . PHP_EOL;
 					$sms_contents .= trans('Customer:') . ' ' . $event['lastname'] . " " . $event['name']
-						. ", " . $event['zip'] . " " . $event['city'] . " " . $event['street'];
+						. ", " . $event['address'];
 					$contacts = $DB->GetCol("SELECT contact FROM customercontacts
 						WHERE customerid = ? AND (type & ?) = 0 AND (type & ?) > 0",
 						array($event['customerid'], CONTACT_DISABLED, (CONTACT_MOBILE | CONTACT_FAX | CONTACT_LANDLINE)));
@@ -493,6 +504,78 @@ if (empty($types) || in_array('timetable', $types)) {
 					printf("[timetable/sms] %s (%04d): %s" . PHP_EOL, $user['name'], $user['id'], $user['phone']);
 				if (!$debug)
 					send_sms_to_user($user['phone'], $sms_contents);
+			}
+		}
+	}
+}
+
+// documents
+if (empty($types) || in_array('documents', $types)) {
+	$days = $notifications['documents']['days'];
+	$customers = $DB->GetAll("SELECT DISTINCT c.id, c.pin, c.lastname, c.name,
+			b.balance, m.email, x.phone
+		FROM customers c
+		LEFT JOIN (
+			SELECT customerid, SUM(value) AS balance FROM cash
+			GROUP BY customerid
+		) b ON b.customerid = c.id
+		JOIN documents d ON d.customerid = c.id
+		JOIN documentcontents dc ON dc.docid = d.id
+		LEFT JOIN (SELECT " . $DB->GroupConcat('contact') . " AS email, customerid
+			FROM customercontacts
+			WHERE (type & ?) = ?
+			GROUP BY customerid
+		) m ON (m.customerid = c.id)
+		LEFT JOIN (SELECT " . $DB->GroupConcat('contact') . " AS phone, customerid
+			FROM customercontacts
+			WHERE (type & ?) = ?
+			GROUP BY customerid
+		) x ON (x.customerid = c.id)
+		WHERE d.type IN (?, ?) AND dc.todate >= $daystart + ? * 86400
+			AND dc.todate < $daystart + (? + 1) * 86400",
+		array(CONTACT_EMAIL | CONTACT_NOTIFICATIONS | CONTACT_DISABLED,
+			CONTACT_EMAIL | CONTACT_NOTIFICATIONS,
+			CONTACT_MOBILE | CONTACT_NOTIFICATIONS | CONTACT_DISABLED,
+			CONTACT_MOBILE | CONTACT_NOTIFICATIONS,
+			DOC_CONTRACT, DOC_ANNEX,
+			$days, $days));
+
+	if (!empty($customers)) {
+		$notifications['documents']['customers'] = array();
+		foreach ($customers as $row) {
+			$notifications['documents']['customers'][] = $row['id'];
+			$message = parse_customer_data($notifications['documents']['message'], $row);
+			$subject = parse_customer_data($notifications['documents']['subject'], $row);
+
+			$recipient_name = $row['lastname'] . ' ' . $row['name'];
+			$recipient_mails = ($debug_email ? explode(',', $debug_email) :
+				(!empty($row['email']) ? explode(',', trim($row['email'])) : null));
+			$recipient_phones = ($debug_phone ? explode(',', $debug_phone) :
+				(!empty($row['phone']) ? explode(',', trim($row['phone'])) : null));
+
+			if (!$quiet) {
+				if (in_array('mail', $channels) && !empty($recipient_mails))
+					foreach ($recipient_mails as $recipient_mail)
+						printf("[mail/documents] %s (%04d): %s" . PHP_EOL,
+							$recipient_name, $row['id'], $recipient_mail);
+				if (in_array('sms', $channels) && !empty($recipient_phones))
+					foreach ($recipient_phones as $recipient_phone)
+						printf("[sms/documents] %s (%04d): %s" . PHP_EOL,
+							$recipient_name, $row['id'], $recipient_phone);
+			}
+
+			if (!$debug) {
+				if (in_array('mail', $channels) && !empty($recipient_mails)) {
+					$msgid = create_message(MSG_MAIL, $subject, $message);
+					foreach ($recipient_mails as $recipient_mail)
+						send_mail($msgid, $row['id'], $recipient_mail, $recipient_name,
+							$subject, $message);
+				}
+				if (in_array('sms', $channels) && !empty($recipient_phones)) {
+					$msgid = create_message(MSG_SMS, $subject, $message);
+					foreach ($recipient_phones as $recipient_phone)
+						send_sms($msgid, $row['id'], $recipient_phone, $message);
+				}
 			}
 		}
 	}
@@ -590,18 +673,27 @@ if (empty($types) || in_array('debtors', $types)) {
 			GROUP BY customerid
 		) x ON (x.customerid = c.id)
 		LEFT JOIN documents d ON d.id = cash.docid
-		WHERE c.cutoffstop < $currtime AND ((cash.docid = 0 AND ((cash.type <> 0 AND cash.time < $currtime)
+		LEFT JOIN (
+			SELECT SUM(value) AS totalvalue, docid FROM cash
+			JOIN documents d2 ON d2.id = cash.docid
+			WHERE d2.type = ?
+			GROUP BY docid
+		) tv ON tv.docid = d.id
+		WHERE c.cutoffstop < $currtime AND ((cash.docid IS NULL AND ((cash.type <> 0 AND cash.time < $currtime)
 			OR (cash.type = 0 AND cash.time + ((CASE c.paytime WHEN -1 THEN
 				(CASE WHEN divisions.inv_paytime IS NULL THEN $deadline ELSE divisions.inv_paytime END) ELSE c.paytime END) + ?) * 86400 < $currtime)))
-			OR (cash.docid <> 0 AND ((d.type IN (?, ?) AND cash.time < $currtime
-				OR (d.type IN (?, ?) AND d.cdate + (d.paytime + ?) * 86400 < $currtime)))))
+			OR (cash.docid IS NOT NULL AND ((d.type = ? AND cash.time < $currtime)
+				OR (d.type = ? AND cash.time < $currtime AND tv.totalvalue >= 0)
+				OR (((d.type = ? AND tv.totalvalue < 0)
+				    OR d.type IN (?, ?)) AND d.cdate + (d.paytime + ?) * 86400 < $currtime))))
 		GROUP BY c.id, c.pin, c.lastname, c.name, b.balance, m.email, x.phone, divisions.account
 		HAVING SUM(value) < ?", array(
 			CONTACT_EMAIL | CONTACT_NOTIFICATIONS | CONTACT_DISABLED,
 			CONTACT_EMAIL | CONTACT_NOTIFICATIONS,
 			CONTACT_MOBILE | CONTACT_NOTIFICATIONS | CONTACT_DISABLED,
 			CONTACT_MOBILE | CONTACT_NOTIFICATIONS,
-			$days, DOC_RECEIPT, DOC_CNOTE, DOC_INVOICE, DOC_DNOTE, $days, $limit));
+			DOC_CNOTE,
+			$days, DOC_RECEIPT, DOC_CNOTE, DOC_CNOTE, DOC_INVOICE, DOC_DNOTE, $days, $limit));
 
 	if (!empty($customers)) {
 		$notifications['debtors']['customers'] = array();
@@ -675,10 +767,10 @@ if (empty($types) || in_array('reminder', $types)) {
 			LEFT JOIN documents ON documents.id = cash.docid
 			JOIN customers c ON c.id = cash.customerid
 			LEFT JOIN divisions ON divisions.id = c.divisionid
-			WHERE (cash.docid = 0 AND ((cash.type <> 0 AND cash.time < $dayend)
+			WHERE (cash.docid IS NULL AND ((cash.type <> 0 AND cash.time < $dayend)
 				OR (cash.type = 0 AND cash.time + ((CASE c.paytime WHEN -1 THEN
 				(CASE WHEN divisions.inv_paytime IS NULL THEN $deadline ELSE divisions.inv_paytime END) ELSE c.paytime END) + ?) * 86400 < $dayend)))
-				OR (cash.docid <> 0 AND ((documents.type IN (?, ?) AND cash.time < $dayend)
+				OR (cash.docid IS NOT NULL AND ((documents.type IN (?, ?) AND cash.time < $dayend)
 					OR (documents.type IN (?, ?) AND ((documents.cdate / 86400) + documents.paytime - ?) * 86400 < $dayend)))
 			GROUP BY cash.customerid
 		) ca ON (ca.customerid = d.customerid)
@@ -974,7 +1066,7 @@ if (empty($types) || in_array('warnings', $types)) {
 if (empty($types) || in_array('events', $types)) {
 	$time = intval(strftime('%H%M'));
 	$events = $DB->GetAll("SELECT id, title, description, customerid, userid FROM events
-		WHERE (customerid <> 0 OR userid <> 0) AND closed = 0 AND date <= ? AND enddate >= ?
+		WHERE (customerid IS NOT NULL OR userid IS NOT NULL) AND closed = 0 AND date <= ? AND enddate >= ?
 			AND begintime <= ? AND (endtime = 0 OR endtime >= ?)",
 		array($daystart, $dayend, $time, $time));
 
@@ -1182,8 +1274,8 @@ if (!empty($intersect)) {
 					if (empty($customers))
 						break;
 					$customers = $DB->GetCol("SELECT id FROM customers
-						WHERE status = ? AND id IN (" . implode(',', $customers) . ")",
-						array(CSTATUS_CONNECTED));
+						WHERE status IN (?, ?) AND id IN (" . implode(',', $customers) . ")",
+						array(CSTATUS_CONNECTED, CSTATUS_DEBT_COLLECTION));
 					if (empty($customers))
 						break;
 					if (in_array('node-access', $actions)) {
@@ -1204,7 +1296,7 @@ if (!empty($intersect)) {
 					}
 					if (in_array('assignment-invoice', $actions)) {
 						$assigns = $DB->GetAll("SELECT id, customerid FROM assignments
-							WHERE invoice = ? AND (tariffid <> 0 OR liabilityid <> 0)
+							WHERE invoice = ? AND (tariffid IS NOT NULL OR liabilityid IS NOT NULL)
 								AND datefrom <= ?NOW? AND (dateto = 0 OR dateto >= ?NOW?)
 								AND customerid IN (" . implode(',', $customers) . ")",
 							array(1));
@@ -1240,14 +1332,14 @@ if (!empty($intersect)) {
 							SYSLOG::RES_ASSIGN => null,
 							SYSLOG::RES_CUST => null,
 							'datefrom' => time(),
-							SYSLOG::RES_TARIFF => 0,
-							SYSLOG::RES_LIAB => 0,
+							SYSLOG::RES_TARIFF => null,
+							SYSLOG::RES_LIAB => null,
 						);
 						foreach ($customers as $cid)
-							if (!$DB->GetOne("SELECT id FROM assignments WHERE customerid = ? AND tariffid = 0 AND liabilityid = 0",
+							if (!$DB->GetOne("SELECT id FROM assignments WHERE customerid = ? AND tariffid IS NULL AND liabilityid IS NULL",
 								array($cid))) {
 								$DB->Execute("INSERT INTO assignments (customerid, datefrom, tariffid, liabilityid)
-									VALUES (?, ?, 0, 0)", array($cid, $args['datefrom']));
+									VALUES (?, ?, NULL, NULL)", array($cid, $args['datefrom']));
 								if ($SYSLOG) {
 									$SYSLOG->NewTransaction('lms-notify.php');
 									$args[SYSLOG::RES_ASSIGN] = $DB->GetLastInsertID('assignments');
@@ -1256,6 +1348,10 @@ if (!empty($intersect)) {
 								}
 							}
 					}
+					$plugin_manager->executeHook('notification_blocks', array(
+						'customers' => $customers,
+						'actions' => $actions,
+					));
 					break;
 				case 'unblock':
 					if (empty($customers))
@@ -1283,7 +1379,7 @@ if (!empty($intersect)) {
 					}
 					if (in_array('assignment-invoice', $actions)) {
 						$assigns = $DB->GetAll("SELECT id, customerid FROM assignments
-							WHERE invoice = ? AND (tariffid <> 0 OR liabilityid <> 0)
+							WHERE invoice = ? AND (tariffid IS NOT NULL OR liabilityid IS NOT NULL)
 								AND datefrom <= ?NOW? AND (dateto = 0 OR dateto >= ?NOW?)
 								AND customerid IN (" . implode(',', $customers) . ")",
 							array(0));
@@ -1324,13 +1420,13 @@ if (!empty($intersect)) {
 						foreach ($customers as $cid) {
 							if ($SYSLOG)
 								$SYSLOG->NewTransaction('lms-notify.php');
-							if ($datefrom = $DB->GetOne("SELECT datefrom FROM assignments WHERE customerid = ? AND tariffid = 0 AND liabilityid = 0",
+							if ($datefrom = $DB->GetOne("SELECT datefrom FROM assignments WHERE customerid = ? AND tariffid IS NULL AND liabilityid IS NULL",
 								array($cid))) {
 								$year = intval(strftime('%Y', $datefrom));
 								$month = intval(strftime('%m', $datefrom));
 								if ($year < $current_year || ($year == $current_year && $month < $current_month)) {
 									$aids = $DB->GetCol("SELECT id FROM assignments
-										WHERE customerid = ? AND (tariffid <> 0 OR liabilityid <> 0)
+										WHERE customerid = ? AND (tariffid IS NOT NULL OR liabilityid IS NOT NULL)
 											AND datefrom < ?NOW? AND (dateto = 0 OR dateto > ?NOW?)",
 										array($cid));
 									if (!empty($aids))
@@ -1346,7 +1442,7 @@ if (!empty($intersect)) {
 								}
 							}
 							$aids = $DB->GetCol("SELECT id FROM assignments
-								WHERE customerid = ? AND tariffid = 0 AND liabilityid = 0", array($cid));
+								WHERE customerid = ? AND tariffid IS NULL AND liabilityid IS NULL", array($cid));
 							if (!empty($aids))
 								foreach ($aids as $aid) {
 									$DB->Execute("DELETE FROM assignments WHERE id = ?", array($aid));
@@ -1356,6 +1452,10 @@ if (!empty($intersect)) {
 								}
 						}
 					}
+					$plugin_manager->executeHook('notification_unblocks', array(
+						'customers' => $customers,
+						'actions' => $actions,
+					));
 					break;
 			}
 }

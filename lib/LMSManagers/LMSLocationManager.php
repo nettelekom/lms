@@ -3,7 +3,7 @@
 /*
  *  LMS version 1.11-git
  *
- *  Copyright (C) 2001-2016 LMS Developers
+ *  Copyright (C) 2001-2018 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -27,10 +27,10 @@
 /**
  * LMSLocationManager
  *
- * @author Maciej Lew <maciej.lew.1987@gmail.com>
  */
 class LMSLocationManager extends LMSManager implements LMSLocationManagerInterface
 {
+	static private $cities_with_sections = null;
 
     /**
      * Inserts or updates country state
@@ -322,7 +322,7 @@ class LMSLocationManager extends LMSManager implements LMSLocationManagerInterfa
      * \return false     address id not found
      */
     public function CopyAddress( $address_id ) {
-        $addr = $this->db->GetRow('SELECT * FROM addresses WHERE id = ?;', array($address_id));
+        $addr = $this->db->GetRow('SELECT * FROM addresses WHERE id = ?', array($address_id));
 
         if ( $addr ) {
             unset($addr['id']);
@@ -345,5 +345,121 @@ class LMSLocationManager extends LMSManager implements LMSLocationManagerInterfa
 			LEFT JOIN location_districts ld ON ld.id = lb.districtid
 			LEFT JOIN location_states ls ON ls.id = ld.stateid
 			WHERE a.id = ?', array($address_id));
+	}
+
+	public function GetCustomerAddress($customer_id, $type = BILLING_ADDRESS) {
+		return $this->db->GetOne('SELECT address_id FROM customer_addresses
+			WHERE customer_id = ? AND type = ?', array($customer_id, $type));
+	}
+
+	public function TerytToLocation($terc, $simc, $ulic) {
+		$woj = substr($terc, 0, 2);
+		$pow = substr($terc, 2, 2);
+		$gmi = substr($terc, 4, 2);
+		$rodz_gmi = $terc[6];
+    	$result = $this->db->GetRow('SELECT ts.cityid AS location_city, ts.nazwa AS location_city_name,
+				lb.id AS location_borough, lb.name AS location_borough_name,
+				ld.id AS location_district, ld.name AS location_district_name,
+				ls.id AS location_state, ls.name AS location_state_name
+			FROM teryt_simc ts
+			JOIN location_cities lc ON lc.id = ts.cityid
+			JOIN location_boroughs lb ON lb.id = lc.boroughid
+			JOIN location_districts ld ON ld.id = lb.districtid
+			JOIN location_states ls ON ls.id = ld.stateid
+			WHERE woj = ? AND pow = ? AND gmi = ? AND rodz_gmi = ? AND sym = ?',
+			array($woj, $pow, $gmi, $rodz_gmi, $simc));
+		if (empty($result))
+			return null;
+		if (empty($ulic))
+			return compact('city');
+		$street = $this->db->GetRow('SELECT id AS location_street, cecha, nazwa_1, nazwa_2
+			FROM teryt_ulic
+			WHERE woj = ? AND pow = ? AND gmi = ? AND rodz_gmi = ? AND sym = ? AND sym_ul = ?',
+			array($woj, $pow, $gmi, $rodz_gmi, $simc, $ulic));
+		if (empty($street))
+			return compact('result');
+		else {
+			$street_parts = array_splice($street, 1, 3);
+			if (empty($street_parts['nazwa_2']))
+				unset($street_parts['nazwa_2']);
+			$street['location_street_name'] = implode(' ', $street_parts);
+		}
+		return array_merge($result, $street);
+	}
+
+	public function GetZipCode(array $params) {
+		extract($params);
+
+		static $street_suffixes = array(
+			'/ul./', '/rondo/', '/park/', '/al./', '/pl./', '/bulw./', '/szosa/', '/inne/', '/skwer/', '/os./', '/rynek/',
+			'/droga/', '/ogród/', '/wyb./', '/wyspa/', '/ul./',
+		);
+
+		$cities_with_sections = $this->GetCitiesWithSections();
+
+		preg_match('/^(?<number>[0-9]+)(?<letter>[a-z]*)$/', strtolower($house), $m);
+		$number = intval($m['number']);
+		$letter = $m['letter'];
+		$parity = (intval($number) & 1) ? 1 : 2;
+
+		$from = '(fromnumber IS NULL OR (fromnumber < ' . $number . ')
+			OR (fromnumber = ' . $number . ' AND (fromletter IS NULL' . (empty($letter) ? '' : ' OR fromletter <= \'' . $letter . '\'') . ')))';
+		$to = '(tonumber IS NULL OR (tonumber > ' . $number . ')
+			OR (tonumber = ' . $number . ' AND (toletter IS NULL' . (empty($letter) ? '' : ' OR toletter >= \'' . $letter . '\'') . ')))';
+
+		if (isset($cityid))
+			// teryt compatible address
+			return $this->db->GetOne('SELECT zip FROM pna
+				WHERE cityid = ? AND parity & ? > 0' . (isset($streetid) ? ' AND streetid = ' . intval($streetid) : '') . '
+					AND ' . $from . ' AND ' . $to . '
+					ORDER BY fromnumber DESC, tonumber DESC LIMIT 1', array($cityid, $parity));
+		elseif (isset($city)) {
+			// non-teryt address
+
+			if (isset($cities_with_sections[mb_strtolower($city)]))
+				$boroughs = $cities_with_sections[mb_strtolower($city)]['boroughs'];
+
+			$street = trim(preg_replace($street_suffixes, array(), $street));
+			$escaped_street = $this->db->Escape($street);
+			$escaped_city = $this->db->Escape($city);
+			return $this->db->GetOne('SELECT zip FROM pna p
+				JOIN location_cities lc ON lc.id = p.cityid
+				LEFT JOIN location_cities lc2 ON lc2.id = lc.cityid
+				LEFT JOIN location_streets lst ON lst.id = p.streetid
+				WHERE ' . (isset($boroughs) ? 'lc.boroughid IN (' . $boroughs . ')'
+						: '((p.cityid IS NOT NULL AND (CASE WHEN lc2.id IS NULL THEN lc.name ELSE '
+							. $this->db->Concat('lc.name', "' '", 'lc2.name') . ' END) = ' . $escaped_city . ')
+							OR LOWER(p.cityname) = LOWER(' . $escaped_city . '))') . '
+					AND parity & ? > 0' . (!empty($street) ? ' AND (lst.name = ' . $escaped_street . '
+						OR (CASE WHEN lst.name2 IS NULL THEN \'\'
+							ELSE ' . $this->db->Concat('lst.name', "' '", 'lst.name2') . ' END) = ' . $escaped_street . '
+						OR (CASE WHEN lst.name2 IS NULL THEN \'\'
+							ELSE ' . $this->db->Concat('lst.name2', "' '", 'lst.name') . ' END) = ' . $escaped_street
+						. ' OR (p.streetname IS NOT NULL AND LOWER(p.streetname) = LOWER(' . $escaped_street . ')))' : '') . '
+					AND ' . $from . ' AND ' . $to . '
+					ORDER BY fromnumber DESC, tonumber DESC LIMIT 1', array($parity));
+		}
+	}
+
+	public function GetCitiesWithSections() {
+		if (!is_null(self::$cities_with_sections))
+			return self::$cities_with_sections;
+
+		self::$cities_with_sections = $this->db->GetAllByKey("SELECT lb2.cityid, LOWER(lb2.cityname) AS cityname,
+				(" . $this->db->GroupConcat('lc.id', ',', true) . ") AS cities,
+				(" . $this->db->GroupConcat('lc.boroughid', ',', true) . ") AS boroughs
+			FROM location_boroughs lb
+			JOIN location_cities lc ON lc.boroughid = lb.id
+			JOIN (SELECT lb.id, lb.districtid, lc.id AS cityid, lc.name AS cityname
+				FROM location_boroughs lb
+				JOIN location_cities lc ON lc.boroughid = lb.id
+				WHERE lb.type = 1
+			) lb2 ON lb2.districtid = lb.districtid
+			WHERE lb.type = 8 OR lb.type = 9
+			GROUP BY lb2.cityid, LOWER(lb2.cityname)", 'cityname');
+
+		if (empty(self::$cities_with_sections))
+			self::$cities_with_sections = array();
+		return self::$cities_with_sections;
 	}
 }

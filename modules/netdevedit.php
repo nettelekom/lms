@@ -24,8 +24,21 @@
  *  $Id$
  */
 
-if (!$LMS->NetDevExists($_GET['id'])) {
-	$SESSION->redirect('?m=netdevlist');
+$id = intval($_GET['id']);
+
+if ($api) {
+	if (!$LMS->NetDevExists($id))
+		die;
+
+	if (!isset($_POST['in']))
+		die;
+	$netdevdata = json_decode(base64_decode($_POST['in']), true);
+} else {
+	if (!$LMS->NetDevExists($id))
+		$SESSION->redirect('?m=netdevlist');
+
+	if (isset($_POST['netdev']))
+		$netdevdata = $_POST['netdev'];
 }
 
 $action = !empty($_GET['action']) ? $_GET['action'] : '';
@@ -60,7 +73,7 @@ switch ($action) {
 			UNION
 				(SELECT linktype AS type, linkradiosector AS srcradiosector, NULL AS dstradiosector,
 				linktechnology AS technology, linkspeed AS speed, id, port AS srcport, NULL AS dstport
-				FROM nodes WHERE netdev = ? AND ownerid > 0)
+				FROM nodes WHERE netdev = ? AND ownerid IS NOT NULL)
 			ORDER BY srcport', array($dev1['id'], $dev1['id'], $dev1['id'], $dev1['id'], $dev1['id'],
 					$dev1['id'], $dev1['id'], $dev1['id']));
 
@@ -75,7 +88,7 @@ switch ($action) {
 			UNION
 				(SELECT linktype AS type, linkradiosector AS srcradiosector, NULL AS dstradiosector,
 					linktechnology AS technology, linkspeed AS speed, id, port AS srcport, NULL AS dstport
-					FROM nodes WHERE netdev = ? AND ownerid > 0)
+					FROM nodes WHERE netdev = ? AND ownerid IS NOT NULL)
 			ORDER BY srcport', array($dev2['id'], $dev2['id'], $dev2['id'], $dev2['id'], $dev2['id'],
 					$dev2['id'], $dev2['id'], $dev2['id']));
 
@@ -214,7 +227,7 @@ switch ($action) {
 			if ($dev['srcport']) {
 				if (!preg_match('/^[0-9]+$/', $dev['srcport']) || $dev['srcport'] > $ports2) {
 					$error['srcport'] = trans('Incorrect port number!');
-				} elseif ($DB->GetOne('SELECT id FROM vnodes WHERE netdev=? AND port=? AND ownerid>0', array($dev['id'], $dev['srcport']))
+				} elseif ($DB->GetOne('SELECT id FROM vnodes WHERE netdev=? AND port=? AND ownerid IS NOT NULL', array($dev['id'], $dev['srcport']))
 						|| $DB->GetOne('SELECT 1 FROM netlinks WHERE (src = ? OR dst = ?)
 					AND (CASE src WHEN ? THEN srcport ELSE dstport END) = ?', array($dev['id'], $dev['id'], $dev['id'], $dev['srcport']))) {
 					$error['srcport'] = trans('Selected port number is taken by other device or node!');
@@ -224,7 +237,7 @@ switch ($action) {
 			if ($dev['dstport']) {
 				if (!preg_match('/^[0-9]+$/', $dev['dstport']) || $dev['dstport'] > $ports1) {
 					$error['dstport'] = trans('Incorrect port number!');
-				} elseif ($DB->GetOne('SELECT id FROM vnodes WHERE netdev=? AND port=? AND ownerid>0', array($_GET['id'], $dev['dstport']))
+				} elseif ($DB->GetOne('SELECT id FROM vnodes WHERE netdev=? AND port=? AND ownerid IS NOT NULL', array($_GET['id'], $dev['dstport']))
 						|| $DB->GetOne('SELECT 1 FROM netlinks WHERE (src = ? OR dst = ?)
 					AND (CASE src WHEN ? THEN srcport ELSE dstport END) = ?', array($_GET['id'], $_GET['id'], $_GET['id'], $dev['dstport']))) {
 					$error['dstport'] = trans('Selected port number is taken by other device or node!');
@@ -272,7 +285,7 @@ switch ($action) {
 		elseif ($node['port']) {
 			if (!preg_match('/^[0-9]+$/', $node['port']) || $node['port'] > $ports) {
 				$error['port'] = trans('Incorrect port number!');
-			} elseif ($DB->GetOne('SELECT id FROM vnodes WHERE netdev=? AND port=? AND ownerid>0', array($_GET['id'], $node['port']))
+			} elseif ($DB->GetOne('SELECT id FROM vnodes WHERE netdev=? AND port=? AND ownerid IS NOT NULL', array($_GET['id'], $node['port']))
 					|| $DB->GetOne('SELECT 1 FROM netlinks WHERE (src = ? OR dst = ?)
 				AND (CASE src WHEN ? THEN srcport ELSE dstport END) = ?', array($_GET['id'], $_GET['id'], $_GET['id'], $node['port']))) {
 				$error['port'] = trans('Selected port number is taken by other device or node!');
@@ -330,7 +343,7 @@ switch ($action) {
 				);
 				$SYSLOG->AddMessage(SYSLOG::RES_NODE, SYSLOG::OPER_UPDATE, $args);
 			}
-			$DB->Execute('DELETE FROM nodes WHERE id = ? AND ownerid = 0', array($_GET['ip']));
+			$DB->Execute('DELETE FROM nodes WHERE id = ? AND ownerid IS NULL', array($_GET['ip']));
 		}
 
 		$SESSION->redirect('?m=netdevinfo&id=' . $_GET['id']);
@@ -338,7 +351,7 @@ switch ($action) {
 	case 'ipset':
 		if (!empty($_GET['ip'])) {
 			if ($SYSLOG) {
-				$access = $DB->GetOne('SELECT access FROM vnodes WHERE id = ? AND ownerid = 0',
+				$access = $DB->GetOne('SELECT access FROM vnodes WHERE id = ? AND ownerid IS NULL',
 					array($_GET['ip']));
 				$args = array(
 					SYSLOG::RES_NODE => $_GET['ip'],
@@ -348,7 +361,7 @@ switch ($action) {
 				$SYSLOG->AddMessage(SYSLOG::RES_NODE, SYSLOG::OPER_UPDATE, $args);
 			}
 			$DB->Execute('UPDATE nodes SET access = (CASE access WHEN 1 THEN 0 ELSE 1 END)
-			WHERE id = ? AND ownerid = 0', array($_GET['ip']));
+				WHERE id = ? AND ownerid IS NULL', array($_GET['ip']));
 		} else
 			$LMS->IPSetU($_GET['id'], $_GET['access']);
 
@@ -358,7 +371,7 @@ switch ($action) {
 	case 'formaddip':
 		$subtitle = trans('New IP address');
 		$nodeipdata = $_POST['ipadd'];
-		$nodeipdata['ownerid'] = 0;
+		$nodeipdata['ownerid'] = null;
 		foreach ($nodeipdata['macs'] as $key => $value)
 			$nodeipdata['macs'][$key] = str_replace('-', ':', $value);
 
@@ -450,7 +463,7 @@ switch ($action) {
 
 		$subtitle = trans('IP address edit');
 		$nodeipdata = $_POST['ipadd'];
-		$nodeipdata['ownerid'] = 0;
+		$nodeipdata['ownerid'] = null;
 		foreach ($nodeipdata['macs'] as $key => $value)
 			$nodeipdata['macs'][$key] = str_replace('-', ':', $value);
 
@@ -564,9 +577,8 @@ switch ($action) {
 		break;
 }
 
-if (isset($_POST['netdev'])) {
-	$netdevdata = $_POST['netdev'];
-	$netdevdata['id'] = $_GET['id'];
+if (isset($netdevdata)) {
+	$netdevdata['id'] = $id;
 
 	if ($netdevdata['name'] == '')
 		$error['name'] = trans('Device name is required!');
@@ -575,68 +587,63 @@ if (isset($_POST['netdev'])) {
 
 	$netdevdata['ports'] = intval($netdevdata['ports']);
 
-	if ($netdevdata['ports'] < $LMS->CountNetDevLinks($_GET['id']))
+	if ($netdevdata['ports'] < $LMS->CountNetDevLinks($id))
 		$error['ports'] = trans('Connected devices number exceeds number of ports!');
 
-	$netdevdata['clients'] = (empty($netdevdata['clients'])) ? 0 : intval($netdevdata['clients']);
+	if (!empty($netdevdata['ownerid']) && !$LMS->CustomerExists($netdevdata['ownerid']))
+		$error['ownerid'] = trans('Customer doesn\'t exist!');
 
-    if (!empty($netdevdata['ownerid']) && !$LMS->customerExists($netdevdata['ownerid'])) {
-        $error['ownerid'] = "doesnt exists";
-    }
+	if (!$api) {
+		$netdevdata['clients'] = (empty($netdevdata['clients'])) ? 0 : intval($netdevdata['clients']);
 
-	$netdevdata['purchasetime'] = 0;
-	if ($netdevdata['purchasedate'] != '') {
-		// date format 'yyyy/mm/dd'
-		if (!preg_match('/^[0-9]{4}\/[0-9]{2}\/[0-9]{2}$/', $netdevdata['purchasedate'])) {
-			$error['purchasedate'] = trans('Invalid date format!');
-		} else {
-			$date = explode('/', $netdevdata['purchasedate']);
-			if (checkdate($date[1], $date[2], (int) $date[0])) {
-				$tmpdate = mktime(0, 0, 0, $date[1], $date[2], $date[0]);
-				if (mktime(0, 0, 0) < $tmpdate)
-					$error['purchasedate'] = trans('Date from the future not allowed!');
-				else
-					$netdevdata['purchasetime'] = $tmpdate;
-			}
-			else
+		if ($netdevdata['purchasedate'] != '') {
+			$netdevdata['purchasetime'] = date_to_timestamp($netdevdata['purchasedate']);
+			if (empty($netdevdata['purchasetime']))
 				$error['purchasedate'] = trans('Invalid date format!');
-		}
+			else
+				if (time() < $netdevdata['purchasetime'])
+					$error['purchasedate'] = trans('Date from the future not allowed!');
+		} else
+			$netdevdata['purchasetime'] = 0;
+
+		if ($netdevdata['guaranteeperiod'] != 0 && $netdevdata['purchasedate'] == '')
+			$error['purchasedate'] = trans('Purchase date cannot be empty when guarantee period is set!');
 	}
 
-	if ($netdevdata['guaranteeperiod'] != 0 && $netdevdata['purchasedate'] == '') {
-		$error['purchasedate'] = trans('Purchase date cannot be empty when guarantee period is set!');
+	if ($api && isset($netdevdata['project'])) {
+		$project = $LMS->GetProjectByName($netdevdata['project']);
+		if (empty($project)) {
+			$netdevdata['projectname'] = $netdevdata['project'];
+			$netdevdata['invprojectid'] = -1;
+		} else
+			$netdevdata['invprojectid'] = $project['id'];
 	}
 
-	if ($netdevdata['invprojectid'] == '-1') { // nowy projekt
-		if (!strlen(trim($netdevdata['projectname']))) {
+	if ($netdevdata['invprojectid'] == '-1') { // new investment project
+		if (!strlen(trim($netdevdata['projectname'])))
 			$error['projectname'] = trans('Project name is required');
-		}
-		if ($DB->GetOne("SELECT id FROM invprojects WHERE name=? AND type<>?",
-			array($netdevdata['projectname'], INV_PROJECT_SYSTEM)))
+		if ($LMS->ProjectByNameExists($netdevdata['projectname']))
 			$error['projectname'] = trans('Project with that name already exists');
 	}
 
 	if (!$error) {
-		if ($netdevdata['guaranteeperiod'] == -1)
-			$netdevdata['guaranteeperiod'] = NULL;
+		if (!$api) {
+			if ($netdevdata['guaranteeperiod'] == -1)
+				$netdevdata['guaranteeperiod'] = NULL;
 
-		if (!isset($netdevdata['shortname']))
-			$netdevdata['shortname'] = '';
-		if (!isset($netdevdata['secret']))
-			$netdevdata['secret'] = '';
-		if (!isset($netdevdata['community']))
-			$netdevdata['community'] = '';
-		if (!isset($netdevdata['nastype']))
-			$netdevdata['nastype'] = 0;
+			if (!isset($netdevdata['shortname']))
+				$netdevdata['shortname'] = '';
+			if (!isset($netdevdata['secret']))
+				$netdevdata['secret'] = '';
+			if (!isset($netdevdata['community']))
+				$netdevdata['community'] = '';
+			if (!isset($netdevdata['nastype']))
+				$netdevdata['nastype'] = 0;
+		}
 
 		$ipi = $netdevdata['invprojectid'];
-		if ($ipi == '-1') {
-			$DB->BeginTrans();
-			$DB->Execute("INSERT INTO invprojects (name, type) VALUES (?, ?)",
-				array($netdevdata['projectname'], INV_PROJECT_REGULAR));
-			$ipi = $DB->GetLastInsertID('invprojects');
-			$DB->CommitTrans();
-		}
+		if ($ipi == '-1')
+			$ipi = $LMS->AddProject($netdevdata);
 
 		if ($netdevdata['invprojectid'] == '-1' || intval($ipi)>0) {
 			$netdevdata['invprojectid'] = intval($ipi);
@@ -649,16 +656,29 @@ if (isset($_POST['netdev'])) {
 			$netdevdata['netnodeid'] = null;
 		}
 
-		$LMS->NetDevUpdate($netdevdata);
-		$LMS->CleanupInvprojects();
+		$result = $LMS->NetDevUpdate($netdevdata);
+		$LMS->CleanupProjects();
+
+		if ($api) {
+			if ($result) {
+				header('Content-Type: application-json');
+				echo json_encode(array('id' => $id));
+			}
+			die;
+		}
+
 		$hook_data = $LMS->executeHook('netdevedit_after_update',
 			array(
 				'smarty' => $SMARTY,
 			));
-		$SESSION->redirect('?m=netdevinfo&id=' . $_GET['id']);
+		$SESSION->redirect('?m=netdevinfo&id=' . $id);
+	} elseif ($api) {
+		header('Content-Type: application-json');
+		echo json_encode($error);
+		die;
 	}
 } else {
-	$netdevdata = $LMS->GetNetDev($_GET['id']);
+	$netdevdata = $LMS->GetNetDev($id);
 
 	if ($netdevdata['purchasetime'])
 		$netdevdata['purchasedate'] = date('Y/m/d', $netdevdata['purchasetime']);
@@ -668,13 +688,13 @@ if (isset($_POST['netdev'])) {
 	}
 }
 
-$netdevdata['id'] = $_GET['id'];
+$netdevdata['id'] = $id;
 
-$netdevips       = $LMS->GetNetDevIPs($_GET['id']);
+$netdevips       = $LMS->GetNetDevIPs($id);
 $nodelist        = $LMS->GetUnlinkedNodes();
-$netdevconnected = $LMS->GetNetDevConnectedNames($_GET['id']);
-$netcomplist     = $LMS->GetNetDevLinkedNodes($_GET['id']);
-$netdevlist      = $LMS->GetNotConnectedDevices($_GET['id']);
+$netdevconnected = $LMS->GetNetDevConnectedNames($id);
+$netcomplist     = $LMS->GetNetDevLinkedNodes($id);
+$netdevlist      = $LMS->GetNotConnectedDevices($id);
 
 unset($netdevlist['total']);
 unset($netdevlist['order']);
@@ -689,11 +709,8 @@ if ($netdevdata['producer']) {
 if ($subtitle)
 	$layout['pagetitle'] .= ' - ' . $subtitle;
 
-$nprojects = $DB->GetAll("SELECT * FROM invprojects WHERE type<>? ORDER BY name",
-	array(INV_PROJECT_SYSTEM));
-$SMARTY->assign('NNprojects',$nprojects);
-$netnodes = $DB->GetAll("SELECT * FROM netnodes ORDER BY name");
-$SMARTY->assign('NNnodes',$netnodes);
+$SMARTY->assign('NNprojects', $LMS->GetProjects());
+$SMARTY->assign('NNnodes', $LMS->GetNetNodes());
 
 $SMARTY->assign('error'                , $error);
 $SMARTY->assign('netdevinfo'           , $netdevdata);
@@ -714,7 +731,7 @@ $SMARTY->assign('nodelinktype'         , $SESSION->get('nodelinktype'));
 $SMARTY->assign('nodelinkradiosector'  , $SESSION->get('nodelinkradiosector'));
 $SMARTY->assign('nodelinktechnology'   , $SESSION->get('nodelinktechnology'));
 $SMARTY->assign('nodelinkspeed'        , $SESSION->get('nodelinkspeed'));
-$SMARTY->assign('nastype'              , $LMS->GetNAStypes());
+$SMARTY->assign('nastypes'             , $LMS->GetNAStypes());
 
 if (!ConfigHelper::checkConfig('phpui.big_networks'))
     $SMARTY->assign('customers', $LMS->GetCustomerNames());

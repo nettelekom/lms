@@ -195,8 +195,11 @@ if (($fh = fopen($message_file, "r")) != NULL) {
 		if (empty($line) && !$body)
 			$body = TRUE;
 		else
-			if ($body)
+			if ($body) {
+				if ($ucs)
+					$line = preg_replace('/\x0$/', "\x0\n", $line);
 				$message .= $line;
+			}
 		next($lines);
 	}
 	if ($ucs)
@@ -229,6 +232,7 @@ if (($fh = fopen($message_file, "r")) != NULL) {
 		'body' => $message,
 		'phonefrom' => empty($phone) ? '' : $phone,
 		'categories' => $cats,
+		'source' => RT_SOURCE_SMS,
 	));
 
 	if ($newticket_notify) {
@@ -244,50 +248,29 @@ if (($fh = fopen($message_file, "r")) != NULL) {
 			$mailfrom = $default_mail_from;
 
 		$headers['From'] = $mailfname.' <'.$mailfrom.'>';
-		$headers['Subject'] = sprintf("[RT#%06d] %s", $tid, trans('SMS from $a', (empty($phone) ? trans("unknown") : $formatted_phone)));
 		$headers['Reply-To'] = $headers['From'];
 
-		$sms_body = $headers['Subject']."\n".$message;
-		if (!empty($lms_url))
-			$message = $message."\n\n" . $lms_url . '?m=rtticketview&id='.$tid;
-
 		if (!empty($customer['cid'])) {
-			$info = $DB->GetRow("SELECT " . $DB->Concat('UPPER(lastname)',"' '",'c.name') . " AS customername,
-					address, zip, city FROM customeraddressview c WHERE c.id = ?", array($customer['cid']));
-			$info['contacts'] = $DB->GetAll("SELECT contact, name, type FROM customercontacts
-				WHERE customerid = ?", array($customer['cid']));
+			$info = $LMS->GetCustomer($customer['cid'], true);
 
-			$emails = array();
-			$phones = array();
-			if (!empty($info['contacts']))
-				foreach ($info['contacts'] as $contact) {
-					$target = $contact['contact'] . (strlen($contact['name']) ? ' (' . $contact['name'] . ')' : '');
-					if ($contact['type'] == CONTACT_EMAIL)
-						$emails[] = $target;
-					else
-						$phones[] = $target;
-				}
+			$emails = array_map(function($contact) {
+					return $contact['fullname'];
+				}, $LMS->GetCustomerContacts($customer['cid'], CONTACT_EMAIL));
+			$phones = array_map(function($contact) {
+					return $contact['fullname'];
+				}, $LMS->GetCustomerContacts($customer['cid'], CONTACT_LANDLINE | CONTACT_MOBILE));
 
 			if ($helpdesk_customerinfo) {
-				$info['locations'] = $LMS->GetUniqueNodeLocations($customer['cid']);
-
-				$message .= "\n\n-- \n";
-				$message .= trans('Customer:').' '.$info['customername']."\n";
-				$message .= trans('ID:').' '.sprintf('%04d', $customer['cid'])."\n";
-				$message .= trans('Address:') . ' ' . (empty($info['locations']) ? $info['address'] . ', ' . $info['zip'] . ' ' . $info['city']
-					: implode(', ', $info['locations'])) . "\n";
-				if (!empty($phones))
-					$message .= trans('Phone:').' ' . implode(', ', $phones) . "\n";
-				if (!empty($emails))
-					$message .= trans('E-mail:').' ' . implode(', ', $emails);
-
-				$sms_body .= "\n";
-				$sms_body .= trans('Customer:').' '.$info['customername'];
-				$sms_body .= ' '.sprintf('(%04d)', $customer['cid']).'. ';
-				$sms_body .= empty($info['locations']) ? $info['address'] . ', ' . $info['zip'] . ' ' . $info['city']
-					: implode(', ', $info['locations']);
-				if (!empty($phones))
-					$sms_body .= '. ' . trans('Phone:') . ' ' . preg_replace('/([0-9])[\s-]+([0-9])/', '\1\2', implode(',', $phones));
+				$params = array(
+					'id' => $tid,
+					'customerid' => $customer['cid'],
+					'customer' => $info,
+					'emails' => $emails,
+					'phones' => $phones,
+					'categories' => $cats,
+				);
+				$mail_customerinfo = $LMS->ReplaceNotificationCustomerSymbols(ConfigHelper::getConfig('phpui.helpdesk_customerinfo_mail_body'), $params);
+				$sms_customerinfo = $LMS->ReplaceNotificationCustomerSymbols(ConfigHelper::getConfig('phpui.helpdesk_customerinfo_sms_body'), $params);
 			}
 
 			$queuedata = $LMS->GetQueue($queueid);
@@ -312,36 +295,32 @@ if (($fh = fopen($message_file, "r")) != NULL) {
 				}
 			}
 		} elseif ($helpdesk_customerinfo) {
-			$body .= "\n\n-- \n";
-			$body .= trans('Customer:') . ' ' . $requestor;
-			$sms_body .= "\n";
-			$sms_body .= trans('Customer:') . ' ' . $requestor;
+			$mail_customerinfo = "\n\n-- \n" . trans('Customer:') . ' ' . $requestor;
+			$sms_customerinfo = "\n" . trans('Customer:') . ' ' . $requestor;
 		}
 
-		// send email
-		if($recipients = $DB->GetCol("SELECT DISTINCT email
-			FROM users, rtrights
-			WHERE users.id = userid AND queueid = ? AND email <> ''
-				AND (rtrights.rights & 8) > 0 AND deleted = 0
-				AND (ntype & ?) > 0",
-			array($queueid, MSG_MAIL)))
-		{
-			foreach($recipients as $email)
-			{
-				$headers['To'] = '<'.$email.'>';
-				$LMS->SendMail($email, $headers, $message);
-			}
-		}
+		$params = array(
+			'id' => $tid,
+			'messageid' => isset($msgid) ? $msgid : null,
+			'customerid' => $customer['cid'],
+			'status' => $RT_STATES[RT_NEW],
+			'categories' => $cats,
+			'subject' => trans('SMS from $a', (empty($phone) ? trans("unknown") : $formatted_phone)),
+			'body' => $message,
+			'url' => $lms_url . '?m=rtticketview&id=',
+		);
+		$headers['Subject'] = $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_mail_subject'), $params);
+		$params['customerinfo'] = isset($mail_customerinfo) ? $mail_customerinfo : null;
+		$message = $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_mail_body'), $params);
+		$params['customerinfo'] = isset($sms_customerinfo) ? $sms_customerinfo : null;
+		$sms_body = $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_sms_body'), $params);
 
-		// send sms
-		if (!empty($service) && ($recipients = $DB->GetCol("SELECT DISTINCT phone
-			FROM users, rtrights
-			WHERE users.id = userid AND queueid = ? AND phone <> ''
-				AND (rtrights.rights & 8) > 0 AND deleted = 0
-				AND (ntype & ?) > 0",
-			array($queueid, MSG_SMS))))
-			foreach ($recipients as $phone)
-				$LMS->SendSMS($phone, $sms_body);
+		$LMS->NotifyUsers(array(
+			'queue' => $queueid,
+			'mail_headers' => $headers,
+			'mail_body' => $message,
+			'sms_body' => $sms_body,
+		));
 	}
 } else
 	die("Message file doesn't exist!" . PHP_EOL);

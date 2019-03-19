@@ -252,6 +252,7 @@
 
 				<td align="right" class="nobr">
 					{if $billings[i].callanswertime && ($billings[i].caller_flags || $billings[i].callee_flags)}
+						<a href="?m=voipcallrecording&id={$billings[i].id}&download=1"><img src="img/save.gif"></a>
 						{documentview id="{$billings[i].id}"
 						              type="audio/mp3"
 						              name="{trans("ID:")} {$billings[i].id}, {trans("Date:")} {$billings[i].begintime|date_format:"%e %B %Y %H:%M:%S"}"
@@ -259,7 +260,7 @@
 	                                  text="<span class=\"ui-icon ui-icon-volume-on\"></span>"}
 					{/if}
 					<a href="?m=voipaccountbillinginfo&amp;id={$billings[i].id}">
-						<img src="img/info.gif" alt="[ {trans("Info")} ]" title="[ {trans("Details")} ]">
+						<img src="img/info.gif" alt="{trans("Info")}" title="{trans("Details")}">
 					</a>
 				</td>
 			</tr>
@@ -297,12 +298,12 @@
             </td>
             <td>
                 {gmdate("H:i:s", $call_time)}<br>
-                {gmdate("H:i:s", $stats.call)}
+                {gmdate("H:i:s", $stats.totaltime)}
             </td>
 
             <td>
                 {gmdate("H:i:s", $call_talk)}<br>
-                {gmdate("H:i:s", $stats.answer)}
+                {gmdate("H:i:s", $stats.billedtime)}
             </td>
             <td colspan="3" class="text-right">
                 {$sum|money_format}<br>
@@ -310,7 +311,7 @@
             </td>
             <td class="bold text-center">
                 {if $total}{$total}{else}0{/if}<br>
-                {intval($stats.count)}
+                {intval($stats.cnt)}
             </td>
         </tr>
     </tfoot>

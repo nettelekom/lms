@@ -141,7 +141,7 @@ if (!empty($posts)) {
 		$post = imap_fetchstructure($ih, $postid);
 		if ($post->subtype != 'REPORT')
 			continue;
-		if (count($post->parts) != 3)
+		if (count($post->parts) < 2 || count($post->parts) > 3)
 			continue;
 		$parts = $post->parts;
 
@@ -149,37 +149,50 @@ if (!empty($posts)) {
 		$status = 0;
 		$diag_code = '';
 		$disposition = '';
+		$lastdate = '';
 		$readdate = '';
 		foreach ($parts as $partid => $part)
 			switch ($part->subtype) {
+				case 'PLAIN':
+					$headers = imap_fetchheader($ih, $postid);
+					if (preg_match('/Date:\s+(?<date>.+)\r\n?/', $headers, $m))
+						$lastdate = strtotime($m['date']);
+					break;
 				case 'DELIVERY-STATUS':
 					$body = imap_fetchbody($ih, $postid, $partid + 1);
 					if (preg_match('/Status:\s+(?<status>[0-9]+\.[0-9]+\.[0-9]+)/', $body, $m)) {
 						$code = explode('.', $m['status']);
 						$status = intval($code[0]);
 					}
-					if (preg_match('/Diagnostic-Code:\s+(?<code>.+)\r\n?/', $body, $m))
+					if (preg_match('/Diagnostic-Code:\s+(?<code>.+\r\n?(?:\s+[^\s]+.+\r\n?)*)/m', $body, $m))
 						$diag_code = $m['code'];
 					break;
 				case 'DISPOSITION-NOTIFICATION':
 					$body = imap_fetchbody($ih, $postid, $partid + 1);
 					if (preg_match('/Disposition:\s+(?<disposition>.+)\r\n?/', $body, $m))
 						$disposition = $m['disposition'];
+					if (preg_match('/.*Message-ID:\s+<messageitem-(?<msgitemid>[0-9]+)@.+>/', $body, $m))
+						$msgitemid = intval($m['msgitemid']);
 					$headers = imap_fetchheader($ih, $postid);
 					if (preg_match('/Date:\s+(?<date>.+)\r\n?/', $headers, $m))
 						$readdate = strtotime($m['date']);
 					break;
 				case 'RFC822-HEADERS':
+				case 'RFC822':
 					$body = imap_fetchbody($ih, $postid, $partid + 1);
 					if (preg_match('/X-LMS-Message-Item-Id:\s+(?<msgitemid>[0-9]+)/', $body, $m))
+						$msgitemid = intval($m['msgitemid']);
+					if (preg_match('/.*Message-ID:\s+<messageitem-(?<msgitemid>[0-9]+)@.+>/', $body, $m))
 						$msgitemid = intval($m['msgitemid']);
 					break;
 			}
 		if (empty($msgitemid))
 			continue;
-		if (!empty($status) && !empty($diag_code)) {
-			if ($status == 4)
+		if (!empty($status)) {
+			if ($status == 4) {
+				$handled_posts[] = $postid;
 				continue;
+			}
 			switch ($status) {
 				case 2:
 					$status = MSG_DELIVERED;
@@ -188,8 +201,11 @@ if (!empty($posts)) {
 					$status = MSG_ERROR;
 					break;
 			}
-			$DB->Execute('UPDATE messageitems SET status = ?, error = ? WHERE id = ?',
-				array($status, $status == MSG_ERROR ? $diag_code : null, $msgitemid));
+			if (empty($lastdate))
+				$lastdate = $DB->GetOne('SELECT lastdate FROM messageitems WHERE id = ?', array($msgitemid));
+			$DB->Execute('UPDATE messageitems SET status = ?, error = ?, lastdate = ? WHERE id = ?',
+				array($status, $status == MSG_ERROR && !empty($diag_code) ? $diag_code : null,
+					$lastdate, $msgitemid));
 		} elseif (!empty($disposition) && !empty($readdate))
 			$DB->Execute('UPDATE messageitems SET status = ?, lastreaddate = ? WHERE id = ?',
 				array(MSG_DELIVERED, $readdate, $msgitemid));

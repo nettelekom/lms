@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2016 LMS Developers
+ *  (C) Copyright 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -47,7 +47,6 @@ if (isset($_POST['document'])) {
 
 	if (!$document['title'])
 		$error['title'] = trans('Document title is required!');
-
 
 	// check if selected customer can use selected numberplan
 	if ($document['numberplanid'] && $document['customerid']
@@ -95,26 +94,54 @@ if (isset($_POST['document'])) {
 	if ($document['fromdate'] > $document['todate'] && $document['todate'] != 0)
 		$error['todate'] = trans('Start date can\'t be greater than end date!');
 
+	// validate tariff selection list when promotions are active only
+	if (isset($document['assignment']) && !empty($document['assignment']['schemaid'])) {
+		// validate selected promotion schema properties
+		$selected_assignment = $document['assignment'];
+		$selected_assignment['datefrom'] = $oldfromdate;
+		$selected_assignment['dateto'] = $oldtodate;
+
+		$result = $LMS->ValidateAssignment($selected_assignment);
+		extract($result);
+	} else
+		$selected_assignment = null;
+
 	$files = array();
 
 	if ($document['templ']) {
 		foreach ($documents_dirs as $doc)
-			if(file_exists($doc . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $document['templ'] )) {
+			if (file_exists($doc . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $document['templ'])) {
 				$doc_dir = $doc;
-				continue;
+				$template_dir = $doc . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $document['templ'];
+				break;
 			}
+
 		$result = '';
+		$script_result = '';
+
 		// read template information
-		include($doc_dir . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $document['templ'] . DIRECTORY_SEPARATOR . 'info.php');
+		include($template_dir . DIRECTORY_SEPARATOR . 'info.php');
 		// set some variables (needed in e.g. plugin)
+		if ($document['reference'])
+			$document['reference'] = $DB->GetRow('SELECT id, type, fullnumber, cdate FROM documents
+				WHERE id = ?', array($document['reference']));
 		$SMARTY->assignByRef('document', $document);
+
 		// call plugin
-		if (!empty($engine['plugin']) && file_exists($doc_dir . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR
+		if (!empty($engine['plugin'])) {
+			if (file_exists($doc_dir . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR
 			. $engine['name'] . DIRECTORY_SEPARATOR . $engine['plugin'] . '.php'))
-			include($doc_dir . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $engine['name']
-				. DIRECTORY_SEPARATOR . $engine['plugin'] . '.php');
+				include($doc_dir . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $engine['name']
+					. DIRECTORY_SEPARATOR . $engine['plugin'] . '.php');
+			if (file_exists($doc_dir . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR
+				. $engine['name'] . DIRECTORY_SEPARATOR . $engine['plugin'] . '.js'))
+				$script_result = '<script src="' . $_SERVER['REQUEST_URI'] . '&template=' . $engine['name'] . '"></script>';
+		}
 		// get plugin content
 		$SMARTY->assign('plugin_result', $result);
+		$SMARTY->assign('script_result', $script_result);
+		$SMARTY->assign('attachment_result', GenerateAttachmentHTML($template_dir, $engine,
+			isset($document['attachments']) ? $document['attachments'] : array()));
 
 		// run template engine
 		if (file_exists($doc_dir . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR
@@ -146,13 +173,28 @@ if (isset($_POST['document'])) {
 	extract($result);
 	$SMARTY->assign('fileupload', $fileupload);
 
-	if (!$error && !empty($attachments))
-		foreach ($attachments as $attachment) {
-			$attachment['tmpname'] = $tmppath . DIRECTORY_SEPARATOR . $attachment['name'];
-			$attachment['md5sum'] = md5_file($attachment['tmpname']);
-			$attachment['main'] = false;
-			$files[] = $attachment;
-		}
+	if (!$error) {
+		if (!empty($attachments))
+			foreach ($attachments as $attachment) {
+				$attachment['tmpname'] = $tmppath . DIRECTORY_SEPARATOR . $attachment['name'];
+				$attachment['md5sum'] = md5_file($attachment['tmpname']);
+				$attachment['main'] = false;
+				$files[] = $attachment;
+			}
+		if (isset($document['attachments']) && !empty($document['attachments']))
+			foreach ($document['attachments'] as $attachment => $value) {
+				$filename = $engine['attachments'][$attachment];
+				if ($filename[0] != DIRECTORY_SEPARATOR)
+					$filename = $template_dir . DIRECTORY_SEPARATOR . $filename;
+				$files[] = array(
+					'tmpname' => null,
+					'name' => $filename,
+					'type' => mime_content_type($filename),
+					'md5sum' => md5_file($filename),
+					'main' => false,
+				);
+			}
+	}
 
 	if (empty($files) && empty($document['templ']))
 		$error['files'] = trans('You must to specify file for upload or select document template!');
@@ -167,9 +209,10 @@ if (isset($_POST['document'])) {
 			// the new document file
 			// why? document attachment can be shared between different documents.
 			// we should rather use the other message digest in such case!
-			if ($DB->GetOne('SELECT docid FROM documentattachments WHERE md5sum = ?', array($file['md5sum']))
-				&& (filesize($file['newfile']) != filesize($file['tmpname'])
-					|| hash_file('sha256', $file['newfile']) != hash_file('sha256', $file['tmpname']))) {
+			$filename = empty($file['tmpname']) ? $file['name'] : $file['tmpname'];
+			if ($LMS->DocumentAttachmentExists($file['md5sum'])
+				&& (filesize($file['newfile']) != filesize($filename)
+					|| hash_file('sha256', $file['newfile']) != hash_file('sha256', $filename))) {
 				$error['files'] = trans('Specified file exists in database!');
 				break;
 			}
@@ -178,7 +221,12 @@ if (isset($_POST['document'])) {
 		if (!$error) {
 			foreach ($files as $file) {
 				@mkdir($file['path'], 0700);
-				if (!file_exists($file['newfile']) && !@rename($file['tmpname'], $file['newfile'])) {
+				if (empty($file['tmpname'])) {
+					if (!@copy($file['name'], $file['newfile'])) {
+						$error['files'] = trans('Can\'t save file in "$a" directory!', $file['path']);
+						break;
+					}
+				} elseif (!file_exists($file['newfile']) && !@rename($file['tmpname'], $file['newfile'])) {
 					$error['files'] = trans('Can\'t save file in "$a" directory!', $file['path']);
 					break;
 				}
@@ -193,23 +241,7 @@ if (isset($_POST['document'])) {
 
 		$DB->BeginTrans();
 
-		$division = $DB->GetRow('SELECT d.name, d.shortname, d.ten, d.regon,
-									d.account, d.inv_header, d.inv_footer, d.inv_author, d.inv_cplace,
-									addr.country_id as countryid, addr.zip,
-									addr.city, addr.house, addr.flat, addr.street
-								FROM
-									divisions d
-									LEFT JOIN addresses addr ON d.address_id = addr.id
-								WHERE d.id = ?;',array($customer['divisionid']));
-
-		if ($division) {
-			$tmp = array('city_name'     => $division['city'],
-						'location_house' => $division['house'],
-						'location_flat'  => $division['flat'],
-						'street_name'    => $division['street']);
-
-			$division['address'] = location_str( $tmp );
-		}
+		$division = $LMS->GetDivision($customer['divisionid']);
 
 		$fullnumber = docnumber(array(
 			'number' => $document['number'],
@@ -217,31 +249,44 @@ if (isset($_POST['document'])) {
 			'cdate' => $time,
 			'customerid' => $document['customerid'],
 		));
+
+		// if document will not be closed now we should store commit flags in documents table
+		// to allow restore commit flags later during document close process
+		if (isset($document['closed']) || !isset($selected_assignment))
+			$commit_flags = 0;
+		else {
+			$commit_flags = $selected_assignment['existing_assignments']['operation'];
+			if ($commit_flags && isset($selected_assignment['existing_assignments']['reference_document_limit']))
+				$commit_flags += 16;
+		}
+
 		$DB->Execute('INSERT INTO documents (type, number, numberplanid, cdate, sdate, cuserid,
 			customerid, userid, name, address, zip, city, ten, ssn, divisionid, 
 			div_name, div_shortname, div_address, div_city, div_zip, div_countryid, div_ten, div_regon,
-			div_account, div_inv_header, div_inv_footer, div_inv_author, div_inv_cplace, closed, fullnumber)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', array($document['type'],
+			div_account, div_inv_header, div_inv_footer, div_inv_author, div_inv_cplace, closed, fullnumber,
+			reference, template, commitflags)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+			array($document['type'],
 				$document['number'],
-				$document['numberplanid'],
+				empty($document['numberplanid']) ? null : $document['numberplanid'],
 				$time,
 				isset($document['closed']) ? $time : 0,
-				isset($document['closed']) ? $AUTH->id : 0,
+				isset($document['closed']) ? Auth::GetCurrentUser() : null,
 				$document['customerid'],
-				$AUTH->id,
+				Auth::GetCurrentUser(),
 				trim($customer['lastname'] . ' ' . $customer['name']),
 				$customer['address'] ? $customer['address'] : '',
 				$customer['zip'] ? $customer['zip'] : '',
 				$customer['city'] ? $customer['city'] : '',
 				$customer['ten'] ? $customer['ten'] : '',
 				$customer['ssn'] ? $customer['ssn'] : '',
-				$customer['divisionid'],
+				$customer['divisionid'] ? $customer['divisionid'] : null,
 				($division['name'] ? $division['name'] : ''),
 				($division['shortname'] ? $division['shortname'] : ''),
 				($division['address'] ? $division['address'] : ''), 
 				($division['city'] ? $division['city'] : ''), 
 				($division['zip'] ? $division['zip'] : ''),
-				($division['countryid'] ? $division['countryid'] : 0),
+				($division['countryid'] ? $division['countryid'] : null),
 				($division['ten'] ? $division['ten'] : ''), 
 				($division['regon'] ? $division['regon'] : ''), 
 				($division['account'] ? $division['account'] : ''),
@@ -251,6 +296,9 @@ if (isset($_POST['document'])) {
 				($division['inv_cplace'] ? $division['inv_cplace'] : ''),
 				isset($document['closed']) ? 1 : 0,
 				$fullnumber,
+				!isset($document['reference']) || empty($document['reference']) ? null : $document['reference']['id'],
+				empty($document['templ']) ? null : $document['templ'],
+				$commit_flags,
 		));
 
 		$docid = $DB->GetLastInsertID('documents');
@@ -266,7 +314,7 @@ if (isset($_POST['document'])) {
 		foreach ($files as $file)
 			$DB->Execute('INSERT INTO documentattachments (docid, filename, contenttype, md5sum, main)
 				VALUES (?, ?, ?, ?, ?)', array($docid,
-					$file['name'],
+					basename($file['name']),
 					$file['type'],
 					$file['md5sum'],
 					$file['main'] ? 1 : 0,
@@ -277,6 +325,44 @@ if (isset($_POST['document'])) {
 			. DIRECTORY_SEPARATOR . $engine['name'] . DIRECTORY_SEPARATOR . $engine['post-action'] . '.php'))
 			include($doc_dir . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $engine['name']
 				. DIRECTORY_SEPARATOR . $engine['post-action'] . '.php');
+
+		if (isset($selected_assignment)) {
+			$selected_assignment['docid'] = $docid;
+			$selected_assignment['customerid'] = $document['customerid'];
+			$selected_assignment['reference'] = $document['reference']['id'];
+			if (empty($from)) {
+				list ($year, $month, $day) = explode('/', date('Y/m/d'));
+				$selected_assignment['datefrom'] = mktime(0, 0, 0, $month, $day, $year);
+			} else
+				$selected_assignment['datefrom'] = $from;
+			$selected_assignment['dateto'] = $to;
+
+			if (isset($document['closed']))
+				$LMS->UpdateExistingAssignments($selected_assignment);
+
+			if ($selected_assignment['schemaid']) {
+				// create assignments basing on selected promotion schema
+				$selected_assignment['period'] = $period;
+				$selected_assignment['at'] = $at;
+				$selected_assignment['commited'] = isset($document['closed']) ? 1 : 0;
+
+				if (is_array($selected_assignment['stariffid'][$schemaid])) {
+					$copy_a = $selected_assignment;
+					$snodes = $selected_assignment['snodes'][$schemaid];
+					$sphones = $selected_assignment['sphones'][$schemaid];
+
+					foreach ($selected_assignment['stariffid'][$schemaid] as $label => $v) {
+						if (!$v)
+							continue;
+
+						$copy_a['promotiontariffid'] = $v;
+						$copy_a['nodes'] = $snodes[$label];
+						$copy_a['phones'] = $sphones[$label];
+						$tariffid = $LMS->AddAssignment($copy_a);
+					}
+				}
+			}
+		}
 
 		$DB->CommitTrans();
 
@@ -301,11 +387,24 @@ if (isset($_POST['document'])) {
 } else {
 	$document['customerid'] = isset($_GET['cid']) ? $_GET['cid'] : '';
 	$document['type'] = isset($_GET['type']) ? $_GET['type'] : '';
+
+	$default_assignment_invoice = ConfigHelper::getConfig('phpui.default_assignment_invoice');
+	if (!empty($default_assignment_invoice))
+		$document['assignment']['invoice'] = true;
+	$default_assignment_settlement = ConfigHelper::getConfig('phpui.default_assignment_settlement');
+	if (!empty($default_assignment_settlement))
+		$document['assignment']['settlement'] = true;
+	$default_assignment_period = ConfigHelper::getConfig('phpui.default_assignment_period');
+	if (!empty($default_assignment_period))
+		$document['assignment']['period'] = $default_assignment_period;
+	$default_assignment_at = ConfigHelper::getConfig('phpui.default_assignment_at');
+	if (!empty($default_assignment_at))
+		$document['assignment']['at'] = $default_assignment_at;
 }
 
 $SMARTY->setDefaultResourceType('extendsall');
 
-$rights = $DB->GetCol('SELECT doctype FROM docrights WHERE userid = ? AND (rights & 2) = 2', array($AUTH->id));
+$rights = $DB->GetCol('SELECT doctype FROM docrights WHERE userid = ? AND (rights & 2) = 2', array(Auth::GetCurrentUser()));
 
 if (!$rights) {
 	$SMARTY->display('noaccess.html');
@@ -321,12 +420,35 @@ $SMARTY->assign('numberplans', $numberplans);
 
 $docengines = GetDocumentTemplates($rights, isset($document['type']) ? $document['type'] : NULL);
 
+$references = empty($document['customerid']) ? null : $LMS->GetDocuments($document['customerid']);
+$SMARTY->assign('references', $references);
+
 $layout['pagetitle'] = trans('New Document');
 
 $SESSION->save('backto', $_SERVER['QUERY_STRING']);
 
 if (!ConfigHelper::checkConfig('phpui.big_networks'))
 	$SMARTY->assign('customers', $LMS->GetCustomerNames());
+
+// +++ promotion support
+if (isset($document['customerid'])) {
+	$promotions = $LMS->GetPromotions();
+	$numberplans = $LMS->GetNumberPlans(array(
+		'doctype' => DOC_INVOICE,
+		'cdate' => null,
+		'division' => empty($document['customerid']) ? null : $LMS->GetCustomerDivision($document['customerid']),
+		'next' => false,
+	));
+} else {
+	$promotions = $numberplans = null;
+}
+
+$SMARTY->assign('promotions', $promotions);
+$SMARTY->assign('tariffs', $LMS->GetTariffs());
+$SMARTY->assign('numberplanlist', $numberplans);
+// --- promotion support
+
+$tariffs = $LMS->GetTariffs();
 
 $SMARTY->assign('error', $error);
 $SMARTY->assign('docrights', $rights);

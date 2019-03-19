@@ -94,7 +94,7 @@ class NetContainer {
 
                 foreach ( array_reverse($matched_masks) as $v ) {
                     $spaces[] = array(
-                        'ip'    => long2ip($curr_ip),
+                        'ip'    => long_ip($curr_ip),
                         'mask'  => $v['mask'],
                         'hosts' => $this->networks[$i-1]
                     );
@@ -121,7 +121,7 @@ function getNetworks( $ip, $br, $host = null ) {
     $br_long = ip_long($br); // broadcast address
 
     if ( $host ) {
-        $sql  = 'AND h.name ILIKE ?';
+        $sql  = 'AND h.name ?LIKE? ?';
         $data =  array($ip_long, $br_long, $host);
     } else {
         $sql  = '';
@@ -139,8 +139,8 @@ function getNetworks( $ip, $br, $host = null ) {
     );
 
     foreach ( $networks as $k=>$v ) {
-        $networks[$k]['ip']      = long2ip($networks[$k]['ip_long']);
-        $networks[$k]['br_long'] = ip_long(getbraddr(long2ip($v['ip_long']), $v['mask_ip']));
+        $networks[$k]['ip']      = long_ip($networks[$k]['ip_long']);
+        $networks[$k]['br_long'] = ip_long(getbraddr(long_ip($v['ip_long']), $v['mask_ip']));
 
         if ( $v['ip_long'] < $ip_long ) {
             $ip_long = $v['ip_long'];
@@ -173,7 +173,7 @@ if ( isset($_GET['ajax']) ) {
 
         $counter = 2 * pow(2, 24-$mask-1) - 1;
         for ($i=0; $i<=$counter; ++$i) {
-            $SMARTY->assign('ip'   , long2ip(ip_long($ip) + $i * 256));
+            $SMARTY->assign('ip'   , long_ip(ip_long($ip) + $i * 256));
             $SMARTY->assign('hosts', array(array('host'=>$host, 'net_name'=>$_POST['netname'])));
 
             $html .= $SMARTY->fetch('net/network_container.html');
@@ -191,23 +191,23 @@ if ( isset($_GET['ajax']) ) {
         $used_ips = $DB->GetAllByKey('
             SELECT
                 ipaddr as ip, nod.name, nd.name as netdev_name,
-                CASE WHEN nod.ownerid = 0 THEN nd.id ELSE nod.id END as id
+                CASE WHEN nod.ownerid IS NULL THEN nd.id ELSE nod.id END as id
             FROM
                 nodes nod
-                LEFT JOIN netdevices nd ON nod.ownerid = 0 AND nd.id = nod.netdev
+                LEFT JOIN netdevices nd ON nod.ownerid IS NULL AND nd.id = nod.netdev
                 LEFT JOIN networks net  ON net.id = nod.netid
                 LEFT JOIN hosts h       ON h.id = net.hostid
             WHERE
                 nod.ipaddr >= ? AND
-                nod.ipaddr <= ? ' . ($host ? ' AND h.name ILIKE ?' : ''), 'ip', $data
+                nod.ipaddr <= ? ' . ($host ? ' AND h.name ?LIKE? ?' : ''), 'ip', $data
         );
 
-        $full_network = $DB->GetRow('SELECT * FROM networks WHERE name ILIKE ?', array($_POST['netname']));
+        $full_network = $DB->GetRow('SELECT * FROM networks WHERE name ?LIKE? ?', array($_POST['netname']));
 
         $SMARTY->assign('used_ips' , $used_ips);
         $SMARTY->assign('pool'     , array('start'=>$ip_start, 'end'=>$ip_end));
         $SMARTY->assign('network'  , $ip_start == $full_network['address'] ? 1 : 0);
-        $SMARTY->assign('broadcast', long2ip($ip_end) == getbraddr(long2ip($ip_start), $full_network['mask']) ? 1 : 0);
+        $SMARTY->assign('broadcast', long_ip($ip_end) == getbraddr(long_ip($ip_start), $full_network['mask']) ? 1 : 0);
         $SMARTY->assign('hostid'   , $full_network['id'] );
 
         $html .= $SMARTY->fetch('net/network_container.html');

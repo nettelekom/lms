@@ -3,43 +3,6 @@
 {block name=module_content}
 <!--// $Id$ //-->
 <H1>{$layout.pagetitle}</H1>
-<SCRIPT type="text/javascript">
-<!--
-	var tariffTypes = [];
-	{foreach $tariffs as $tariff}
-	tariffTypes[{$tariff.id}] = {$tariff.tarifftype};
-	{/foreach}
-	
-	function assignment_submit() {
-		{if ConfigHelper::checkConfig('phpui.node_assignment_warning')}
-		var tariffid = parseInt($('form[name="assignment"] select[name="assignment[tariffid]"]').val());
-		
-		if (isNaN(tariffid)) {
-			document.assignment.submit();
-			return;
-		}
-
-		switch (tariffid) {
-			case -1:
-				document.assignment.submit();
-				return;
-			case -2:
-				tariffid = parseInt($('form[name="assignment"] select[name="assignment[stariffid]"]').val());
-				break;
-		}
-
-		if (tariffTypes[tariffid] == {$smarty.const.TARIFF_INTERNET} &&
-			!$('#nodeslist :checked:not([name="allbox"])').length &&
-			!confirm('{trans("No nodes has been selected for assignment, by at least one is recommended! Are you sure you want to continue despite of this?")}')){
-			return false;
-		}
-		{/if}
-
-		document.assignment.submit();
-	}
-//-->
-</SCRIPT>
-
 <FORM method="POST" name="assignment" action="?m={$layout.module}{if $assignment.id}&id={$assignment.id}{if $assignment.liabilityid}&lid={$assignment.liabilityid}{/if}{else}&id={$customerinfo.id}{/if}">
 <INPUT type="submit" class="hiddenbtn">
 <TABLE class="lmsbox">
@@ -51,417 +14,66 @@
 
     <THEAD>
 		<TR>
-			<TD>
-				<IMG src="img/money.gif" alt="">
-			</TD>
-			<TD class="bold">
-				{trans("Type")}/{trans("Tariff")}:
-			</TD>
-			<TD>
-				<input type="hidden" value="" name="assignment[tarifftype]" id="tarifftype">
-				<select id="tariff_select" size="1" name="assignment[tariffid]" {tip text="Select liability type" trigger="tariffid"}>
-					<option value=""   data-tarifftype="0" {if !$assignment.tariffid} selected{/if}>- {trans("tariffless liability")} -</option>
-					<option value="-1" data-tarifftype="0" {if $assignment.tariffid == -1} selected{/if}>{trans("- all liabilities suspended -")}</option>
+			<TD colspan="3">
+				<table>
+					<tr>
+						<td>
+							<IMG src="img/money.gif" alt="">
+						</TD>
+						<TD class="bold">
+							{trans("Type")}/{trans("Tariff")}:
+						</TD>
+						<td>
+							<input type="hidden" value="" name="assignment[tarifftype]" id="tarifftype">
+							<select id="tariff-select" size="1" name="assignment[tariffid]" {tip text="Select liability type" trigger="tariffid"}>
+								<option value=""   data-tarifftype="0" {if !$assignment.tariffid} selected{/if}>- {trans("tariffless liability")} -</option>
+								<option value="-1" data-tarifftype="0" {if $assignment.tariffid == -1} selected{/if}>{trans("- all liabilities suspended -")}</option>
 
-					{if $promotionschemas}
-						<option value="-2" data-tarifftype="0" {if $assignment.tariffid == -2} selected{/if}>- {trans("per promotion schema")} -</option>
-					{/if}
+								{if !empty($promotions)}
+									<option value="-2" data-tarifftype="0" {if $assignment.tariffid == -2} selected{/if}>- {trans("per promotion schema")} -</option>
+								{/if}
 
-					{foreach $tariffs as $tariff}
-						<option value="{$tariff.id}" data-tarifftype="{$tariff.tarifftype}" {if $tariff.id==$assignment.tariffid} selected{/if} data-valid="{$tariff.valid}"{if !$tariff.valid} class="blend"{if !$assignment.alltariffs} style="display: none;"{/if}{/if}>
-						{$tariff.name} ({if ConfigHelper::checkConfig('privileges.superuser') || !ConfigHelper::checkConfig('privileges.hide_finances')}{$tariff.value|money_format}{/if}{if $tariff.upceil || $tariff.downceil}, {$tariff.downceil}/{$tariff.upceil} kbit/s{/if})
-						</option>
-					{/foreach}
-				</select>
-				<label>
-					<input type="checkbox" name="assignment[alltariffs]" {tip text="Check if all tariffs should be displayed" trigger="alltariffs"}{if $assignment.alltariffs} checked{/if}>
-					{trans("show all tariffs")}
-				</label>
-			</TD>
+								{foreach $tariffs as $tariff}
+									<option value="{$tariff.id}" data-tarifftype="{$tariff.tarifftype}" data-tariffaccess="{$tariff.authtype}" data-tarifftags="{$tariff.tags}" {if $tariff.id==$assignment.tariffid} selected{/if} data-valid="{$tariff.valid}"{if !$tariff.valid} class="blend"{if !$assignment.alltariffs} style="display: none;"{/if}{/if}>
+									{$tariff.name} ({if ConfigHelper::checkConfig('privileges.superuser') || !ConfigHelper::checkConfig('privileges.hide_finances')}{$tariff.value|money_format}{/if}{if $tariff.upceil || $tariff.downceil}, {$tariff.downceil}/{$tariff.upceil} kbit/s{/if})
+									</option>
+								{/foreach}
+							</select>
+						</td>
+					</tr>
+					<tr>
+						<td colspan="2">
+						</td>
+						<td>
+							<label>
+								<input type="checkbox" name="assignment[alltariffs]" {tip text="Check if all tariffs should be displayed" trigger="alltariffs"}{if $assignment.alltariffs} checked{/if}>
+								{trans("show all tariffs")}
+							</label>
+							{if !empty($tags)}
+							&nbsp;&nbsp;{trans("Tags:")}
+							{/if}
+							<SELECT size="5" id="assignment-tags" name="assignment[tags][]" class="lms-ui-multiselect" {tip text="Select tariff tags"} multiple onchange="javascript:updateTariffs();"{if empty($tags)} style="display: none;"{/if}>
+								{foreach $tags as $tag}
+								<OPTION value="{$tag.id}">{$tag.name}</OPTION>
+								{/foreach}
+							</SELECT>
+						</td>
+					</tr>
+				</table>
+			</td>
 		</TR>
     </THEAD>
 
     <TBODY>
-		{if $promotionschemas}
-		<TR id="a_schema">
-			<TD>
-				<IMG src="img/promoschema.gif" alt="">
-			</TD>
-			<TD class="bold">
-				{trans("Schema")}:
-			</TD>
-			<TD style="width: 98%;">
-				<SELECT size="1" name="assignment[schemaid]" id="promotionselect" {tip text="Select promotion schema"}>
-					{foreach $promotionschemanames as $schemaname}
-      	    	        <optgroup label="{$schemaname.name}" data-valid="{$schemaname.valid}"{if !$schemaname.valid} class="blend"{if !$assignment.alltariffs} style="display: none;"{/if}{/if}>
-                	        {foreach $promotionschemas as $schema}
-                    	        {if $schemaname.name == $schema.promotion}
-                        	        <OPTION value="{$schema.id}"{if $assignment.schemaid == $schema.id} SELECTED{/if} data-valid="{$schemaname.valid}"{if !$schemaname.valid} class="blend"{/if}>{$schema.name|truncate:40:"...":true}</OPTION>
-                                {/if}
-                            {/foreach}
-                        </optgroup>
-                    {/foreach}
-				</SELECT>
-			</TD>
-		</TR>
-	
-		<TR id="a_schematariff">
-			<TD></TD>
-			<TD></TD>
-			<TD>
-				{foreach $promotions as $p}
-                	{foreach $p as $k=>$items}
-                    	<table id="{$k}" class="promotionstable">
-                            {if isset($items.single)}
-                                {foreach $items.single as $v}
-                                    {if $v.optional == 1}
-                                        <tr><td><label><input type="checkbox" name="assignment[stariffid][]" value="{$v.tariffid}"> {$v.tariff}</label></td></tr>
-                                    {else}
-                                        <tr>
-                                            <td class="blend">
-                                                <label><input type="checkbox" data-mandatory="true" checked disabled> {$v.tariff}</label>
-                                                <input type="hidden" name="assignment[stariffid][]" value="{$v.tariffid}">
-                                            </td>
-                                        </tr>
-                                    {/if}
-                                {/foreach}
-                            {/if}
-
-                            {if isset($items.lists)}
-                                {foreach $items.lists as $v}
-                                    <tr>
-                                        <td>
-                                            <select id="{key($v)}" name="assignment[stariffid][]">
-                                                {if !isset($v.required)}<option value="0">-- wybierz --</option>{/if}
-                                                {foreach $v.items as $item}
-                                                     <option value="{$item.tariffid}">{$item.tariff}</option>
-                                                {/foreach}
-                                            </select>
-                                        </td>
-                                    </tr>
-                                {/foreach}
-                            {/if}
-                        </table>
-                    {/foreach}
-                {/foreach}
-			</TD>
-		</TR>
-		{/if}
-	
-		<TR>
-		    <TD colspan="3" class="container">
-		        <TABLE class="lmsbox-inner">
-					<COLGROUP>
-						<COL style="width: 50%;">
-						<COL style="width: 50%;">
-					</COLGROUP>
-	
-					<TBODY>
-			            <TR>
-			                <TD class="valign-top">
-			                    <TABLE style="width: 100%;" cellpadding="3">
-									<COLGROUP>
-										<COL style="width: 1%;">
-										<COL style="width: 1%;">
-										<COL style="width: 98%;">
-									</COLGROUP>
-			
-									<TBODY>
-									
-										<TR id="a_name">
-											<TD>
-												<IMG src="img/money.gif" alt="">
-											</TD>
-											<TD class="bold nobr">
-												{trans("Name:")}
-											</TD>
-											<TD>
-												<INPUT type="text" name="assignment[name]" value="{if $assignment.tariffid<=0}{$assignment.name}{/if}" size="30" {tip text="Enter liability name/description (tariffless liabilities only)" trigger="name"}>
-											</TD>
-										</TR>
-									
-										<TR id="a_attribute">
-											<TD>
-												<IMG src="img/money.gif" alt="">
-											</TD>
-											<TD class="bold nobr">
-												{trans("Attribute:")}
-											</TD>
-											<TD>
-												<INPUT type="text" name="assignment[attribute]" value="{if $assignment.attribute}{$assignment.attribute}{/if}" size="30" {tip text="Enter tariff attribute" trigger="attribute"}>
-											</TD>
-										</TR>
-									
-										<TR id="a_day">
-											<TD>
-												<IMG src="img/calendar.gif" alt="">
-											</TD>
-											<TD class="bold nobr">
-												{trans("Accounting:")}
-											</TD>
-											<TD>
-												<SELECT size="1" name="assignment[period]" {tip text="Select time period to account liability"}>
-													{foreach from=$_PERIODS key=key item=item}
-														<OPTION value="{$key}"{if $assignment.period == $key} SELECTED{/if}>{$item}</OPTION>
-													{/foreach}
-												</SELECT>
-									
-												<INPUT type="TEXT" name="assignment[at]" value="{if $assignment.at}{$assignment.at}{/if}" {tip text="Enter accounting time. For disposable accounting enter date in format YYYY/MM/DD, for weekly accounting enter day of week (Monday = 1), for monthly accounting enter day of month (1 to 28), for yearly accounting enter day and month in format DD/MM (15/09 means September 15th), for half-yearly DD/MM (MM <=6) and for quarterly DD/MM (MM <= 3)" trigger="at"} SIZE="8">
-												{if $assignment.atwarning}
-													<INPUT type="hidden" name="assignment[atwarning]" value="1">
-												{/if}
-											</TD>
-										</TR>
-
-										<TR id="a_period">
-											<TD>
-												<IMG src="img/calendar.gif" alt="">
-											</TD>
-											<TD class="bold nobr">
-												{trans("Period:")}
-											</TD>
-											<TD class="nobr">
-												{trans("from:")}
-												<INPUT type="TEXT" name="assignment[datefrom]" value="{if $assignment.datefrom}{$assignment.datefrom}{/if}" placeholder="{trans("yyyy/mm/dd")}" {tip class="calendar" text="Enter accounting start date in YYYY/MM/DD format. If you don't want to define 'From' date leave this field empty" trigger="datefrom"} SIZE="10">
-												
-												{trans("to:")}
-												<INPUT type="TEXT" name="assignment[dateto]" value="{if $assignment.dateto}{$assignment.dateto}{/if}" placeholder="{trans("yyyy/mm/dd")}" {tip class="calendar" text="Enter accounting end date in YYYY/MM/DD format. Leave this field empty if you don't want to set expiration date" trigger="dateto"} SIZE="10">
-											</TD>
-										</TR>
-									
-										<TR id="a_value">
-											<TD>
-												<IMG src="img/value.gif" alt="">
-											</TD>
-											<TD class="bold">
-												{trans("Value:")}
-											</TD>
-											<TD>
-												<INPUT type="text" name="assignment[value]" value="{if $assignment.value}{$assignment.value}{/if}" size="10" {tip text="Enter liability value (tariffless liabilities only)" trigger="value"}>
-											</TD>
-										</TR>
-
-
-										<TR id="a_discount">
-											<TD style="{if !ConfigHelper::checkConfig('privileges.superuser') && ConfigHelper::checkConfig('privileges.hide_finances')} display: none;{/if}">
-												<IMG src="img/value.gif" alt="">
-											</TD>
-											<TD class="bold" style="{if !ConfigHelper::checkConfig('privileges.superuser') && ConfigHelper::checkConfig('privileges.hide_finances')} display: none;{/if}">
-												<span class="bold">{trans("Discount:")}</span>
-											</TD>
-											<TD style="{if !ConfigHelper::checkConfig('privileges.superuser') && ConfigHelper::checkConfig('privileges.hide_finances')} display: none;{/if}">
-												<INPUT type="text" size="8" name="assignment[discount]" value="{if $assignment.pdiscount != 0}{$assignment.pdiscount|string_format:"%.2f"}{else}{if $assignment.vdiscount != 0}{$assignment.vdiscount|string_format:"%.2f"}{/if}{/if}" {tip text="Enter discount percentage or amount" trigger="discount"}>
-												<SELECT name="assignment[discount_type]">
-													{foreach from=$_DISCOUNTTYPES item=item key=key}
-														<OPTION value="{$key}"{if $assignment.discount_type == $key} selected{/if}>{$item}</OPTION>
-													{/foreach}
-												</SELECT>
-											</TD>
-										</TR>
-
-										<TR id="a_tax">
-											<TD>
-												<IMG src="img/tax.gif" alt="">
-											</TD>
-											<TD class="bold">
-												{trans("Tax:")}
-											</TD>
-											<TD>
-												<SELECT SIZE="1" name="assignment[taxid]" {tip text="Select Tax value"}>
-													{foreach item=tax from=$taxeslist}
-														<OPTION value="{$tax.id}"{if ($assignment.taxid && $tax.id == $assignment.taxid) || (!$assignment.taxid && $tax.value == ConfigHelper::getConfig('phpui.default_taxrate'))} selected{/if}>{$tax.label}</OPTION>
-													{/foreach}
-												</SELECT>
-											</TD>
-										</TR>
-
-										<TR id="a_productid">
-											<TD>
-												<IMG src="img/class.gif" alt="">
-											</TD>
-											<TD class="bold">
-												{trans("Product ID:")}
-											</TD>
-											<TD>
-												<INPUT type="text" name="assignment[prodid]" value="{$assignment.prodid}" size="10" {tip text="Enter liability Product ID (tariffless liabilities only)"}>
-											</TD>
-										</TR>
-									
-										<TR id="a_numberplan">
-											<TD>
-												<IMG src="img/id.gif" alt="">
-											</TD>
-											<TD class="bold nobr">
-												{trans("Numbering Plan:")}
-											</TD>
-											<TD>
-												<SELECT name="assignment[numberplanid]" {tip text="Select numbering plan"}>
-													<OPTION value=""{if !$assignment.numberplanid} selected{/if}>- {trans("default")} -</OPTION>
-									
-													{foreach item=plan from=$numberplanlist}
-														{assign var=period value=$plan.period}
-														<OPTION value="{$plan.id}"{if $plan.id==$assignment.numberplanid} SELECTED{/if}>{$plan.template} ({$_NUM_PERIODS.$period})</OPTION>
-													{/foreach}
-												</SELECT>
-											</TD>
-										</TR>
-
-										<TR id="a_paytype">
-											<TD>
-												<IMG src="img/print.gif" alt="">
-											</TD>
-											<TD class="bold nobr">
-												{trans("Payment Type:")}
-											</TD>
-											<TD>
-												<SELECT name="assignment[paytype]" {tip text="Select payment type" trigger="paytype"}>
-													<OPTION value=""{if !$assignment.paytype} selected{/if}>- {trans("default")} -</OPTION>
-
-													{foreach from=$_PAYTYPES item=item key=key}
-														<OPTION value="{$key}"{if $assignment.paytype==$key} selected{/if}>{$item}</OPTION>
-													{/foreach}
-												</SELECT>
-											</TD>
-										</TR>
-
-										<tr id="a_address">
-											<td>
-												<img src="img/info3.gif" alt="">
-											</td>
-											<td class="bold">
-												<span class="bold">{trans("Recipient:")}</span>
-											</td>
-											<td>
-												<select name="assignment[recipient_address_id]">
-													<option value="-1">{trans("none")}</option>
-													{foreach $customeraddresses as $v}
-														<option value="{$v.address_id}"{if $assignment.recipient_address_id == $v.address_id} selected{/if}>{$v.location}</option>
-													{/foreach}
-												</select>
-											</td>
-										</tr>
-
-									</TBODY>
-								</TABLE>
-							</TD>
-							<TD class="valign-top">
-								<TABLE style="width: 100%;" cellpadding="3">
-									<COLGROUP>
-										<COL style="width: 1%;">
-										<COL style="width: 1%;">
-										<COL style="width: 98%;">
-									</COLGROUP>
-
-									<TBODY>
-										<TR id="a_options">
-											<TD>
-												<IMG src="img/options.gif" alt="">
-											</TD>
-											<TD class="bold">
-												{trans("Options:")}
-											</TD>
-											<TD class="nobr">
-												<label>
-													<INPUT type="checkbox" name="assignment[invoice]" value="1"{if $assignment.invoice} checked{/if}>
-													{trans("with invoice")}
-												</label>
-
-												<label>
-													<INPUT type="checkbox" name="assignment[settlement]" value="1"{if $assignment.settlement} checked{/if}>
-													{trans("with settlement of first deficient period")}
-												</label>
-											</TD>
-										</TR>
-
-										{if $customernodes}
-										<tr id="a_nodes">
-											<td>
-												<img src="img/node.gif" alt="">
-											</td>
-											<td class="bold">
-												{trans("Nodes:")}
-											</td>
-											<td class="nobr" id="nodeslist">
-												{foreach $customernodes as $customernode}
-													{assign var=nodeid value=$customernode.id}
-
-													<label>
-														<input type="checkbox" name="assignment[nodes][{counter}]" value="{$customernode.id}"{if in_array($nodeid, (array)$assignment.nodes)} checked{/if}>
-														<span class="bold">{$customernode.name}</span> ({$customernode.id|string_format:"%04d"}){if $customernode.location} / {$customernode.location|truncate:"60":"...":true}{/if}
-													</label>
-													<br>
-												{/foreach}
-											</td>
-										</tr>
-										{/if}
-
-										{if $customernetdevnodes}
-										<tr id="a_netdevnodes">
-											<td>
-												<img src="img/netdev.gif" alt="">
-											</td>
-											<td class="bold">
-												{trans("Network Devices:")}
-											</td>
-											<td class="nobr" id="nodeslist">
-												{foreach $customernetdevnodes as $customernode}
-													{assign var=nodeid value=$customernode.id}
-
-													<label>
-														<input type="checkbox" name="assignment[nodes][{counter}]" value="{$customernode.id}"{if in_array($nodeid, (array)$assignment.nodes)} checked{/if}>
-														<span class="bold">{$customernode.name}</span> {if !empty($customernode.netdev_name)} / {$customernode.netdev_name}{/if}  ({$customernode.id|string_format:"%04d"}){if $customernode.location} / {$customernode.location|truncate:"60":"...":true}{/if}
-													</label>
-													<br>
-												{/foreach}
-											</td>
-										</tr>
-										{/if}
-										
-										{if $customervoipaccs}
-										<tr id="a_phones">
-											<td>
-												<img src="img/voip.gif" alt="">
-											</td>
-											<td class="bold">
-												{trans("Phones:")}
-											</td>
-											<td class="nobr" id="nodeslist">
-												{foreach $customervoipaccs.accounts as $acc}
-													{foreach $acc.phones as $p}
-                                                        <label>
-															<input type="checkbox" name="assignment[phones][]" value="{$p.id}" {if !empty($assignment.phones) && in_array($p.id, $assignment.phones)} checked{/if}>
-															<span class="bold">{$p.phone}</span> / {$acc.login}
-														</label>
-														<br>
-													{/foreach}
-												{/foreach}
-											</td>
-										</tr>
-										{/if}
-
-										{if count($customernodes) || count($customernetdevnodes)}
-										<tr>
-											<td colspan=2"></td>
-											<td>
-												<label>
-													<INPUT TYPE="checkbox" NAME="allbox" onchange="CheckAll('assignment', this, ['assignment[invoice]', 'assignment[settlement]'])" VALUE="1">
-													{trans("check all<!items>")}
-												</label>
-											</td>
-										</tr>
-										{/if}
-									</TBODY>
-								</TABLE>
-							</TD>
-						</TR>
-					</TBODY>
-				</TABLE>
-			</TD>
+		<tr>
+			<td colspan="3" class="contrainer">
+                {include file="customer/customerassignmenthelper.html" variable_prefix="assignment" variables=$assignment}
+            </TD>
 		</TR>
 
 		<TR>
 			<TD class="buttons" colspan="3">
-				<A href="#" onclick="return assignment_submit();">{trans("Submit")} <IMG src="img/save.gif" alt=""></A>&nbsp;
+				<A href="#" id="submit-button">{trans("Submit")} <IMG src="img/save.gif" alt=""></A>&nbsp;
 				<A href="?m=customerinfo&id={$customerinfo.id}">{trans("Cancel")} <IMG src="img/cancel.gif" alt=""></A>
 			</TD>
 		</TR>
@@ -471,103 +83,135 @@
 <BR>
 
 {include file="customer/customerassignments.html"}
-<SCRIPT type="text/javascript">
-<!--
-	$(function() {
-		$('[name="assignment[alltariffs]"]').click(function() {
-			var checked = this.checked;
 
-			var tariffselect = $('select', $(this).closest('td'));
-			$('option', tariffselect).each(function() {
-				if ($(this).attr('data-valid') == '0') {
-					$(this).css('display', checked ? '' : 'none');
-				}
-			});
-			if (!checked && $('option[data-valid="0"]', tariffselect).filter(':selected').val() == tariffselect.val()) {
-				tariffselect.val($('option:nth(0)').val());
-			}
+<SCRIPT>
+	var tariffTypes = [];
+	{foreach $tariffs as $tariff}
+	tariffTypes[{$tariff.id}] = {$tariff.tarifftype};
+	{/foreach}
 
-			var promoselect = $('#promotionselect');
-			$('optgroup', promoselect).each(function() {
-				if ($(this).attr('data-valid') == '0') {
-					$(this).css('display', checked ? '' : 'none');
-				}
-			});
-			if (!checked && $('option[data-valid="0"]', promoselect).filter(':selected').val() == promoselect.val()) {
-				promoselect.val($('option[data-valid="1"]:nth(0)', promoselect).val());
-				promoselect.trigger('change');
-			}
-		});
-	});
+	var selected = {};
+	{if !empty($assignment.snodes)}
+	selected["snodes"] = {json_encode($assignment.snodes)};
+	{/if}
+	{if !empty($assignment.sphones)}
+	selected["sphones"] = {json_encode($assignment.sphones)};
+	{/if}
+	selected["location"] = "{if isset($assignment.location)}{$assignment.location}{/if}";
+	selected["recipient_address_id"] = "{if isset($assignment.recipient_address_id)}{$assignment.recipient_address_id}{else}0{/if}";
 
-    $( '#tariff_select' ).change( function() {
-    	var tarifftype = $(this).find(':selected').attr('data-tarifftype');
-    	var val = $(this).val();
-    	
-    	$('#tarifftype').val( tarifftype );
-
-		{if $promotionschemas}
-		document.getElementById('a_schema').style.display       = val == -2 ? '' : 'none';
-		document.getElementById('a_schematariff').style.display = val == -2 ? '' : 'none';
-		{/if}
-
-		document.getElementById('a_tax').style.display       = val == '' ? ''     : 'none';
-		document.getElementById('a_value').style.display     = val == '' ? ''     : 'none';
-		document.getElementById('a_productid').style.display = val == '' ? ''     : 'none';
-		document.getElementById('a_name').style.display      = val == '' ? ''     : 'none';
-        document.getElementById('a_attribute').style.display = val == '' ? 'none' : '';
-		document.getElementById('a_options').style.display   = val == -1 ? 'none' : '';
-		document.getElementById('a_day').style.display       = val == -1 ? 'none' : '';
-
-		if (tarifftype == {$smarty.const.TARIFF_PHONE}) {
-			$('#a_phones'     ).show();
-			$('#a_nodes'      ).hide();
-			$('#a_netdevnodes').hide();
-		} else {
-			$('#a_phones').hide();
-			
-			if (val == -1) {
-				$('#a_nodes').hide();
-				$('#a_netdevnodes').hide();
-			} else {
-				$('#a_nodes').show();
-				$('#a_netdevnodes').show();
-			}
-		}
-
-		{if ConfigHelper::checkConfig('privileges.superuser') || !ConfigHelper::checkConfig('privileges.hide_finances')}
-		document.getElementById('a_discount').style.display = val < -1 ? 'none' : '';
-		{/if}
-    });
-
-	function updatePromotionsTable() {
-		$.each( $( '.promotionstable' ), function() {
-			$( this ).css('display', 'none');
-		
-			$.each( $(this).find( 'input, select' ), function() {
-				if ( $( this ).attr('data-mandatory') == undefined ) {
-					$( this ).attr('disabled', true);
-				}
-			});
-		});
+	var assignment_settings = {
+		customerid: {$customerinfo.id},
+		selected: selected,
+		internetTariffType: {$smarty.const.TARIFF_INTERNET},
+		phoneTariffType: {$smarty.const.TARIFF_PHONE},
+		tariffTypes: tariffTypes,
+		variablePrefix: 'assignment',
+        hideFinances: {if !ConfigHelper::checkConfig('privileges.superuser') && ConfigHelper::checkConfig('privileges.hide_finances')}true{else}false{/if}
 	}
 
-	$( '#promotionselect' ).change( function() {
-		updatePromotionsTable();
-		
-		var t = $(this).find('option:selected').text();
-			
-		$("[id='" + t + "']").css('display', 'table');
-	
-		$.each( $("[id='" + t + "']").find( 'input, select' ), function() {
-			if ( $( this ).attr('data-mandatory') == undefined ) {
-				$( this ).attr('disabled', false);
+	var customer_assignment_helper = new CustomerAssignmentHelper(assignment_settings);
+	$(function() {
+		$('#submit-button').click(function(e) {
+			{if ConfigHelper::checkConfig('phpui.node_assignment_warning')}
+			var tariffid = parseInt($('form[name="assignment"] select[name="assignment[tariffid]"]').val());
+
+			if (isNaN(tariffid)) {
+				document.assignment.submit();
+				return;
+			}
+
+			switch (tariffid) {
+				case -1:
+					document.assignment.submit();
+					return;
+				case -2:
+                    if (!customer_assignment_helper.validate(e))
+                    	return;
+					break;
+				default:
+					if (tariffTypes[tariffid] == {$smarty.const.TARIFF_INTERNET}
+				        && !$('#nodelist :checked:not([name="allbox"])').length
+				        && !confirm('{trans("No nodes has been selected for assignment, by at least one is recommended! Are you sure you want to continue despite of this?")}')) {
+					    e.stopImmediatePropagation();
+					    return;
+				    }
+					break;
+			}
+			{/if}
+
+            document.assignment.submit();
+		});
+
+		$('[name="assignment[alltariffs]"]').click(function() {
+			updateTariffs();
+
+			var checked = this.checked;
+
+			// +++ PROMOTION CODE
+			var promotion_select = $('#promotion-select');
+			$('optgroup', promotion_select).each(function() {
+				if ($(this).attr('data-valid') == '0') {
+					$(this).css('display', checked ? '' : 'none');
+				}
+			});
+			if (!checked && $('option[data-valid="0"]', promotion_select).filter(':selected').val() == promotion_select.val()) {
+				promotion_select.val($('option[data-valid="1"]:nth(0)', promotion_select).val());
+				promotion_select.trigger('change');
+			}
+			// +++ PROMOTION CODE
+		});
+
+		updateCheckAllNodes();
+	});
+
+	function updateTariffs() {
+		var valid_checked = $('[name="assignment[alltariffs]"]').is(':checked');
+		var tariff_select = $('#tariff-select');
+
+		var tags = [];
+		$('[name="assignment[tags][]"]:checked').each(function() {
+			tags.push(parseInt($(this).val()));
+		});
+
+		$('option', tariff_select).each(function() {
+			var option = $(this);
+
+			if (option.val() <= 0) {
+				return;
+			}
+
+			if (tags.length) {
+				option.css('display', 'none');
+
+				var tarifftags = option.attr('data-tarifftags');
+				if (typeof(tarifftags) === 'undefined' || !tarifftags.length) {
+					return;
+				}
+
+				tarifftags = JSON.parse('[' +  tarifftags + ']');
+
+				$.each(tarifftags, function(key, value) {
+					if (tags.indexOf(value) > -1) {
+						if (option.attr('data-valid') == '0') {
+							option.css('display', valid_checked ? '' : 'none');
+						} else {
+							option.css('display', '');
+						}
+					}
+				});
+			} else {
+				if (option.attr('data-valid') == '0') {
+					option.css('display', valid_checked ? '' : 'none');
+				} else {
+					option.css('display', '');
+				}
 			}
 		});
-	});
-	
-	$( '#promotionselect' ).trigger('change');
-	$( '#tariff_select'   ).trigger('change');
-//-->
+
+		if ($('option:selected', tariff_select).css('display') == 'none') {
+			tariff_select.val($('option:nth(0)').val());
+		}
+	}
 </SCRIPT>
 {/block}

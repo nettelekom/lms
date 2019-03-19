@@ -31,11 +31,11 @@ class LMSTcpdfInvoice extends LMSInvoice {
 
 	protected function Table() {
 		/* set the line width and headers font */
-		$this->backend->SetFillColor(200, 200, 200);
+		$this->backend->SetFillColor(255, 255, 255);
 		$this->backend->SetTextColor(0);
 		$this->backend->SetDrawColor(0, 0, 0);
-		$this->backend->SetLineWidth(0.3);
-		$this->backend->SetFont('arial', 'B', 8);
+		$this->backend->SetLineWidth(0.1);
+		$this->backend->SetFont('arial', 'B', 7);
 
 		$margins = $this->backend->getMargins();
 		$table_width = $this->backend->getPageWidth() - ($margins['left'] + $margins['right']);
@@ -123,7 +123,7 @@ class LMSTcpdfInvoice extends LMSInvoice {
 			$this->backend->MultiCell($h_width[$item], $h_head, $heads[$item], 1, 'C', true, 0, '', '', true, 0, false, false, $h_head, 'M');
 
 		$this->backend->Ln();
-		$this->backend->SetFont('arial', '', 8);
+		$this->backend->SetFont('arial', '', 7);
 
 		/* invoice correction data */
 		if (isset($this->data['invoice'])) {
@@ -455,8 +455,12 @@ class LMSTcpdfInvoice extends LMSInvoice {
 		$this->backend->Text(7, 209, $this->data['division_zip'] . ' ' . $this->data['division_city']);
 
 		/* account */
-		$this->backend->SetFont('arial', 'B', 9);
-		$this->backend->Text(7, 219, bankaccount($this->data['customerid'], $this->data['account']));
+		$this->backend->SetFont('arial', 'B', 8);
+		if (count($this->data['bankaccounts']) == 1)
+			$account = $this->data['bankaccounts'][0];
+		else
+			$account = bankaccount($this->data['customerid'], $this->data['account']);
+		$this->backend->Text(7, 219, $account);
 
 		/* customer name */
 		$this->backend->SetFont('arial', '', 9);
@@ -501,8 +505,12 @@ class LMSTcpdfInvoice extends LMSInvoice {
 		$this->backend->Text(67, 206, $this->data['division_address'] . ', ' . $this->data['division_zip'] . ' ' . $this->data['division_city']);
 
 		/* account */
-		$this->backend->SetFont('arial', 'B', 9);
-		$this->backend->Text(67, 215, format_bankaccount(bankaccount($this->data['customerid'], $this->data['account'])));
+		$this->backend->SetFont('arial', 'B', 8);
+		if (count($this->data['bankaccounts']) == 1)
+			$account = $this->data['bankaccounts'][0];
+		else
+			$account = bankaccount($this->data['customerid'], $this->data['account']);
+		$this->backend->Text(67, 215, format_bankaccount($account));
 
 		/* currency */
 		$this->backend->SetFont('arial', 'B', 10);
@@ -549,18 +557,20 @@ class LMSTcpdfInvoice extends LMSInvoice {
 			);
 			$this->backend->StartTransform();
 			$this->backend->TranslateX(55);
-			$this->backend->write1DBarcode($barcode, 'C128', '', 263, 60, 5, 0.3, $style, '');
+			$this->backend->write1DBarcode($barcode, 'C128', '', 262, 60, 8, 0.3, $style, '');
 			$this->backend->StopTransform();
 		}
 
 		if (ConfigHelper::checkValue(ConfigHelper::getConfig('invoices.customer_balance_in_form', false))) {
 			/* title */
-			$this->backend->SetFont('arial', '', 10);
-			$this->backend->Text(120, 264, trans('Payment for liabilities'));
+			$this->backend->SetFont('arial', '', 9);
+			$this->backend->writeHTMLCell(70, 10, 131, 262,
+				trans('Payment for liabilities'), $border = 0, $ln = 0, $fill = false, $reseth = true, $align = 'L', $autopadding = true);
 		} else {
 			/* title */
-			$this->backend->SetFont('arial', 'B', 10);
-			$this->backend->Text(120, 264, trans('Payment for invoice No. $a', $barcode));
+			$this->backend->SetFont('arial', 'B', 9);
+			$this->backend->writeHTMLCell(70, 10, 131, 262,
+				trans('Payment for invoice No. $a', $barcode), $border = 0, $ln = 0, $fill = false, $reseth = true, $align = 'L', $autopadding = true);
 		}
 
 		/* deadline */
@@ -576,13 +586,13 @@ class LMSTcpdfInvoice extends LMSInvoice {
 	}
 
 	protected function invoice_date() {
-		$this->backend->SetFont('arial', '', 10);
-		$this->backend->writeHTMLCell(0, 0, '', 20, trans('Settlement date:') . ' <b>' . date("d.m.Y", $this->data['cdate']) . '</b>', 0, 1, 0, true, 'R');
+		$this->backend->SetFont('arial', '', 8);
+		$this->backend->writeHTMLCell(0, 0, '', 10, trans('Settlement date:') . ' <b>' . date("d.m.Y", $this->data['cdate']) . '</b>', 0, 1, 0, true, 'R');
 		$this->backend->writeHTMLCell(0, 0, '', '', trans('Sale date:') . ' <b>' . date("d.m.Y", $this->data['sdate']) . '</b>', 0, 1, 0, true, 'R');
 	}
 
 	protected function invoice_title() {
-		$this->backend->SetY(30);
+		$this->backend->SetY(29);
 		$this->backend->SetFont('arial', 'B', 16);
 		$docnumber = docnumber(array(
 			'number' => $this->data['number'],
@@ -621,7 +631,7 @@ class LMSTcpdfInvoice extends LMSInvoice {
 	}
 
 	protected function invoice_seller() {
-		$this->backend->SetFont('arial', '', 10);
+		$this->backend->SetFont('arial', '', 8);
 		$seller = '<b>' . trans('Seller:') . '</b><br>';
 		$tmp = $this->data['division_header'];
 
@@ -646,12 +656,15 @@ class LMSTcpdfInvoice extends LMSInvoice {
 
 		$buyer .= $this->data['name'] . '<br>';
 		$buyer .= $this->data['address'] . '<br>';
-		$buyer .= $this->data['zip'] . ' ' . $this->data['city'] . '<br>';
+		$buyer .= $this->data['zip'] . ' ' . $this->data['city'];
+		if ($this->data['division_countryid'] && $this->data['countryid'] && $this->data['division_countryid'] != $this->data['countryid'])
+			$buyer .= ', ' . trans($this->data['country']);
+		$buyer .= '<br>';
 		if ($this->data['ten'])
 			$buyer .= trans('TEN') . ': ' . $this->data['ten'] . '<br>';
 		elseif ($this->data['ssn'])
 			$buyer .= trans('SSN') . ': ' . $this->data['ssn'] . '<br>';
-		$this->backend->SetFont('arial', '', 10);
+		$this->backend->SetFont('arial', '', 8);
 		$this->backend->writeHTMLCell(80, '', '', '', $buyer, 0, 1, 0, true, 'L');
 
 		$y = $this->backend->GetY();
@@ -673,8 +686,8 @@ class LMSTcpdfInvoice extends LMSInvoice {
 			$postbox .= $this->data['zip'] . ' ' . $this->data['city'] . '<br>';
 		}
 
-		if ($this->data['division_countryid'] && $this->data['countryid'] && $this->data['division_countryid'] != $this->data['countryid'])
-			$postbox .= trans($this->data['country']) . '<br>';
+		if ($this->data['division_countryid'] && $this->data['post_countryid'] && $this->data['division_countryid'] != $this->data['post_countryid'])
+			$postbox .= ', ' . trans($this->data['post_country']) . '<br>';
 
 		$this->backend->SetFont('arial', 'B', 10);
 		$this->backend->writeHTMLCell(80, '', 125, 50, $postbox, 0, 1, 0, true, 'L');
@@ -706,7 +719,7 @@ class LMSTcpdfInvoice extends LMSInvoice {
 			return 0;
 		}
 
-		$this->backend->SetFont('arial', '', 10);
+		$this->backend->SetFont('arial', '', 8);
 
 		$this->backend->writeHTMLCell(80, '', '', '', '<b>' . trans('Recipient:') . '</b>', 0, 1, 0, true, 'L');
 
@@ -737,8 +750,8 @@ class LMSTcpdfInvoice extends LMSInvoice {
 		else
 			$this->backend->writeHTMLCell(0, 0, '', '', trans('To pay:') . ' ' . moneyf($this->data['value']), 0, 1, 0, true, 'L');
 
-		$this->backend->SetFont('arial', '', 10);
-		$this->backend->writeHTMLCell(0, 6, '', '', trans('In words:') . ' ' . moneyf_in_words($this->data['value']), 0, 1, 0, true, 'L');
+		$this->backend->SetFont('arial', '', 8);
+		$this->backend->writeHTMLCell(0, 5, '', '', trans('In words:') . ' ' . moneyf_in_words($this->data['value']), 0, 1, 0, true, 'L');
 	}
 
 	protected function invoice_balance() {
@@ -749,20 +762,12 @@ class LMSTcpdfInvoice extends LMSInvoice {
 	}
 
 	protected function invoice_dates() {
-		$y = $this->backend->GetY();
-
-		$paytype = $this->data['paytype'];
-		$this->backend->SetFont('arial', '', 8);
-		$this->backend->Ln();
+		$this->backend->SetFont('arial', '', 10);
 		if ($paytype != 8) {
-			$deadline = trans('Deadline:') . ' <b>' . date("d.m.Y", $this->data['pdate']) . '</b>';
-			$this->backend->writeHTMLCell(0, 0, '', '', $deadline, 0, 1, 0, true, 'L');
+		$this->backend->writeHTMLCell(0, 0, '', 19, trans('Deadline:') . '<b>' . date("d.m.Y", $this->data['pdate']) . '</b>', 0, 1, 0, true, 'R');
 		}
-		$payment = trans('Payment type:') . ' <b>' . $this->data['paytypename'] . '</b>';
-		$this->backend->writeHTMLCell(0, 0, '', '', $payment, 0, 1, 0, true, 'L');
-
-		$y = $this->backend->SetY($y);
-	}
+		$this->backend->writeHTMLCell(0, 0, '', '', trans('Payment type:') . '<b>' . $this->data['paytypename'] . '</b>', 0, 1, 0, true, 'R');
+}
 
 	protected function invoice_expositor() {
 		$expositor = isset($this->data['user']) ? $this->data['user'] : $this->data['division_author'];
@@ -772,7 +777,7 @@ class LMSTcpdfInvoice extends LMSInvoice {
 
 	protected function invoice_footnote() {
 		if (!empty($this->data['division_footer'])) {
-			$this->backend->Ln(7);
+			//$this->backend->Ln(145);
 			//$this->backend->SetFont('arial', 'B', 10);
 			//$this->backend->Write(0, trans('Notes:'), '', 0, 'L', true, 0, false, false, 0);
 			$tmp = $this->data['division_footer'];
@@ -785,7 +790,7 @@ class LMSTcpdfInvoice extends LMSInvoice {
 			$tmp = str_replace('%bankaccount', implode("\n", $accounts), $tmp);
 
 			$this->backend->SetFont('arial', '', 8);
-			$h = $this->backend->getStringHeight(0, $tmp);
+			//$h = $this->backend->getStringHeight(0, $tmp);
 			$tmp = mb_ereg_replace('\r?\n', '<br>', $tmp);
 			$this->backend->writeHTMLCell(0, 0, '', '', $tmp, 0, 1, 0, true, 'C');
 		}
@@ -795,7 +800,7 @@ class LMSTcpdfInvoice extends LMSInvoice {
 		$image_path = ConfigHelper::getConfig('invoices.header_image', '', true);
 		if (!file_exists($image_path))
 			return;
-		$this->backend->writeHTMLCell(40, 0, 15, 6, '<img src="' . $image_path . '">');
+		$this->backend->writeHTMLCell(40, 0, 12, 8, '<img src="' . $image_path . '">');
 	}
 
 	public function invoice_cancelled() {
@@ -835,12 +840,24 @@ class LMSTcpdfInvoice extends LMSInvoice {
 			$this->backend->SetXY($x, $y);
 		}
 	}
+	
+	public function invoice_qr2pay_code() {
+		$x = $this->backend->GetX();
+		$y = $this->backend->GetY();
+		$this->backend->writeHTMLCell(150, 0, '', '', trans("&nbsp; <BR> Scan and Pay <BR> You can make a transfer simply and quickly using your phone. <BR> To make a transfer, please scan QRcode on you smartphone in your bank's application."), 0, 1, 0, true, 'R');
+		$tmp = '|PL|'.bankaccount($this->data['customerid'], $this->data['account']).'|'.str_pad( $this->data['value'] * 100,  6, 0, STR_PAD_LEFT).'|'.$this->data['division_name'].'|' . trans('QR Payment for Internet Invoice no.').' '.$docnumber.'|||';
+		$style['position'] = 'R';
+		$this->backend->write2DBarcode($tmp, 'QRCODE,M', $x, $y,30,30,$style);
+		unset($tmp);	
+	}				
 
 	public function invoice_body_standard() {
 		$this->invoice_cancelled();
 		$this->invoice_no_accountant();
 		$this->invoice_header_image();
 		$this->invoice_date();
+		$this->invoice_dates();
+		$this->invoice_expositor();
 		$this->invoice_title();
 		$this->invoice_seller();
 		$this->invoice_buyer();
@@ -849,10 +866,10 @@ class LMSTcpdfInvoice extends LMSInvoice {
 		$this->invoice_to_pay();
 		if (ConfigHelper::checkValue(ConfigHelper::getConfig('invoices.show_balance',true)))
 		    $this->invoice_balance();
-		$this->invoice_dates();
-		$this->invoice_expositor();
+		if (ConfigHelper::checkConfig('invoices.qr2pay') && !isset($this->data['rebate']))
+			$this->invoice_qr2pay_code();
 		$this->invoice_footnote();
-
+		
 		$docnumber = docnumber(array(
 			'number' => $this->data['number'],
 			'template' => $this->data['template'],
@@ -892,6 +909,8 @@ class LMSTcpdfInvoice extends LMSInvoice {
 		$this->invoice_no_accountant();
 		$this->invoice_header_image();
 		$this->invoice_date();
+		$this->invoice_dates();
+		$this->invoice_expositor();
 		$this->invoice_title();
 		$this->invoice_seller();
 		$this->invoice_buyer();
@@ -900,8 +919,8 @@ class LMSTcpdfInvoice extends LMSInvoice {
 		$this->invoice_to_pay();
 		if (ConfigHelper::checkValue(ConfigHelper::getConfig('invoices.show_balance',true)))
 		    $this->invoice_balance();
-		$this->invoice_dates();
-		$this->invoice_expositor();
+		if (ConfigHelper::checkConfig('invoices.qr2pay') && !isset($this->data['rebate']))
+			$this->invoice_qr2pay_code();		
 		$this->invoice_footnote();
 		if (($this->data['customerbalance'] < 0 || ConfigHelper::checkValue(ConfigHelper::getConfig('invoices.always_show_form', true)))
 			&& !isset($this->data['rebate'])) {

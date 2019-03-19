@@ -79,7 +79,7 @@ if(isset($_POST['nodedata']))
 
 	if(!$error)
 	{
-		$nodeedit['modifierid'] = $AUTH->id;
+	    $nodeedit['modifierid'] = Auth::GetCurrentUser();
 		$voip->NodeUpdate($nodeedit);
 		$SESSION->redirect('?m=v_nodeinfo&id=' . $nodeedit['id']);
 	}

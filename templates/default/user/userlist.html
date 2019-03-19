@@ -6,10 +6,11 @@
 <TABLE class="lmsbox">
     <COLGROUP>
         <COL style="width: 1%;">
-        <COL style="width: 92%">
+        <COL style="width: 91%">
         <COL style="width: 2%">
         <COL style="width: 2%">
         <COL style="width: 2%">
+        <COL style="width: 1%">
         <COL style="width: 1%">
     </COLGROUP>
     <THEAD>
@@ -19,6 +20,9 @@
 		</TH>
 		<TH scope="col">
 			<SPAN class="nobr"><IMG src="img/info2.gif" alt=""> {trans("First/last name")}</SPAN>
+		</TH>
+		<TH scope="col">
+			<SPAN class="nobr"><IMG src="img/phone.gif" alt=""> {trans("Phone")}</SPAN>
 		</TH>
 		<TH scope="col">
                         <SPAN class="nobr"><img src="img/calendar.gif" alt=""> {trans("Active from:")}</SPAN>
@@ -34,7 +38,7 @@
 		</TH>
 	</TR>
     </THEAD>
-    <TFOOT><TR><TD colspan="6"></TD></TR></TFOOT>
+    <TFOOT><TR><TD colspan="7"></TD></TR></TFOOT>
     <TBODY>
 	{cycle values="light,lucid" print=false}
 	{section name=userslist loop=$userslist}{if $userslist[userslist].id}
@@ -44,6 +48,9 @@
 		</TD>
 		<TD class="nobr" onClick="return self.location.href='?m=userinfo&amp;id={$userslist[userslist].id}';">
 			<IMG src="img/info2.gif" alt=""> {$userslist[userslist].name}
+		</TD>
+		<TD class="nobr" onClick="return self.location.href='?m=userinfo&amp;id={$userslist[userslist].id}';">
+			<IMG src="img/phone.gif" alt=""> {if $userslist[userslist].phone}{$userslist[userslist].phone}{else} - {/if}
 		</TD>
 		<td class="nobr" onclick="return self.location.href='?m=userinfo&amp;id={$userslist[userslist].id}';">
 			<img src="img/calendar.gif" alt=""> {$userslist[userslist].accessfrom}
@@ -58,15 +65,15 @@
 		<TD class="text-right nobr">
 			{if $layout.logid ne $userslist[userslist].id}
 			    {if !$userslist[userslist].access}
-				<a href="?m=useraccess&amp;id={$userslist[userslist].id}&amp;access=1"><img src="img/noaccess.gif" alt="[ {trans('Connect')} ]" title="[ {trans('Connect')} ]"></a>
+				<a href="?m=useraccess&amp;id={$userslist[userslist].id}&amp;access=1"><img src="img/noaccess.gif" alt="{trans('Connect')}" title="{trans('Connect')}"></a>
 			    {else}
-				<a href="?m=useraccess&amp;id={$userslist[userslist].id}&amp;access=0"><img src="img/access.gif" alt="[ {trans('Disconnect')} ]" title="[ {trans('Disconnect')} ]"></a>
+				<a href="?m=useraccess&amp;id={$userslist[userslist].id}&amp;access=0"><img src="img/access.gif" alt="{trans('Disconnect')}" title="{trans('Disconnect')}"></a>
 			    {/if}
 			{/if}
-			<a href="?m=userpasswd&amp;id={$userslist[userslist].id}"><img src="img/keys.gif" alt="[ {trans("Change password")} ]" title="[ {trans("Change password")} ]"></a>
-			{if $userslist[userslist].id != $layout.logid}<a href="?m=userdel&amp;id={$userslist[userslist].id}" onClick="return confirmLink(this, '{trans("Are you sure, you want to irreversibly delete that user account?")}');"><img src="img/delete.gif" alt="[ {trans("Delete")} ]" title="[ {trans("Delete")} ]"></a>{/if}
-			<a href="?m=useredit&amp;id={$userslist[userslist].id}"><img src="img/edit.gif" alt="[ {trans("Edit")} ]" title="[ {trans("Edit")} ]"></a>
-			<a href="?m=userinfo&amp;id={$userslist[userslist].id}"><img src="img/info.gif" alt="[ {trans("Info")} ]" title="[ {trans("Info")} ]"></a>
+			<a href="?m=userpasswd&amp;id={$userslist[userslist].id}"><img src="img/keys.gif" alt="{trans("Change password")}" title="{trans("Change password")}"></a>
+			{if $userslist[userslist].id != $layout.logid}<a href="?m=userdel&amp;id={$userslist[userslist].id}" onClick="return confirmLink(this, '{trans("Are you sure, you want to irreversibly delete that user account?")}');"><img src="img/delete.gif" alt="{trans("Delete")}" title="{trans("Delete")}"></a>{/if}
+			<a href="?m=useredit&amp;id={$userslist[userslist].id}"><img src="img/edit.gif" alt="{trans("Edit")}" title="{trans("Edit")}"></a>
+			<a href="?m=userinfo&amp;id={$userslist[userslist].id}"><img src="img/info.gif" alt="{trans("Info")}" title="{trans("Info")}"></a>
 		</TD>
 	</TR>
 	{/if}{/section}

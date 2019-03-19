@@ -44,11 +44,14 @@ switch ( strtolower($_GET['action']) ) {
             die( json_encode( array() ) );
         }
 
-        foreach ($caddr as $k=>$v) {
+        foreach ($caddr as $k => &$v) {
             if ( empty($v['location']) ) {
                 unset( $caddr[$k] );
+            } elseif ($v['teryt']) {
+                $v['location'] = trans('$a (TERRIT)', $v['location']);
             }
         }
+        unset($v);
 
         die( json_encode($caddr) );
     break;
@@ -73,7 +76,7 @@ switch ( strtolower($_GET['action']) ) {
                                  country_id as location_country_id, flat as location_flat,
                                  -1 as location_address_type
                              FROM addresses
-                             WHERE id = ?;', 'address_id',
+                             WHERE id = ?', 'address_id',
                              array((int) $_GET['id']));
 
         if ( !$addr ) {

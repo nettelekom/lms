@@ -3,7 +3,7 @@
 /*
  *  LMS version 1.11-git
  *
- *  Copyright (C); 2001-2016 LMS Developers
+ *  Copyright (C); 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -26,12 +26,14 @@
 
 /**
  * LMSFinanceManagerInterface
- * 
- * @author Maciej Lew <maciej.lew.1987@gmail.com>
- * @author Tomasz Chiliński <tomasz.chilinski@chilan.com>
+ *
  */
 interface LMSFinanceManagerInterface
 {
+    public function GetPromotionNameBySchemaID($id);
+
+    public function GetPromotionNameByID($id);
+
     public function GetCustomerTariffsValue($id);
 
     public function GetCustomerAssignments($id, $show_expired = false);
@@ -40,7 +42,11 @@ interface LMSFinanceManagerInterface
 
     public function AddAssignment($data);
 
-    public function SuspendAssignment($id, $suspend = TRUE);
+	public function ValidateAssignment($data);
+
+	public function UpdateExistingAssignments($data);
+
+	public function SuspendAssignment($id, $suspend = TRUE);
 
     public function AddInvoice($invoice);
 
@@ -66,9 +72,13 @@ interface LMSFinanceManagerInterface
 
     public function TariffExists($id);
 
-    public function ReceiptContentDelete($docid, $itemid = 0);
+	public function ReceiptDelete($docid);
 
-    public function DebitNoteContentDelete($docid, $itemid = 0);
+	public function ReceiptContentDelete($docid, $itemid = 0);
+
+	public function DebitNoteDelete($noteid);
+
+	public function DebitNoteContentDelete($docid, $itemid = 0);
 
     public function AddBalance($addbalance);
 
@@ -97,4 +107,14 @@ interface LMSFinanceManagerInterface
     public function CalcAt($period, $date);
 
 	public function isDocumentPublished($id);
+
+	public function isDocumentReferenced($id);
+
+	public function AddReceipt(array $receipt);
+
+	public function GetCashRegistries($cid = null);
+
+	public function GetOpenedLiabilities($customerid);
+
+	public function GetPromotions();
 }

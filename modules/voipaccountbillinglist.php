@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2016 LMS Developers
+ *  (C) Copyright 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -44,6 +44,8 @@ $params = array();
 $params['o']          = sessionHandler('o', 'vblo');
 $params['id']         = sessionHandler('fvoipaccid', 'vblfvoipaccid');
 $params['frangefrom'] = sessionHandler('frangefrom', 'vblfrangefrom');
+if (empty($params['frangefrom']))
+	$params['frangefrom'] = date('Y/m/01');
 $params['frangeto']   = sessionHandler('frangeto', 'vblfrangeto');
 $params['ftype']      = sessionHandler('ftype', 'vblftype');
 $params['fstatus']    = sessionHandler('fstatus', 'vblfstatus');
@@ -51,15 +53,11 @@ $params['fstatus']    = sessionHandler('fstatus', 'vblfstatus');
 $bill_list = $LMS->getVoipBillings($params);
 
 // CALL BILLING RANGE
-if (!empty($params['frangefrom'])) {
-	list($year, $month, $day) = explode('/', $params['frangefrom']);
-	$listdata['frangefrom'] = mktime(0,0,0, $month, $day, $year);
-}
+if (!empty($params['frangefrom']))
+	$listdata['frangefrom'] = date_to_timestamp($params['frangefrom']);
 
-if (!empty($params['frangeto'])) {
-	list($year, $month, $day) = explode('/', $params['frangeto']);
-	$listdata['frangeto'] = mktime(23,59,59, $month, $day, $year);
-}
+if (!empty($params['frangeto'])) 
+	$listdata['frangeto'] = date_to_timestamp($params['frangeto']);
 
 // CALL STATUS
 if (!empty($params['fstatus']))
@@ -110,10 +108,10 @@ if ($SESSION->is_set('valp') && !isset($_GET['page']))
 $SESSION->save('valp', $page);
 
 $billing_stats = $DB->GetRow('SELECT
-                                 sum(price) as price,
-                                 sum(totaltime) as call,
-                                 sum(billedtime) as answer,
-                                 count(*) as count
+                                 SUM(price) AS price,
+                                 SUM(totaltime) AS totaltime,
+                                 SUM(billedtime) AS billedtime,
+                                 COUNT(*) AS cnt
                               FROM
                                  voip_cdr');
 

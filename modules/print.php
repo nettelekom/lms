@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2016 LMS Developers
+ *  (C) Copyright 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -194,11 +194,11 @@ switch($type)
 		$customerslist = $DB->GetAllByKey('SELECT id, '.$DB->Concat('UPPER(lastname)',"' '",'name').' AS customername FROM customers','id');
 
 		if(isset($date['from']))
-			$lastafter = $DB->GetOne('SELECT SUM(CASE WHEN c.customerid!=0 AND type=0 THEN 0 ELSE value END)
+			$lastafter = $DB->GetOne('SELECT SUM(CASE WHEN c.customerid IS NOT NULL AND type=0 THEN 0 ELSE value END)
 					FROM cash c '
 					.($group ? 'LEFT JOIN customerassignments a ON (c.customerid = a.customerid) ' : '')
 					.'WHERE time<?'
-					.($docs ? ($docs == 'documented' ? ' AND c.docid > 0' : ' AND c.docid = 0') : '')
+					.($docs ? ($docs == 'documented' ? ' AND c.docid IS NOT NULL' : ' AND c.docid IS NULL') : '')
 					.($source ? ' AND c.sourceid = '.intval($source) : '')
 					.($group ? ' AND a.customergroupid = '.$group : '')
 					.($net ? ' AND EXISTS (SELECT 1 FROM vnodes WHERE c.customerid = ownerid AND ((ipaddr > '.$net['address'].' AND ipaddr < '.$net['broadcast'].') OR (ipaddr_pub > '.$net['address'].' AND ipaddr_pub < '.$net['broadcast'].')))' : '')
@@ -218,7 +218,7 @@ switch($type)
 					LEFT JOIN taxes ON (taxid = taxes.id) '
 					.($group ? 'LEFT JOIN customerassignments a ON (c.customerid = a.customerid)  ' : '')
 					.'WHERE time <= ? '
-					.($docs ? ($docs == 'documented' ? ' AND c.docid > 0' : ' AND c.docid = 0') : '')
+					.($docs ? ($docs == 'documented' ? ' AND c.docid IS NOT NULL' : ' AND c.docid IS NULL') : '')
 					.($source ? ($source == -1 ? ' AND c.sourceid IS NULL' : ' AND c.sourceid = '.intval($source)) : '')
 					.(isset($date['from']) ? ' AND time >= '.$date['from'] : '')
 					.($group ? ' AND a.customergroupid = '.$group : '')
@@ -327,7 +327,7 @@ switch($type)
 
 		$incomelist = $DB->GetAll('SELECT floor(time/86400)*86400 AS date, SUM(value) AS value
 			FROM cash c
-			WHERE value>0 AND time>=? AND time<=? AND docid=0
+			WHERE value>0 AND time>=? AND time<=? AND docid IS NULL
 				AND NOT EXISTS (
 			        	SELECT 1 FROM customerassignments a
 					JOIN excludedgroups e ON (a.customergroupid = e.customergroupid)
@@ -428,10 +428,11 @@ switch($type)
 			.$type
 			.'&from='.$date['from']
 			.'&to='.$date['to']
-			. (!empty($_POST['einvoice']) ? '&einvoice=' . intval($_POST['einvoice']) : '')
+			.(!empty($_POST['einvoice']) ? '&einvoice=' . intval($_POST['einvoice']) : '')
 			.(!empty($_POST['division']) ? '&divisionid='.intval($_POST['division']) : '')
 			.(!empty($_POST['customer']) ? '&customerid='.intval($_POST['customer']) : '')
 			.(!empty($_POST['group']) ? '&groupid='.intval($_POST['group']) : '')
+			.(!empty($_POST['customer_type']) ? '&customertype='.intval($_POST['customer_type']) : '')
 			.(!empty($_POST['numberplan']) ? '&numberplanid='.intval($_POST['numberplan']) : '')
 			.(!empty($_POST['groupexclude']) ? '&groupexclude=1' : '')
 			.(!empty($_POST['autoissued']) ? '&autoissued=1' : '')
@@ -726,7 +727,7 @@ switch($type)
 
 		if($list = $DB->GetAll(
 	    		'SELECT d.id AS id, SUM(value) AS value, number, cdate, customerid,
-				d.name, address, zip, city, template, extnumber, closed,
+				d.name, address, zip, city, numberplans.template, extnumber, closed,
 				MIN(description) AS title, COUNT(*) AS posnumber
 			FROM documents d
 			LEFT JOIN numberplans ON (numberplanid = numberplans.id)
@@ -737,7 +738,7 @@ switch($type)
 					SELECT 1 FROM customerassignments a
 					JOIN excludedgroups e ON (a.customergroupid = e.customergroupid)
 					WHERE e.userid = lms_current_user() AND a.customerid = d.customerid)
-			GROUP BY d.id, number, cdate, customerid, d.name, address, zip, city, template, extnumber, closed
+			GROUP BY d.id, number, cdate, customerid, d.name, address, zip, city, numberplans.template, extnumber, closed
 			ORDER BY cdate, d.id', array(DOC_RECEIPT)))
 		{
 			foreach($list as $idx => $row)
@@ -882,7 +883,7 @@ switch($type)
 			'doctype' => array(DOC_INVOICE, DOC_CNOTE),
 		)));
 		$SMARTY->assign('cashreglist', $DB->GetAllByKey('SELECT id, name FROM cashregs ORDER BY name', 'id'));
-		$SMARTY->assign('divisions', $DB->GetAll('SELECT id, shortname FROM divisions ORDER BY shortname'));
+		$SMARTY->assign('divisions', $LMS->GetDivisions());
 		$SMARTY->assign('sourcelist', $DB->GetAll('SELECT id, name FROM cashsources ORDER BY name'));
 		$SMARTY->assign('printmenu', 'finances');
 		$SMARTY->display('print/printindex.html');

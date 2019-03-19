@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2016 LMS Developers
+ *  (C) Copyright 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -138,15 +138,24 @@ if (isset($_POST['nodeedit'])) {
 		$nodeedit['ipaddr_pub'] = '0.0.0.0';
 
 	$macs = array();
-	foreach ($nodeedit['macs'] as $key => $value)
+	$key = 0;
+	foreach ($nodeedit['macs'] as $value) {
+		if (!$value)
+			continue;
+
 		if (check_mac($value)) {
 			if ($value != '00:00:00:00:00:00' && !ConfigHelper::checkConfig('phpui.allow_mac_sharing')) {
 				if (($nodeid = $LMS->GetNodeIDByMAC($value)) != NULL && $nodeid != $nodeinfo['id'])
 					$error['mac' . $key] = trans('Specified MAC address is in use!');
 			}
-			$macs[] = $value;
-		} elseif ($value != '')
+		} else {
 			$error['mac' . $key] = trans('Incorrect MAC address!');
+		}
+
+		$macs[$key] = $value;
+		++$key;
+	}
+
 	if (empty($macs))
 		$error['mac0'] = trans('MAC address is required!');
 	$nodeedit['macs'] = $macs;
@@ -190,7 +199,7 @@ if (isset($_POST['nodeedit'])) {
 
 			if (!preg_match('/^[0-9]+$/', $nodeedit['port']) || $nodeedit['port'] > $ports) {
 				$error['port'] = trans('Incorrect port number!');
-			} elseif ($DB->GetOne('SELECT id FROM vnodes WHERE netdev=? AND port=? AND ownerid>0', array($nodeedit['netdev'], $nodeedit['port']))
+			} elseif ($DB->GetOne('SELECT id FROM vnodes WHERE netdev=? AND port=? AND ownerid IS NOT NULL', array($nodeedit['netdev'], $nodeedit['port']))
 					|| $DB->GetOne('SELECT 1 FROM netlinks WHERE (src = ? OR dst = ?)
 			                AND (CASE src WHEN ? THEN srcport ELSE dstport END) = ?', array($nodeedit['netdev'], $nodeedit['netdev'], $nodeedit['netdev'], $nodeedit['port']))) {
 				$error['port'] = trans('Selected port number is taken by other device or node!');
@@ -208,8 +217,7 @@ if (isset($_POST['nodeedit'])) {
 		if (!strlen(trim($nodeedit['projectname']))) {
 		 $error['projectname'] = trans('Project name is required');
 		}
-		if ($DB->GetOne("SELECT * FROM invprojects WHERE name=? AND type<>?",
-			array($nodeedit['projectname'], INV_PROJECT_SYSTEM)))
+		if ($LMS->ProjectByNameExists($nodeedit['projectname']))
 			$error['projectname'] = trans('Project with that name already exists');
 	}
 	$authtype = 0;
@@ -231,20 +239,15 @@ if (isset($_POST['nodeedit'])) {
 		$nodeedit = $LMS->ExecHook('node_edit_before', $nodeedit);
 
 		$ipi = $nodeedit['invprojectid'];
-		if ($ipi == '-1') {
-			$DB->BeginTrans();
-			$DB->Execute("INSERT INTO invprojects (name, type) VALUES (?, ?)",
-				array($nodeedit['projectname'], INV_PROJECT_REGULAR));
-			$ipi = $DB->GetLastInsertID('invprojects');
-			$DB->CommitTrans();
-		}
+		if ($ipi == '-1')
+			$ipi = $LMS->AddProject($nodeedit);
 		if ($nodeedit['invprojectid'] == '-1' || intval($ipi)>0) {
 			$nodeedit['invprojectid'] = intval($ipi);
 		} else {
 			$nodeedit['invprojectid'] = NULL;
 		}
 		$LMS->NodeUpdate($nodeedit, ($customerid != $nodeedit['ownerid']));
-		$LMS->CleanupInvprojects();
+		$LMS->CleanupProjects();
 
 		$nodeedit = $LMS->ExecHook('node_edit_after', $nodeedit);
 
@@ -278,6 +281,12 @@ if (isset($_POST['nodeedit'])) {
 
 	if ($nodeedit['ipaddr_pub'] == '0.0.0.0')
 		$nodeinfo['ipaddr_pub'] = '';
+} else {
+	if (empty($nodeinfo['netdev'])) {
+		$nodeinfo['linktype'] = intval(ConfigHelper::getConfig('phpui.default_linktype', LINKTYPE_WIRE));
+		$nodeinfo['linktechnology'] = intval(ConfigHelper::getConfig('phpui.default_linktechnology', 0));
+		$nodeinfo['linkspeed'] = intval(ConfigHelper::getConfig('phpui.default_linkspeed', 100000));
+	}
 }
 
 if (empty($nodeinfo['macs']))
@@ -307,8 +316,7 @@ $nodeinfo = $hook_data['nodeedit'];
 
 $SMARTY->assign('xajax', $LMS->RunXajax());
 
-$nprojects = $DB->GetAll("SELECT * FROM invprojects WHERE type<>? ORDER BY name",
-	array(INV_PROJECT_SYSTEM));
+$nprojects = $LMS->GetProjects();
 $SMARTY->assign('NNprojects',$nprojects);
 
 $SMARTY->assign('nodesessions', $LMS->GetNodeSessions($nodeid));

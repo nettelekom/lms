@@ -3,7 +3,7 @@
 /*
  *  LMS version 1.11-git
  *
- *  (C) Copyright 2001-2016 LMS Developers
+ *  (C) Copyright 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -51,8 +51,8 @@ function module_main()
 			$doc['attachments'] = $LMS->DB->GetAllBykey('SELECT * FROM documentattachments WHERE docid = ?
 				ORDER BY main DESC, filename', 'id', array($doc['id']));
 
-    $fields_changed = $LMS->DB->GetRow('SELECT id FROM up_info_changes WHERE customerid = ?', 
-    	array($SESSION->id));
+	$fields_changed = $LMS->DB->GetAllByKey('SELECT id, fieldname, fieldvalue FROM up_info_changes WHERE customerid = ?',
+		'fieldname', array($SESSION->id));
 
     $SMARTY->assign('userinfo',$userinfo);
     $SMARTY->assign('usernodes',$usernodes);
@@ -92,7 +92,13 @@ function module_updateuserform()
     $SMARTY->display('module:updateuser.html');
 }
 
-function module_updateusersave() 
+function parse_notification_mail($string, $customerinfo) {
+	$string = str_replace('%cid%', $customerinfo['id'], $string);
+	$string = str_replace('%customername%', $customerinfo['customername'], $string);
+	return $string;
+}
+
+function module_updateusersave()
 {
     global $LMS, $SMARTY, $SESSION, $rights, $error;
 
@@ -103,13 +109,9 @@ function module_updateusersave()
     $id = $SESSION->id;
     $error = NULL;
 
-    if(isset($right['edit_addr']) || 
-	isset($right['edit_addr_ack']) ||
-    	isset($right['edit_contact']) || 
-	isset($right['edit_contact_ack'])
-    )
-	foreach(array_diff_assoc($userdata, $userinfo) as $field => $val) 
-	{
+	if (isset($right['edit_addr']) || isset($right['edit_addr_ack'])
+		|| isset($right['edit_contact']) || isset($right['edit_contact_ack']))
+	foreach (array_diff_assoc($userdata, $userinfo) as $field => $val) {
 	    if($field == 'phone' || $field == 'email' || $field == 'im')
 	    {
 		    $type = $field == 'phone' ? 'contacts' : $field . 's';
@@ -131,17 +133,20 @@ function module_updateusersave()
 					array($id, $v, CONTACT_LANDLINE));
 			    
 			    $userinfo[$type][$i][$checked_property] = $v;
-			}
-			elseif(isset($right['edit_contact_ack']) && ($v || isset($userinfo[$type][$i])))
-				if(!isset($userinfo[$type][$i]) || $userinfo[$type][$i][$checked_property] != $v)
-					$LMS->DB->Execute('INSERT INTO up_info_changes(customerid, fieldname, fieldvalue) 
-						VALUES(?, ?, ?)', array($id, $field.$i, $v));
+			} elseif (isset($right['edit_contact_ack']) && ($v || isset($userinfo[$type][$i])))
+				if (!isset($userinfo[$type][$i]) || $userinfo[$type][$i][$checked_property] != $v) {
+					$LMS->DB->Execute('DELETE FROM up_info_changes WHERE customerid = ? AND fieldname = ?',
+						array($id, $field . $i));
+					$LMS->DB->Execute('INSERT INTO up_info_changes(customerid, fieldname, fieldvalue)
+						VALUES(?, ?, ?)', array($id, $field . $i, $v));
+					$need_change_notification = true;
+				}
 		    }
 		    continue;
 	    }
 	    else
 		    $val = trim(htmlspecialchars($val, ENT_NOQUOTES));
-            
+
 	    switch($field) {
 		case 'name':
 		case 'lastname':
@@ -153,10 +158,13 @@ function module_updateusersave()
 			if(isset($right['edit_addr'])) {
 				$userinfo[$field] = $val;
 				$needupdate = 1;
-			}
-			elseif(isset($right['edit_addr_ack']))
-				$LMS->DB->Execute('INSERT INTO up_info_changes(customerid, fieldname, fieldvalue) 
+			} elseif(isset($right['edit_addr_ack'])) {
+				$LMS->DB->Execute('DELETE FROM up_info_changes WHERE customerid = ? AND fieldname = ?',
+					array($id, $field));
+				$LMS->DB->Execute('INSERT INTO up_info_changes(customerid, fieldname, fieldvalue)
 					VALUES(?, ?, ?)', array($id, $field, $val));
+				$need_change_notification = true;
+			}
 			break;
 		case 'email':
 			if($val!='' && !check_email($val)) {
@@ -167,10 +175,13 @@ function module_updateusersave()
 				if(isset($right['edit_contact'])) {
 					$userinfo[$field] = $val;
 					$needupdate = 1;
-				}
-				elseif(isset($right['edit_contact_ack']))
-					$LMS->DB->Execute('INSERT INTO up_info_changes(customerid, fieldname, fieldvalue) 
+				} elseif(isset($right['edit_contact_ack'])) {
+					$LMS->DB->Execute('DELETE FROM up_info_changes WHERE customerid = ? AND fieldname = ?',
+						array($id, $field));
+					$LMS->DB->Execute('INSERT INTO up_info_changes(customerid, fieldname, fieldvalue)
 						VALUES(?, ?, ?)', array($id, $field, $val));
+					$need_change_notification = true;
+				}
 			}
 			break;
 		case 'ten':
@@ -182,10 +193,13 @@ function module_updateusersave()
 				if(isset($right['edit_addr'])) {
 					$userinfo[$field] = $val;
 					$needupdate = 1;
-				}
-				elseif(isset($right['edit_addr_ack']))
-					$LMS->DB->Execute('INSERT INTO up_info_changes(customerid, fieldname, fieldvalue) 
+				} elseif(isset($right['edit_addr_ack'])) {
+					$LMS->DB->Execute('DELETE FROM up_info_changes WHERE customerid = ? AND fieldname = ?',
+						array($id, $field));
+					$LMS->DB->Execute('INSERT INTO up_info_changes(customerid, fieldname, fieldvalue)
 						VALUES(?, ?, ?)', array($id, $field, $val));
+					$need_change_notification = true;
+				}
 			}
 			break;
 		case 'ssn':
@@ -197,33 +211,49 @@ function module_updateusersave()
 				if(isset($right['edit_addr'])) {
 					$userinfo[$field] = $val;
 					$needupdate = 1;
-				}
-				elseif(isset($right['edit_addr_ack']))
-					$LMS->DB->Execute('INSERT INTO up_info_changes(customerid, fieldname, fieldvalue) 
+				} elseif(isset($right['edit_addr_ack'])) {
+					$LMS->DB->Execute('DELETE FROM up_info_changes WHERE customerid = ? AND fieldname = ?',
+						array($id, $field));
+					$LMS->DB->Execute('INSERT INTO up_info_changes(customerid, fieldname, fieldvalue)
 						VALUES(?, ?, ?)', array($id, $field, $val));
+					$need_change_notification = true;
+				}
 			}
 			break;
 		default:
 			break;
-	    }
+		}
 	}
 
-    if(isset($error))
-    {
-    	$usernodes = $LMS->GetCustomerNodes($SESSION->id);
-        $usernodes['ownerid'] = $SESSION->id;
+	if (isset($error)) {
+		$usernodes = $LMS->GetCustomerNodes($SESSION->id);
+		$usernodes['ownerid'] = $SESSION->id;
 
-        $SMARTY->assign('userinfo',$userinfo);
-        $SMARTY->assign('usernodes',$usernodes);
-	$SMARTY->assign('error',$error);
-        $SMARTY->display('module:updateuser.html');
-    }
-    else
-    {
-	if(isset($needupdate))
-    		$LMS->CustomerUpdate($userinfo);
-        header('Location: ?m=info');
-    }
+		$SMARTY->assign('userinfo',$userinfo);
+		$SMARTY->assign('usernodes',$usernodes);
+		$SMARTY->assign('error',$error);
+		$SMARTY->display('module:updateuser.html');
+	} else {
+		if (isset($needupdate))
+			$LMS->CustomerUpdate($userinfo);
+		elseif (isset($need_change_notification)) {
+			$mail_sender = ConfigHelper::getConfig('userpanel.change_notification_mail_sender', ConfigHelper::getConfig('mail.smtp_username'));
+			$mail_recipient = ConfigHelper::getConfig('userpanel.change_notification_mail_recipient');
+			$mail_subject = ConfigHelper::getConfig('userpanel.change_notification_mail_subject');
+			$mail_body = ConfigHelper::getConfig('userpanel.change_notification_mail_body');
+
+			if (!empty($mail_sender) && !empty($mail_recipient) && !empty($mail_subject) && !empty($mail_body)) {
+				$mail_subject = parse_notification_mail($mail_subject, $userinfo);
+				$mail_body = parse_notification_mail($mail_body, $userinfo);
+				$LMS->SendMail($mail_recipient, array(
+						'From' => $mail_sender,
+						'To' => $mail_recipient,
+						'Subject' => $mail_subject,
+					), $mail_body);
+			}
+		}
+		header('Location: ?m=info');
+	}
 }
 
 if(defined('USERPANEL_SETUPMODE'))
@@ -243,8 +273,8 @@ if(defined('USERPANEL_SETUPMODE'))
 			foreach($userchanges as $key => $change)
 			{
 				if (preg_match('/phone([0-9]+)/', $change['fieldname'], $matches))
-					$old = $DB->GetOne('SELECT contact AS phone FROM customercontacts WHERE id = ? AND type < ?',
-						array($matches[1], CONTACT_MOBILE));
+					$old = $DB->GetOne('SELECT contact AS phone FROM customercontacts WHERE id = ? AND type & ? > 0',
+						array($matches[1], CONTACT_MOBILE|CONTACT_LANDLINE));
 				elseif (preg_match('/email([0-9]+)/', $change['fieldname'], $matches))
 					$old = $DB->GetOne('SELECT contact AS email FROM customercontacts WHERE id = ? AND type & ? > 0',
 						array($matches[1], (CONTACT_EMAIL|CONTACT_INVOICES|CONTACT_NOTIFICATIONS)));
@@ -263,6 +293,10 @@ if(defined('USERPANEL_SETUPMODE'))
 		$SMARTY->display('module:info:setup_changes.html');
 	}
 
+	function parse_customer_mail($text, $params) {
+		return str_replace('%changes%', implode(', ', array_map('trans', $params['changes'])), $text);
+	}
+
 	function module_submit_changes_save() {
 		global $LMS;
 
@@ -270,16 +304,21 @@ if(defined('USERPANEL_SETUPMODE'))
 
 		if (isset($_POST['userchanges'])) {
 			$args = array();
+			$addresses = array();
+			$confirmed_changes = array();
 			foreach ($_POST['userchanges'] as $changeid) {
 				$changes = $DB->GetRow('SELECT customerid, fieldname, fieldvalue FROM up_info_changes
 					WHERE id = ?', array($changeid));
-				if (!isset($args[$changes['customerid']]))
+				if (!isset($args[$changes['customerid']])) {
 					$args[$changes['customerid']] = array(
 						SYSLOG::RES_CUST => $changes['customerid'],
-						SYSLOG::RES_USER => $LMS->AUTH->id,
+						SYSLOG::RES_USER => Auth::GetCurrentUser(),
 					);
+					$confirmed_changes[$changes['customerid']] = array();
+				}
 
 				if (preg_match('/(phone|email|im)([0-9]+)/', $changes['fieldname'], $matches)) {
+					$confirmed_changes[$changes['customerid']][] = $matches[1];
 					if ($matches[2]) {
 						$fields = array(
 							SYSLOG::RES_CUST => $changes['customerid'],
@@ -314,37 +353,115 @@ if(defined('USERPANEL_SETUPMODE'))
 				switch ($changes['fieldname']) {
 					case 'name':
 					case 'lastname':
+					case 'ssn':
+					case 'ten':
+						$confirmed_changes[$changes['customerid']][] = $changes['fieldname'];
+
+						$DB->Execute('UPDATE customers SET '.$changes['fieldname'].' = ? WHERE id = ?',
+							array($changes['fieldvalue'], $changes['customerid']));
+						$args[$changes['customerid']][$changes['fieldname']] = $changes['fieldvalue'];
+						break;
 					case 'street':
 					case 'building':
 					case 'apartment':
 					case 'zip':
 					case 'city':
-					case 'ssn':
-					case 'ten':
-						$DB->Execute('UPDATE customers SET '.$changes['fieldname'].' = ? WHERE id = ?',
-							array($changes['fieldvalue'], $changes['customerid']));
-						$args[$changes['customerid']][$changes['fieldname']] = $changes['fieldvalue'];
+						$confirmed_changes[$changes['customerid']][] = $changes['fieldname'];
+
+						if ($changes['fieldname'] == 'building')
+							$changes['fieldname'] = 'house';
+						elseif ($changes['fieldname'] == 'apartment')
+							$changes['fieldname'] = 'flat';
+
+						if (!isset($addresses[$changes['customerid']]))
+							$addresses[$changes['customerid']] = $DB->GetOne('SELECT address_id FROM customer_addresses WHERE customer_id = ? AND type = ?',
+								array($changes['customerid'], BILLING_ADDRESS));
+
+						$DB->Execute('UPDATE addresses SET ' . $changes['fieldname'] . ' = ?
+							WHERE id = ?', array($changes['fieldvalue'], $addresses[$changes['customerid']]));
 						break;
 				}
-
-				if ($LMS->SYSLOG && !empty($args))
-					foreach ($args as $customerid => $fields)
-						if (count($fields) > 2)
-							$LMS->SYSLOG->AddMessage(SYSLOG::RES_CUST, SYSLOG::OPER_UPDATE, $fields);
 				$DB->Execute('DELETE FROM up_info_changes WHERE id = ?', array($changeid));
+			}
+
+			if ($LMS->SYSLOG && !empty($args))
+				foreach ($args as $customerid => $fields)
+					if (count($fields) > 2)
+						$LMS->SYSLOG->AddMessage(SYSLOG::RES_CUST, SYSLOG::OPER_UPDATE, $fields);
+
+			$mail_subject = ConfigHelper::getConfig('userpanel.change_confirmation_mail_subject');
+			$mail_body = ConfigHelper::getConfig('userpanel.change_confirmation_mail_body');
+			if (!empty($mail_subject) && !empty($mail_body) && !empty($confirmed_changes)) {
+				$mail_sender = ConfigHelper::getConfig('userpanel.change_notification_mail_sender', ConfigHelper::getConfig('mail.smtp_username'));
+				foreach ($confirmed_changes as $customerid => $changes)
+					if (!empty($changes)) {
+						$customerinfo = $LMS->GetCustomer($customerid);
+						$mail_recipients = array();
+						foreach ($customerinfo['emails'] as $email)
+							if (($email['type'] & (CONTACT_NOTIFICATIONS | CONTACT_DISABLED)) == CONTACT_NOTIFICATIONS)
+								$mail_recipients[] = $email['contact'];
+
+						if (!empty($mail_recipients)) {
+							$subject = parse_customer_mail($mail_subject, array('changes' => $changes));
+							$body = parse_customer_mail($mail_body, array('changes' => $changes));
+
+							foreach ($mail_recipients as $mail_recipient) {
+								$LMS->SendMail($mail_recipient, array(
+										'From' => $mail_sender,
+										'To' => $mail_recipient,
+										'Subject' => $subject,
+									), $body);
+							}
+						}
+					}
 			}
 		}
 
 		module_changes();
 	}
 
-	function module_submit_changes_delete()
-	{
-		global $DB;
+	function module_submit_changes_delete() {
+		global $LMS;
 
-		if(isset($_POST['userchanges']))
-			foreach($_POST['userchanges'] as $changeid)
+		$DB = LMSDB::getInstance();
+
+		if (isset($_POST['userchanges'])) {
+			$rejected_changes = array();
+			foreach ($_POST['userchanges'] as $changeid) {
+				$change = $DB->GetRow('SELECT customerid, fieldname FROM up_info_changes WHERE id = ?',
+					array($changeid));
+				if (!isset($rejected_changes[$change['customerid']]))
+					$rejected_changes[$change['customerid']] = array();
+				$rejected_changes[$change['customerid']][] = $change['fieldname'];
 				$DB->Execute('DELETE FROM up_info_changes WHERE id = ?', array($changeid));
+			}
+			$mail_subject = ConfigHelper::getConfig('userpanel.change_rejection_mail_subject');
+			$mail_body = ConfigHelper::getConfig('userpanel.change_rejection_mail_body');
+			if (!empty($mail_subject) && !empty($mail_body) && !empty($rejected_changes)) {
+				$mail_sender = ConfigHelper::getConfig('userpanel.change_notification_mail_sender', ConfigHelper::getConfig('mail.smtp_username'));
+				foreach ($rejected_changes as $customerid => $changes)
+					if (!empty($changes)) {
+						$customerinfo = $LMS->GetCustomer($customerid);
+						$mail_recipients = array();
+						foreach ($customerinfo['emails'] as $email)
+							if (($email['type'] & (CONTACT_NOTIFICATIONS | CONTACT_DISABLED)) == CONTACT_NOTIFICATIONS)
+								$mail_recipients[] = $email['contact'];
+
+						if (!empty($mail_recipients)) {
+							$subject = parse_customer_mail($mail_subject, array('changes' => $changes));
+							$body = parse_customer_mail($mail_body, array('changes' => $changes));
+
+							foreach ($mail_recipients as $mail_recipient) {
+								$LMS->SendMail($mail_recipient, array(
+										'From' => $mail_sender,
+										'To' => $mail_recipient,
+										'Subject' => $subject,
+									), $body);
+							}
+						}
+					}
+			}
+		}
 
 		module_changes();
 	}
@@ -355,17 +472,43 @@ if(defined('USERPANEL_SETUPMODE'))
 		$SMARTY->assign('hide_nodesbox', ConfigHelper::getConfig('userpanel.hide_nodesbox'));
 		$SMARTY->assign('consent_text', ConfigHelper::getConfig('userpanel.data_consent_text'));
 		$SMARTY->assign('show_confirmed_documents_only', ConfigHelper::checkConfig('userpanel.show_confirmed_documents_only'));
+		$SMARTY->assign('change_notification_mail_sender', ConfigHelper::getConfig('userpanel.change_notification_mail_sender'));
+		$SMARTY->assign('change_notification_mail_recipient', ConfigHelper::getConfig('userpanel.change_notification_mail_recipient'));
+		$SMARTY->assign('change_notification_mail_subject', ConfigHelper::getConfig('userpanel.change_notification_mail_subject'));
+		$SMARTY->assign('change_notification_mail_body', ConfigHelper::getConfig('userpanel.change_notification_mail_body'));
+		$SMARTY->assign('change_confirmation_mail_subject', ConfigHelper::getConfig('userpanel.change_confirmation_mail_subject'));
+		$SMARTY->assign('change_confirmation_mail_body', ConfigHelper::getConfig('userpanel.change_confirmation_mail_body'));
+		$SMARTY->assign('change_rejection_mail_subject', ConfigHelper::getConfig('userpanel.change_rejection_mail_subject'));
+		$SMARTY->assign('change_rejection_mail_body', ConfigHelper::getConfig('userpanel.change_rejection_mail_body'));
+
 		$SMARTY->display('module:info:setup.html');
 	}
 
 	function module_submit_setup() {
 		$DB = LMSDB::getInstance();
+
 		$DB->Execute('UPDATE uiconfig SET value = ? WHERE section = ? AND var = ?',
 			array(isset($_POST['hide_nodesbox']) ? 1 : 0, 'userpanel', 'hide_nodesbox'));
 		$DB->Execute('UPDATE uiconfig SET value = ? WHERE section = ? AND var = ?',
 			array($_POST['consent_text'], 'userpanel', 'data_consent_text'));
 		$DB->Execute('UPDATE uiconfig SET value = ? WHERE section = ? AND var = ?',
 			array(isset($_POST['show_confirmed_documents_only']) ? 'true' : 'false', 'userpanel', 'show_confirmed_documents_only'));
+		$DB->Execute('UPDATE uiconfig SET value = ? WHERE section = ? AND var = ?',
+			array($_POST['change_notification_mail_sender'], 'userpanel', 'change_notification_mail_sender'));
+		$DB->Execute('UPDATE uiconfig SET value = ? WHERE section = ? AND var = ?',
+			array($_POST['change_notification_mail_recipient'], 'userpanel', 'change_notification_mail_recipient'));
+		$DB->Execute('UPDATE uiconfig SET value = ? WHERE section = ? AND var = ?',
+			array($_POST['change_notification_mail_subject'], 'userpanel', 'change_notification_mail_subject'));
+		$DB->Execute('UPDATE uiconfig SET value = ? WHERE section = ? AND var = ?',
+			array($_POST['change_notification_mail_body'], 'userpanel', 'change_notification_mail_body'));
+		$DB->Execute('UPDATE uiconfig SET value = ? WHERE section = ? AND var = ?',
+			array($_POST['change_confirmation_mail_subject'], 'userpanel', 'change_confirmation_mail_subject'));
+		$DB->Execute('UPDATE uiconfig SET value = ? WHERE section = ? AND var = ?',
+			array($_POST['change_confirmation_mail_body'], 'userpanel', 'change_confirmation_mail_body'));
+		$DB->Execute('UPDATE uiconfig SET value = ? WHERE section = ? AND var = ?',
+			array($_POST['change_rejection_mail_subject'], 'userpanel', 'change_rejection_mail_subject'));
+		$DB->Execute('UPDATE uiconfig SET value = ? WHERE section = ? AND var = ?',
+			array($_POST['change_rejection_mail_body'], 'userpanel', 'change_rejection_mail_body'));
 
 		header('Location: ?m=userpanel&module=info');
 	}

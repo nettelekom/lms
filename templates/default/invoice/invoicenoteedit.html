@@ -12,7 +12,7 @@
 			add += "&original=1";
 		if (document.save.copy.checked)
 			add += "&copy=1";
-		document.save.action = "?m=invoicenote&action=save&print=1" + add;
+		document.save.action = "?m=invoicenoteedit&action=save&print=1" + add;
 		document.save.submit();
 	}
 //-->
@@ -28,6 +28,24 @@
 	</TR>
     </THEAD>
     <TBODY>
+	<TR>
+		<TD class="bold nobr">
+			{trans("Credit note number:")}
+		</TD>
+		<TD class="nobr">
+			<INPUT TYPE="TEXT" NAME="cnote[number]" VALUE="{$cnote.number}" SIZE="10" {tip text="Enter credit note number. WARNING! Changing this number can be DANGEROUS! (leave this field empty to obtain next number)" trigger="number"}>&nbsp;
+			{if $numberplanlist}
+			<SELECT name="cnote[numberplanid]" {tip text="Select numbering plan"}>
+				{foreach item=plan from=$numberplanlist}
+				{assign var=period value=$plan.period}
+				<OPTION value="{$plan.id}"{if $plan.id==$cnote.numberplanid} SELECTED{/if}>{number number=$plan.next template=$plan.template time=$cnote.cdate customerid=$invoice.customerid} ({$_NUM_PERIODS.$period})</OPTION>
+				{/foreach}
+			</SELECT>
+			{else}
+			<INPUT type="hidden" name="cnote[numberplanid]" value="0">
+			{/if}
+		</TD>
+	</TR>
 	<TR>
 		<TD WIDTH="1%" NOWRAP>
 			<B>{trans("Settlement date:")}</B>
@@ -77,6 +95,14 @@
 		</TD>
 	</TR>
 	{/if}
+	<TR>
+		<td class="bold nobr">
+			<label for="use_current_customer_data">{trans("Use current customer data:")}</label>
+		</td>
+		<TD class="nobr">
+			<input type="checkbox" id="use_current_customer_data" name="cnote[use_current_customer_data]" value="1"{if $cnote.use_current_customer_data} checked{/if} {tip text="Check it if you want to use current customer data"}>
+		</TD>
+	</TR>
 	<TR>
 		<TD WIDTH="1%" NOWRAP>
 			<B>{trans("Reason:")}</B>

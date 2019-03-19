@@ -36,6 +36,12 @@ function GetReceipt($id) {
 				LEFT JOIN customers c ON (d.customerid = c.id)
 				LEFT JOIN vdivisions ds ON (ds.id = c.divisionid)
 				WHERE d.type = 2 AND d.id = ?', array($id))) {
+		// if division for receipt is not defined and there is only one division in database
+		// we try to use this division
+		if (empty($receipt['d_name']) && $db->GetOne('SELECT COUNT(*) FROM divisions') == 1)
+			$receipt = array_merge($receipt, $db->GetRow('SELECT name AS d_name, address AS d_address,
+				zip AS d_zip, city AS d_city FROM vdivisions'));
+
 		$receipt['contents'] = $db->GetAll('SELECT * FROM receiptcontents WHERE docid = ? ORDER BY itemid', array($id));
 		$receipt['total'] = 0;
 
@@ -102,7 +108,12 @@ if (isset($_GET['print']) && $_GET['print'] == 'cached' && sizeof($_POST['marks'
 	sort($ids);
 
 	$layout['pagetitle'] = trans('Cash Receipts');
-	$type = !empty($_GET['which']) ? $_GET['which'] : '';
+
+	$type = array();
+	if (isset($_GET['which']) && !empty($_GET['which']))
+		$type = explode(',', $_GET['which']);
+	if (empty($type))
+		$type = explode(',', ConfigHelper::getConfig('receipts.default_printpage', 'original,copy'));
 
 	$i = 0;
 	$count = sizeof($ids);
@@ -120,7 +131,7 @@ if (isset($_GET['print']) && $_GET['print'] == 'cached' && sizeof($_POST['marks'
 	}
 } elseif ($receipt = GetReceipt($_GET['id'])) {
 	$regid = $DB->GetOne('SELECT DISTINCT regid FROM receiptcontents WHERE docid=?', array($_GET['id']));
-	if (!$DB->GetOne('SELECT rights FROM cashrights WHERE userid=? AND regid=?', array($AUTH->id, $regid))) {
+	if (!$DB->GetOne('SELECT rights FROM cashrights WHERE userid=? AND regid=?', array(Auth::GetCurrentUser(), $regid))) {
 		$SMARTY->display('noaccess.html');
 		$SESSION->close();
 		die;
@@ -132,7 +143,13 @@ if (isset($_GET['print']) && $_GET['print'] == 'cached' && sizeof($_POST['marks'
 
 	$receipt['last'] = true;
 	$receipt['first'] = true;
-	$receipt['which'] = isset($_GET['which']) ? $_GET['which'] : NULL;
+
+	$receipt['which'] = array();
+	if (isset($_GET['which']) && !empty($_GET['which']))
+		$receipt['which'] = explode(',', $_GET['which']);
+	if (empty($receipt['which']))
+		$receipt['which'] = explode(',', ConfigHelper::getConfig('receipts.default_printpage', 'original,copy'));
+
 	$document->Draw($receipt);
 }
 

@@ -38,7 +38,7 @@ function GetCustomerCovenants($customerid)
 			ROUND(c.value / (taxes.value/100+1), 2)*-1 AS net
 			FROM cash c
 			LEFT JOIN taxes ON (c.taxid = taxes.id)
-			WHERE c.customerid = ? AND c.docid = 0 AND c.value < 0
+			WHERE c.customerid = ? AND c.docid IS NULL AND c.value < 0
 			ORDER BY time', array($customerid));
 }
 
@@ -75,6 +75,7 @@ switch($action)
 		if(!empty($_GET['customerid']) && $LMS->CustomerExists($_GET['customerid']))
 		{
 			$customer = $LMS->GetCustomer($_GET['customerid'], true);
+			$invoice['customerid'] = $_GET['customerid'];
 
 			$invoice['numberplanid'] = $DB->GetOne('SELECT n.id FROM numberplans n
 				JOIN numberplanassignments a ON (n.id = a.planid)
@@ -338,7 +339,7 @@ switch($action)
 			break;
 
 		$DB->BeginTrans();
-		$DB->LockTables(array('documents', 'cash', 'invoicecontents', 'numberplans', 'divisions'));
+		$DB->LockTables(array('documents', 'cash', 'invoicecontents', 'numberplans', 'divisions', 'vdivisions'));
 
 		if(!$invoice['number'])
 			$invoice['number'] = $LMS->GetNewDocumentNumber(array(
@@ -417,7 +418,7 @@ switch($action)
 				'original' => !empty($_GET['original']) ? 1 : 0,
 				'copy' => !empty($_GET['copy']) ? 1 : 0));
 
-		if (isset($_POST['reuse']))
+		if (isset($_POST['reuse']) || isset($_GET['print']))
 			$SESSION->redirect('?m=invoicenew&action=init');
 		else
 			$SESSION->redirect('?' . $SESSION->get('backto'));

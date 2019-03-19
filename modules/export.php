@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2016 LMS Developers
+ *  (C) Copyright 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -68,7 +68,7 @@ if(isset($_GET['type']) && $_GET['type'] == 'cash')
 	if($list = $DB->GetAll(
     		'SELECT d.id AS id, value, number, cdate, customerid, 
 		d.name AS customer, address, zip, city, ten, ssn, userid,
-		template, extnumber, receiptcontents.description, 
+		numberplans.template, extnumber, receiptcontents.description, 
 		cashregs.name AS cashreg
 		FROM documents d
 		LEFT JOIN receiptcontents ON (d.id = docid)
@@ -84,8 +84,6 @@ if(isset($_GET['type']) && $_GET['type'] == 'cash')
 	{
 		$record = '';
 		$i = 0;
-		$maz_from = array(chr(161),chr(198),chr(202),chr(163),chr(209),chr(211),chr(166),chr(172),chr(175),chr(177),chr(230),chr(234),chr(179),chr(241),chr(243),chr(182),chr(188),chr(191));
-		$maz_to = array(chr(143),chr(149),chr(144),chr(156),chr(165),chr(163),chr(152),chr(160),chr(161),chr(134),chr(141),chr(145),chr(146),chr(164),chr(162),chr(158),chr(166),chr(167));
 
 		if(is_array($cash_record))
 			foreach($cash_record as $r)
@@ -171,10 +169,7 @@ if(isset($_GET['type']) && $_GET['type'] == 'cash')
 			{
 				if(strtoupper($encoding)=='MAZOVIA')
 				{
-					// iconv don't support Mazovia standard, but some 
-					// old Polish programs need it
-					$line = iconv('UTF-8', 'ISO-8859-2//TRANSLIT', $line);
-					$line = str_replace($maz_from, $maz_to, $line);
+					$line = mazovia_to_utf8($line);
 				}
 				else
 					$line = iconv('UTF-8', $encoding.'//TRANSLIT', $line);
@@ -225,7 +220,8 @@ elseif(isset($_GET['type']) && $_GET['type'] == 'invoices')
 		ORDER BY cdate, docid', array(DOC_INVOICE, DOC_CNOTE, $unixfrom, $unixto));
 
 	// get documents data
-	$docs = $DB->GetAllByKey('SELECT documents.id AS id, number, cdate, customerid, userid, name, address, zip, city, ten, ssn, template, reference, extnumber, paytime, closed
+	$docs = $DB->GetAllByKey('SELECT documents.id AS id, number, cdate, customerid, userid, name, address, zip, city, ten, ssn,
+			numberplans.template, reference, extnumber, paytime, closed
 		FROM documents 
 	        LEFT JOIN numberplans ON numberplanid = numberplans.id
 		WHERE (type = ? OR type = ?) AND (cdate BETWEEN ? AND ?) ', 'id', array(DOC_INVOICE, DOC_CNOTE, $unixfrom, $unixto));
@@ -240,8 +236,6 @@ elseif(isset($_GET['type']) && $_GET['type'] == 'invoices')
 		// get taxes for calculations
 		$taxes = $LMS->GetTaxes();
 		$i = 0;
-		$maz_from = array(chr(161),chr(198),chr(202),chr(163),chr(209),chr(211),chr(166),chr(172),chr(175),chr(177),chr(230),chr(234),chr(179),chr(241),chr(243),chr(182),chr(188),chr(191));
-		$maz_to = array(chr(143),chr(149),chr(144),chr(156),chr(165),chr(163),chr(152),chr(160),chr(161),chr(134),chr(141),chr(145),chr(146),chr(164),chr(162),chr(158),chr(166),chr(167));
 
 		if(is_array($inv_record))
 			foreach($inv_record as $r)
@@ -381,10 +375,7 @@ elseif(isset($_GET['type']) && $_GET['type'] == 'invoices')
 				{
 					if(strtoupper($encoding)=='MAZOVIA')
 					{
-						// iconv don't support Mazovia standard, but some 
-						// old Polish programs need it
-						$line = iconv('UTF-8', 'ISO-8859-2//TRANSLIT', $line);
-						$line = str_replace($maz_from, $maz_to, $line);
+						$line = mazovia_to_utf8($line);
 					}
 					else
 						$line = iconv('UTF-8', $encoding.'//TRANSLIT', $line);

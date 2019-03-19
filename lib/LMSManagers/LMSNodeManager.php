@@ -3,7 +3,7 @@
 /*
  *  LMS version 1.11-git
  *
- *  Copyright (C) 2001-2016 LMS Developers
+ *  Copyright (C) 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -27,7 +27,6 @@
 /**
  * LMSNodeManager
  *
- * @author Maciej Lew <maciej.lew.1987@gmail.com>
  */
 class LMSNodeManager extends LMSManager implements LMSNodeManagerInterface
 {
@@ -45,11 +44,11 @@ class LMSNodeManager extends LMSManager implements LMSNodeManagerInterface
             'ipaddr_pub'        => $nodedata['ipaddr_pub'],
             'ipaddr'            => $nodedata['ipaddr'],
             'passwd'            => $nodedata['passwd'],
-            SYSLOG::RES_NETDEV  => $nodedata['netdev'],
-            SYSLOG::RES_USER    => $this->auth->id,
+            SYSLOG::RES_NETDEV  => empty($nodedata['netdev']) ? null : $nodedata['netdev'],
+            SYSLOG::RES_USER    => Auth::GetCurrentUser(),
             'access'            => $nodedata['access'],
             'warning'           => $nodedata['warning'],
-            SYSLOG::RES_CUST    => $nodedata['ownerid'],
+            SYSLOG::RES_CUST    => empty($nodedata['ownerid']) ? null : $nodedata['ownerid'],
             'info'              => $nodedata['info'],
             'chkmac'            => $nodedata['chkmac'],
             'halfduplex'        => $nodedata['halfduplex'],
@@ -204,7 +203,7 @@ class LMSNodeManager extends LMSManager implements LMSNodeManagerInterface
 
     public function GetNode($id)
     {
-        if ($result = $this->db->GetRow('SELECT n.*, rs.name AS linkradiosectorname,
+        if ($result = $this->db->GetRow('SELECT n.*, COALESCE(n.netdev, 0) AS netdev, rs.name AS linkradiosectorname,
 				inet_ntoa(n.ipaddr) AS ip, inet_ntoa(n.ipaddr_pub) AS ip_pub,
 				lc.name AS city_name,
 				(CASE WHEN ls.name2 IS NOT NULL THEN ' . $this->db->Concat('ls.name2', "' '", 'ls.name') . ' ELSE ls.name END) AS street_name,
@@ -367,14 +366,29 @@ class LMSNodeManager extends LMSManager implements LMSNodeManagerInterface
 		} else {
 			$sql .= 'SELECT n.id AS id, n.ipaddr, inet_ntoa(n.ipaddr) AS ip, ipaddr_pub,
 				inet_ntoa(n.ipaddr_pub) AS ip_pub, n.mac, n.name, n.ownerid, n.access, n.warning,
-				n.netdev, n.lastonline, n.info, '
+				n.netdev, n.lastonline, n.info, n.longitude, n.latitude, n.linktype, n.linktechnology, n.linkspeed,
+				(CASE WHEN n.invprojectid = ' . INV_PROJECT_SYSTEM . ' THEN
+						(CASE WHEN nd.invprojectid = ' . INV_PROJECT_SYSTEM . ' THEN pnn.name ELSE pnd.name END)
+					ELSE p.name END) AS project,
+				nd.netnodeid AS netnodeid, '
 				. $this->db->Concat('c.lastname', "' '", 'c.name') . ' AS owner, net.name AS netname, n.location,
-				lb.name AS borough_name, lb.type AS borough_type,
-				ld.name AS district_name, ls.name AS state_name ';
+				lc.ident AS city_ident,
+				lb.name AS borough_name, lb.ident AS borough_ident,
+				lb.type AS borough_type,
+				ld.name AS district_name, ld.ident AS district_ident,
+				ls.name AS state_name, ls.ident AS state_ident,
+				lst.ident AS street_ident,
+				n.location_house, n.location_flat ';
 		}
 		$sql .= 'FROM vnodes n 
 				JOIN customerview c ON (n.ownerid = c.id)
-				JOIN networks net ON net.id = n.netid 
+				JOIN networks net ON net.id = n.netid
+				LEFT JOIN netdevices nd ON nd.id = n.netdev
+				LEFT JOIN netnodes nn ON nn.id = nd.netnodeid
+				LEFT JOIN invprojects p ON p.id = n.invprojectid
+				LEFT JOIN invprojects pnd ON pnd.id = nd.invprojectid
+				LEFT JOIN invprojects pnn ON pnn.id = nn.invprojectid
+				LEFT JOIN location_streets lst ON lst.id = n.location_street
 				LEFT JOIN location_cities lc ON lc.id = n.location_city
 				LEFT JOIN location_boroughs lb ON lb.id = lc.boroughid
 				LEFT JOIN location_districts ld ON ld.id = lb.districtid
@@ -389,11 +403,11 @@ class LMSNodeManager extends LMSManager implements LMSNodeManagerInterface
 				. ($status == 4 ? ' AND n.id NOT IN (
 					SELECT DISTINCT nodeid FROM nodeassignments na
 					JOIN assignments a ON a.id = na.assignmentid
-					WHERE a.suspended = 0 AND a.period IN (' . implode(',', array(YEARLY, HALFYEARLY, QUARTERLY, MONTHLY, DISPOSABLE)) . ')
+					WHERE a.suspended = 0 AND a.commited = 1 AND a.period IN (' . implode(',', array(YEARLY, HALFYEARLY, QUARTERLY, MONTHLY, DISPOSABLE)) . ')
 						AND a.datefrom <= ?NOW? AND (a.dateto = 0 OR a.dateto >= ?NOW?)
 					)' : '')
 				. ($status == 5 ? ' AND n.location_city IS NULL' : '')
-				. ($status == 6 ? ' AND n.netdev = 0' : '')
+				. ($status == 6 ? ' AND n.netdev IS NULL' : '')
 				. ($status == 7 ? ' AND n.warning = 1' : '')
 				. ($status == 8 ? ' AND (n.latitude IS NULL OR n.longitude IS NULL)' : '')
 				. ($customergroup ? ' AND customergroupid = ' . intval($customergroup) : '')
@@ -407,16 +421,23 @@ class LMSNodeManager extends LMSManager implements LMSNodeManagerInterface
 			$nodelist = $this->db->GetAll($sql);
 
 			if (!empty($nodelist)) {
-				foreach ($nodelist as $idx => $row) {
+				foreach ($nodelist as &$row) {
 					($row['access']) ? $totalon++ : $totaloff++;
 
 					// if location is empty and owner is set then heirdom address from owner
 					if ( !$row['location'] && $row['ownerid'] ) {
 						global $LMS;
 
-						$nodelist[$idx]['location'] = $LMS->getAddressForCustomerStuff( $row['ownerid'] );
+						$row['location'] = $LMS->getAddressForCustomerStuff( $row['ownerid'] );
 					}
+
+					$row['terc'] = empty($row['state_ident']) ? null
+						: $row['state_ident'] . $row['district_ident']
+						. $row['borough_ident'] . $row['borough_type'];
+					$row['simc'] = empty($row['city_ident']) ? null : $row['city_ident'];
+					$row['ulic'] = empty($row['street_ident']) ? null : $row['street_ident'];
 				}
+				unset($row);
 
 				$nodelist['total'] = sizeof($nodelist);
 				$nodelist['order'] = $order;
@@ -570,11 +591,11 @@ class LMSNodeManager extends LMSManager implements LMSNodeManagerInterface
     public function IPSetU($netdev, $access = FALSE)
     {
         if ($access)
-            $res = $this->db->Execute('UPDATE nodes SET access=1 WHERE netdev=? AND ownerid=0', array($netdev));
+            $res = $this->db->Execute('UPDATE nodes SET access=1 WHERE netdev=? AND ownerid IS NULL', array($netdev));
         else
-            $res = $this->db->Execute('UPDATE nodes SET access=0 WHERE netdev=? AND ownerid=0', array($netdev));
+            $res = $this->db->Execute('UPDATE nodes SET access=0 WHERE netdev=? AND ownerid IS NULL', array($netdev));
         if ($this->syslog && $res) {
-            $nodes = $this->db->GetCol('SELECT id FROM vnodes WHERE netdev=? AND ownerid=0', array($netdev));
+            $nodes = $this->db->GetCol('SELECT id FROM vnodes WHERE netdev=? AND ownerid IS NULL', array($netdev));
             foreach ($nodes as $node) {
                 $args = array(
                     SYSLOG::RES_NODE => $node,
@@ -594,13 +615,13 @@ class LMSNodeManager extends LMSManager implements LMSNodeManagerInterface
                 ? strtoupper($nodedata['name']) : $nodedata['name'],
             'ipaddr'            => $nodedata['ipaddr'],
             'ipaddr_pub'        => $nodedata['ipaddr_pub'],
-            SYSLOG::RES_CUST    => $nodedata['ownerid'],
+            SYSLOG::RES_CUST    => empty($nodedata['ownerid']) ? null : $nodedata['ownerid'],
             'passwd'            => $nodedata['passwd'],
-            SYSLOG::RES_USER    => $this->auth->id,
+            SYSLOG::RES_USER    => Auth::GetCurrentUser(),
             'access'            => $nodedata['access'],
             'warning'           => $nodedata['warning'],
             'info'              => $nodedata['info'],
-            SYSLOG::RES_NETDEV  => $nodedata['netdev'],
+            SYSLOG::RES_NETDEV  => empty($nodedata['netdev']) ? null : $nodedata['netdev'],
             'linktype'          => isset($nodedata['linktype']) ? intval($nodedata['linktype']) : 0,
             'linkradiosector'   => (isset($nodedata['linktype']) && intval($nodedata['linktype']) == 1 ?
         (isset($nodedata['radiosector']) && intval($nodedata['radiosector']) ? intval($nodedata['radiosector']) : null) : null),
@@ -676,7 +697,7 @@ class LMSNodeManager extends LMSManager implements LMSNodeManagerInterface
     public function NodeExists($id)
     {
         return ($this->db->GetOne('SELECT n.id FROM vnodes n
-			WHERE n.id = ? AND n.ownerid > 0 AND NOT EXISTS (
+			WHERE n.id = ? AND n.ownerid IS NOT NULL AND NOT EXISTS (
 		        	SELECT 1 FROM customerassignments a
 			        JOIN excludedgroups e ON (a.customergroupid = e.customergroupid)
 				WHERE e.userid = lms_current_user() AND a.customerid = n.ownerid)'
@@ -689,11 +710,11 @@ class LMSNodeManager extends LMSManager implements LMSNodeManagerInterface
 				COUNT(CASE WHEN access=0 THEN 1 END) AS disconnected,
 				COUNT(CASE WHEN ?NOW?-lastonline < ? THEN 1 END) AS online,
 				COUNT(CASE WHEN location_city IS NULL THEN 1 END) AS withoutterryt,
-				COUNT(CASE WHEN netdev = 0 THEN 1 END) AS withoutnetdev,
+				COUNT(CASE WHEN netdev IS NULL THEN 1 END) AS withoutnetdev,
 				COUNT(CASE WHEN warning = 1 THEN 1 END) AS withwarning
 				FROM vnodes
 				JOIN customerview c ON c.id = ownerid
-				WHERE ownerid > 0', array(ConfigHelper::getConfig('phpui.lastonline_limit')));
+				WHERE ownerid IS NOT NULL', array(ConfigHelper::getConfig('phpui.lastonline_limit')));
 
         $result['total'] = $result['connected'] + $result['disconnected'];
         return $result;
@@ -788,7 +809,7 @@ class LMSNodeManager extends LMSManager implements LMSNodeManagerInterface
         }
 
         if ( !$error_msg ) {
-            $this->db->Execute('UPDATE nodes SET ' . $field . ' = ? WHERE id = ?;', array($value, $nodeid));
+            $this->db->Execute('UPDATE nodes SET ' . $field . ' = ? WHERE id = ?', array($value, $nodeid));
         } else {
             return $error_msg;
         }
@@ -810,5 +831,32 @@ class LMSNodeManager extends LMSManager implements LMSNodeManagerInterface
 			} else
 				$locations[] = $node['location'];
 		return array_unique($locations);
+	}
+
+	public function GetNodeLocations($customerid, $address_id = null) {
+		$customerid = intval($customerid);
+
+		$nodes = $this->db->GetAllByKey('SELECT n.id, n.name, location, address_id FROM vnodes n
+			WHERE ownerid = ?' . (empty($address_id) ? '' : ' AND (address_id IS NULL OR address_id = ' . intval($address_id) . ')')
+			. ' ORDER BY n.name ASC', 'id', array($customerid));
+		if (empty($nodes))
+			return null;
+
+		foreach ($nodes as $idx => &$node)
+			if (empty($node['address_id'])) {
+				if (!isset($default_address)) {
+					$customer_manager = new LMSCustomerManager($this->db, $this->auth, $this->cache, $this->syslog);
+					$default_address = $customer_manager->getFullAddressForCustomerStuff($customerid);
+				}
+				if (!empty($address_id) && $address_id != $default_address['address_id']) {
+					unset($nodes[$idx]);
+					continue;
+				}
+				$node['address_id'] = $default_address['address_id'];
+				$node['location'] = $default_address['location'];
+			}
+		unset($node);
+
+		return $nodes;
 	}
 }

@@ -3,7 +3,7 @@
 /*
  *  LMS version 1.11-git
  *
- *  Copyright (C); 2001-2013 LMS Developers
+ *  Copyright (C); 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -34,7 +34,7 @@ interface LMSHelpdeskManagerInterface
 
     public function GetQueue($id);
 
-    public function GetQueueContents($ids, $order = 'createtime,desc', $state = NULL, $owner = 0, $catids = NULL);
+    public function GetQueueContents($ids, $order = 'createtime,desc', $state = NULL, $owner = 0, $catids = NULL, $removed = NULL);
 
     public function GetUserRightsRT($user, $queue, $ticket = NULL);
 
@@ -76,11 +76,29 @@ interface LMSHelpdeskManagerInterface
 
     public function TicketExists($id);
 
+//	public function SaveTicketMessageAttachments($ticketid, $messageid, $files, $cleanup = false);
+
+	public function TicketMessageAdd($message, $files = null);
+
     public function TicketAdd($ticket, $files = NULL);
+
+	public function GetLastMessageID();
 
     public function GetTicketContents($id);
 
     public function GetMessage($id);
-    
-    public function TicketChange($ticketid, array $props); 
+
+    public function GetFirstMessage($ticketid);
+
+    public function GetLastMessage($ticketid);
+
+    public function TicketChange($ticketid, array $props);
+
+	public function GetQueueCategories($queueid);
+
+	public function ReplaceNotificationSymbols($text, array $params);
+
+	public function ReplaceNotificationCustomerSymbols($text, array $params);
+
+	public function NotifyUsers(array $params);
 }

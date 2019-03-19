@@ -44,7 +44,7 @@
 <![endif]-->
 <script type="text/javascript" src="img/common.js"></script>
 <body style="overflow: auto">
-	<div id="data" class="lmsPingContents" style="height: 250px; width: 450px; overflow: auto"></div>
+	<div id="data" class="lmsPingContents"></div>
 	<form id="params">
 	<table cellpadding="2" style="bottom: 0; position: absolute" width="100%">
 		<tr class="light">
@@ -97,7 +97,7 @@
 		if (elem && document.getElementById('autoscroll').checked)
 			elem.scrollTop = elem.scrollHeight;
 		try {
-			var times = JSON.parse(document.getElementById('times').value);
+			var times = JSON.parse(decodeURIComponent(document.getElementById('times').value));
 			if (times.length) {
 				for (var i in times) {
 					var chunks = times[i].split(' ');

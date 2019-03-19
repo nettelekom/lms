@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2016 LMS Developers
+ *  (C) Copyright 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -24,34 +24,28 @@
  *  $Id$
  */
 
-if(isset($_GET['action']) && $_GET['action'] == 'confirm')
-{
-	if(!empty($_POST['marks']))
-	{
-	        foreach($_POST['marks'] as $id => $mark)
-			$DB->Execute('UPDATE documents SET sdate=?NOW?, cuserid=?, closed=1 WHERE id=?
-				AND EXISTS (SELECT 1 FROM docrights r WHERE r.userid = ?
-					AND r.doctype = documents.type AND (r.rights & 4) = 4)',
-				array($AUTH->id, $mark, $AUTH->id));
-	}
+$userid = Auth::GetCurrentUser();
+
+if (isset($_GET['action']) && $_GET['action'] == 'confirm') {
+	if (!empty($_POST['marks']))
+		$ids = $_POST['marks'];
 	else
-		$DB->Execute('UPDATE documents SET sdate=?NOW?, cuserid=?, closed=1 WHERE id=?
-			AND EXISTS (SELECT 1 FROM docrights r WHERE r.userid = ?
-				AND r.doctype = documents.type AND (r.rights & 4) = 4)',
-			array($AUTH->id, $_GET['id'], $AUTH->id));
+		$ids = array($_GET['id']);
+
+	$LMS->CommitDocuments($ids);
 
 	$SESSION->redirect('?'.$SESSION->get('backto'));
 }
 
 include(MODULES_DIR . DIRECTORY_SEPARATOR . 'document.inc.php');
 
-$document = $DB->GetRow('SELECT documents.id AS id, closed, type, number, template,
+$document = $DB->GetRow('SELECT documents.id AS id, closed, type, number, numberplans.template,
 	cdate, sdate, cuserid, numberplanid, title, fromdate, todate, description, divisionid, documents.customerid
 	FROM documents
 	JOIN docrights r ON (r.doctype = documents.type)
 	LEFT JOIN documentcontents ON (documents.id = docid)
 	LEFT JOIN numberplans ON (numberplanid = numberplans.id)
-	WHERE documents.id = ? AND r.userid = ? AND (r.rights & 8) = 8', array($_GET['id'], $AUTH->id));
+	WHERE documents.id = ? AND r.userid = ? AND (r.rights & 8) = 8', array($_GET['id'], $userid));
 if (empty($document)) {
 	$SMARTY->display('noaccess.html');
 	die;
@@ -187,9 +181,9 @@ if(isset($_POST['document']))
 				array(	$documentedit['type'],
 					$documentedit['closed'],
 					$documentedit['closed'] ? ($document['closed'] ? $document['sdate'] : time()) : 0,
-					$documentedit['closed'] ? ($document['closed'] ? $document['cuserid'] : $AUTH->id) : 0,
+					$documentedit['closed'] ? ($document['closed'] ? $document['cuserid'] : $userid) : null,
 					$documentedit['number'],
-					$documentedit['numberplanid'],
+					empty($documentedit['numberplanid']) ? null : $documentedit['numberplanid'],
 					$fullnumber,
 					$documentedit['id'],
 					));
@@ -250,11 +244,11 @@ else
 }
 
 $rights = $DB->GetCol('SELECT doctype FROM docrights
-	WHERE userid = ? AND (rights & 2) = 2', array($AUTH->id));
+	WHERE userid = ? AND (rights & 2) = 2', array($userid));
 
 if(!$rights || !$DB->GetOne('SELECT 1 FROM docrights
 	WHERE userid = ? AND doctype = ? AND (rights & 8) = 8',
-	array($AUTH->id, $document['type'])))
+	array($userid, $document['type'])))
 {
         $SMARTY->display('noaccess.html');
         die;

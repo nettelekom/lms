@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2016 LMS Developers
+ *  (C) Copyright 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -79,6 +79,7 @@ switch($type)
                 $customergroup = $_POST['customergroup'];
                 $sqlskey = 'AND';
                 $nodegroup = $_POST['nodegroup'];
+		$sendingregister = $_POST['sendingregister'];
 
 		switch($state)
 		{
@@ -145,14 +146,22 @@ switch($type)
 		}
 
 		$SMARTY->assign('contactlist', $DB->GetAllByKey('SELECT customerid, MIN(contact) AS phone
-				FROM customercontacts WHERE contact <> \'\' AND type & 7 > 0 GROUP BY customerid',
+				FROM customercontacts WHERE contact <> \'\' AND type & ' . (CONTACT_MOBILE | CONTACT_FAX | CONTACT_LANDLINE) . ' > 0
+				GROUP BY customerid',
 				'customerid', array()));
 
+		if ($sendingregister)
+		{
+			$print_template = 'print/printcustomerlist-sendingbook.html';
+		} else {
+			$print_template = 'print/printcustomerlist.html';
+		}
+
 		if (strtolower(ConfigHelper::getConfig('phpui.report_type')) == 'pdf') {
-			$output = $SMARTY->fetch('print/printcustomerlist.html');
+			$output = $SMARTY->fetch("$print_template");
 			html2pdf($output, trans('Reports'), $layout['pagetitle']);
 		} else {
-			$SMARTY->display('print/printcustomerlist.html');
+			$SMARTY->display("$print_template");
 		}
 	break;
 
@@ -248,7 +257,7 @@ switch($type)
 		$SMARTY->assign('customergroups', $LMS->CustomergroupGetAll());
 		$SMARTY->assign('nodegroups', $LMS->GetNodeGroupNames());
 		$SMARTY->assign('cstateslist', $LMS->GetCountryStates());
-		$SMARTY->assign('divisions', $DB->GetAll('SELECT id, shortname FROM divisions ORDER BY shortname'));
+		$SMARTY->assign('divisions', $LMS->GetDivisions());
 		$SMARTY->assign('printmenu', 'customer');
 		$SMARTY->display('print/printindex.html');
 	break;

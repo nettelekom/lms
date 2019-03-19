@@ -37,7 +37,7 @@ if(isset($_GET['file']))
 			header('Content-Length: '.$size.' bytes');
 			header('Content-Type: '.$attach['contenttype']);
 			header('Cache-Control: private');
-			header('Content-Disposition: attachment; filename='.$filename);
+			header('Content-Disposition: ' . ($attach['contenttype'] == 'application/pdf' ? 'inline' : 'attachment') . '; filename='.$filename);
 			@readfile($file);
 		}
 		$SESSION->close();
@@ -53,6 +53,9 @@ if(!isset($_GET['id']))
 $message = $LMS->GetMessage($_GET['id']); 
 if($message['userid'])
 	$message['username'] = $LMS->GetUserName($message['userid']);
+
+if($message['deluserid'])
+	$message['delusername'] = $LMS->GetUserName($message['deluserid']);
 
 if($message['customerid'])
 	$message['customername'] = $LMS->GetCustomerName($message['customerid']);

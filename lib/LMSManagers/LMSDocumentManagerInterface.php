@@ -3,7 +3,7 @@
 /*
  *  LMS version 1.11-git
  *
- *  Copyright (C) 2001-2016 LMS Developers
+ *  Copyright (C) 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -27,16 +27,28 @@
 /**
  * LMSDocumentManagerInterface
  * 
- * @author Maciej Lew <maciej.lew.1987@gmail.com>
- * @author Tomasz Chiliński <tomasz.chilinski@chilan.com>
  */
 interface LMSDocumentManagerInterface
 {
     public function GetDocuments($customerid = NULL, $limit = NULL);
-    
-    public function GetNumberPlans($properties);
+
+	public function GetDocumentList($order='cdate,asc', $search);
+
+	public function GetNumberPlans($properties);
 
     public function GetNewDocumentNumber($properties);
 
     public function DocumentExists($properties);
+
+	public function CommitDocuments(array $ids);
+
+	public function UpdateDocumentPostAddress($docid, $customerid);
+
+	public function DeleteDocumentAddresses($docid);
+
+	public function DocumentAttachmentExists($md5sum);
+
+	public function GetDocumentFullContents($id);
+
+	public function SendDocuments($docs, $type, $params);
 }

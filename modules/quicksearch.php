@@ -78,50 +78,67 @@ switch ($mode) {
 		if(isset($_GET['ajax'])) // support for AutoSuggest
 		{
 			$candidates = $DB->GetAll("SELECT c.id, cc.contact AS email, full_address AS address, post_name, post_full_address AS post_address, deleted,
-			    ".$DB->Concat('UPPER(lastname)',"' '",'c.name')." AS username
+			    ".$DB->Concat('UPPER(lastname)',"' '",'c.name')." AS username, va.address AS location_address
 				FROM customerview c
-				LEFT JOIN customercontacts cc ON cc.customerid = c.id AND (cc.type & " . CONTACT_EMAIL . " = " . CONTACT_EMAIL . ")    
+				LEFT JOIN customer_addresses ca ON ca.customer_id = c.id AND ca.type = ?
+				LEFT JOIN vaddresses va ON va.id = ca.address_id
+				LEFT JOIN customercontacts cc ON cc.customerid = c.id AND (cc.type & ?) > 0
 				WHERE ".(preg_match('/^[0-9]+$/', $search) ? 'c.id = '.intval($search).' OR ' : '')."
 					LOWER(".$DB->Concat('lastname',"' '",'c.name').") ?LIKE? LOWER($sql_search)
 					OR LOWER(full_address) ?LIKE? LOWER($sql_search)
 					OR LOWER(post_name) ?LIKE? LOWER($sql_search)
 					OR LOWER(post_full_address) ?LIKE? LOWER($sql_search)
+					OR LOWER(va.address) ?LIKE? LOWER($sql_search)
 					OR LOWER(cc.contact) ?LIKE? LOWER($sql_search)
 				ORDER by deleted, username, cc.contact, full_address
-				LIMIT ?", array(intval(ConfigHelper::getConfig('phpui.quicksearch_limit', 15))));
+				LIMIT ?", array(LOCATION_ADDRESS, CONTACT_EMAIL, intval(ConfigHelper::getConfig('phpui.quicksearch_limit', 15))));
 
 			$eglible=array(); $actions=array(); $descriptions=array();
-			if ($candidates)
-			foreach($candidates as $idx => $row) {
-				$actions[$row['id']] = '?m=customerinfo&id='.$row['id'];
-				$eglible[$row['id']] = escape_js(($row['deleted'] ? '<font class="blend">' : '')
-				    .truncate_str($row['username'], 50).($row['deleted'] ? '</font>' : ''));
+			if ($candidates) {
+				$customer_count = array();
+				foreach ($candidates as $idx => $row) {
+					$customername = $row['username'];
+					if (!isset($customer_count[$customername]))
+						$customer_count[$customername] = 0;
+					$customer_count[$customername]++;
+				}
+				foreach ($candidates as $idx => $row) {
+					$actions[$row['id']] = '?m=customerinfo&id=' . $row['id'];
+					$eglible[$row['id']] = escape_js(($row['deleted'] ? '<font class="blend">' : '')
+						. truncate_str($row['username'], 50) . ($row['deleted'] ? '</font>' : ''));
 
-				if (preg_match("~^$search\$~i",$row['id'])) {
-				    $descriptions[$row['id']] = escape_js(trans('Id:').' '.$row['id']);
-				    continue;
+					if ($customer_count[$row['username']] > 1) {
+						$descriptions[$row['id']] = escape_js(trans('Address:') . ' ' . $row['address']);
+						continue;
+					}
+
+					if (preg_match("~^$search\$~i", $row['id'])) {
+						$descriptions[$row['id']] = escape_js(trans('Id:') . ' ' . $row['id']);
+						continue;
+					}
+					if (preg_match("~$search~i", $row['username'])) {
+						$descriptions[$row['id']] = '';
+						continue;
+					}
+					if (preg_match("~$search~i", $row['address'])) {
+						$descriptions[$row['id']] = escape_js(trans('Address:') . ' ' . $row['address']);
+						continue;
+					} else if (preg_match("~$search~i", $row['post_name'])) {
+						$descriptions[$row['id']] = escape_js(trans('Name:') . ' ' . $row['post_name']);
+						continue;
+					} else if (preg_match("~$search~i", $row['post_address'])) {
+						$descriptions[$row['id']] = escape_js(trans('Address:') . ' ' . $row['post_address']);
+						continue;
+					} else if (preg_match("~$search~i", $row['location_address'])) {
+						$descriptions[$row['id']] = escape_js(trans('Address:') . ' ' . $row['location_address']);
+						continue;
+					}
+					if (preg_match("~$search~i", $row['email'])) {
+						$descriptions[$row['id']] = escape_js(trans('E-mail:') . ' ' . $row['email']);
+						continue;
+					}
+					$descriptions[$row['id']] = '';
 				}
-				if (preg_match("~$search~i",$row['username'])) {
-				    $descriptions[$row['id']] = '';
-				    continue;
-				}
-				if (preg_match("~$search~i",$row['address'])) {
-				    $descriptions[$row['id']] = escape_js(trans('Address:').' '.$row['address']);
-				    continue;
-				}
-				else if (preg_match("~$search~i",$row['post_name'])) {
-				    $descriptions[$row['id']] = escape_js(trans('Name:').' '.$row['post_name']);
-				    continue;
-				}
-				else if (preg_match("~$search~i",$row['post_address'])) {
-				    $descriptions[$row['id']] = escape_js(trans('Address:').' '.$row['post_address']);
-				    continue;
-				}
-				if (preg_match("~$search~i",$row['email'])) {
-				    $descriptions[$row['id']] = escape_js(trans('E-mail:').' '.$row['email']);
-				    continue;
-				}
-				$descriptions[$row['id']] = '';
 			}
 			header('Content-type: text/plain');
 			if ($eglible) {
@@ -131,8 +148,8 @@ switch ($mode) {
 			} else {
 				print "false;\n";
 			}
-                        $SESSION->close();
-                        $DB->Destroy();
+			$SESSION->close();
+			$DB->Destroy();
 			exit;
 		}
 
@@ -162,6 +179,48 @@ switch ($mode) {
 
 		$target = '?m=customersearch&search=1';
 	break;
+
+	case 'customerext':
+		if(isset($_GET['ajax'])) // support for AutoSuggest
+		{
+			$candidates = $DB->GetAll("SELECT c.id, cc.contact AS email, full_address AS address, post_name, post_full_address AS post_address, deleted,
+			    ".$DB->Concat('UPPER(lastname)',"' '",'c.name')." AS username
+				FROM customerview c
+				LEFT JOIN customercontacts cc ON cc.customerid = c.id AND (cc.type & ?) > 0
+				WHERE LOWER(c.extid) ?LIKE? LOWER($sql_search)
+				ORDER by deleted, username, cc.contact, full_address
+				LIMIT ?", array(CONTACT_EMAIL, intval(ConfigHelper::getConfig('phpui.quicksearch_limit', 15))));
+
+			$eglible=array(); $actions=array(); $descriptions=array();
+			if ($candidates)
+			foreach($candidates as $idx => $row) {
+				$actions[$row['id']] = '?m=customerinfo&id='.$row['id'];
+				$eglible[$row['id']] = escape_js(($row['deleted'] ? '<font class="blend">' : '')
+				 . truncate_str($row['username'], 50).($row['deleted'] ? '</font>' : ''));
+
+				if (preg_match("~^$search\$~i",$row['id'])) {
+					$descriptions[$row['id']] = escape_js(trans('Id:').' '.$row['id']);
+					continue;
+				}
+				$descriptions[$row['id']] = '';
+			}
+			header('Content-type: text/plain');
+			if ($eglible) {
+				print "this.eligible = [\"".implode('","',$eglible)."\"];\n";
+				print "this.descriptions = [\"".implode('","',$descriptions)."\"];\n";
+				print "this.actions = [\"".implode('","',$actions)."\"];\n";
+			} else {
+				print "false;\n";
+			}
+			$SESSION->close();
+			$DB->Destroy();
+			exit;
+		}
+
+		if (($customerids = $DB->GetCol("SELECT id FROM customerview WHERE LOWER(extid) ?LIKE? LOWER($sql_search)"))
+			&& count($customerids) == 1)
+			$target = '?m=customerinfo&id=' . $customerids[0];
+		break;
 
 	case 'phone':
 		if(isset($_GET['ajax'])) // support for AutoSuggest
@@ -321,11 +380,12 @@ switch ($mode) {
 	case 'ticket':
 		if(isset($_GET['ajax'])) // support for AutoSuggest
 		{
-			$categories = $LMS->GetCategoryListByUser($AUTH->id);
+			$categories = $LMS->GetCategoryListByUser(Auth::GetCurrentUser());
 			foreach($categories as $category)
 				$catids[] = $category['id'];
 			$candidates = $DB->GetAll("SELECT t.id, t.subject, t.requestor, c.name, c.lastname 
 				FROM rttickets t
+				JOIN rtrights r ON r.queueid = t.queueid AND r.userid = ? AND r.rights & 1 > 0
 				LEFT JOIN rtticketcategories tc ON t.id = tc.ticketid
 				LEFT JOIN customerview c on (t.customerid = c.id)
 				WHERE ".(is_array($catids) ? "tc.categoryid IN (".implode(',', $catids).")" : "tc.categoryid IS NULL")
@@ -335,7 +395,11 @@ switch ($mode) {
 					OR LOWER(c.name) ?LIKE? LOWER($sql_search)
 					OR LOWER(c.lastname) ?LIKE? LOWER($sql_search))
 					ORDER BY t.subject, t.id, c.lastname, c.name, t.requestor
-					LIMIT ?", array(intval(ConfigHelper::getConfig('phpui.quicksearch_limit', 15))));
+					LIMIT ?",
+					array(
+						Auth::GetCurrentUser(),
+						intval(ConfigHelper::getConfig('phpui.quicksearch_limit', 15)),
+					));
 
 			$eglible=array(); $actions=array(); $descriptions=array();
 			if ($candidates)

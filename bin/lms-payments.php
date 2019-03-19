@@ -104,9 +104,13 @@ $CONFIG = (array) parse_ini_file($CONFIG_FILE, true);
 // Check for configuration vars and set default values
 $CONFIG['directories']['sys_dir'] = (!isset($CONFIG['directories']['sys_dir']) ? getcwd() : $CONFIG['directories']['sys_dir']);
 $CONFIG['directories']['lib_dir'] = (!isset($CONFIG['directories']['lib_dir']) ? $CONFIG['directories']['sys_dir'] . DIRECTORY_SEPARATOR . 'lib' : $CONFIG['directories']['lib_dir']);
+$CONFIG['directories']['plugin_dir'] = (!isset($CONFIG['directories']['plugin_dir']) ? $CONFIG['directories']['sys_dir'] . DIRECTORY_SEPARATOR . 'plugins' : $CONFIG['directories']['plugin_dir']);
+$CONFIG['directories']['plugins_dir'] = $CONFIG['directories']['plugin_dir'];
 
 define('SYS_DIR', $CONFIG['directories']['sys_dir']);
 define('LIB_DIR', $CONFIG['directories']['lib_dir']);
+define('PLUGIN_DIR', $CONFIG['directories']['plugin_dir']);
+define('PLUGINS_DIR', $CONFIG['directories']['plugin_dir']);
 
 // Load autoloader
 $composer_autoload_path = SYS_DIR . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php';
@@ -134,6 +138,18 @@ require_once(LIB_DIR . DIRECTORY_SEPARATOR . 'common.php');
 require_once(LIB_DIR . DIRECTORY_SEPARATOR . 'language.php');
 require_once(LIB_DIR . DIRECTORY_SEPARATOR . 'definitions.php');
 
+$SYSLOG = SYSLOG::getInstance();
+
+// Initialize Session, Auth and LMS classes
+
+$AUTH = null;
+$LMS = new LMS($DB, $AUTH, $SYSLOG);
+$LMS->ui_lang = $_ui_language;
+$LMS->lang = $_language;
+
+$plugin_manager = new LMSPluginManager();
+$LMS->setPluginManager($plugin_manager);
+
 $deadline = ConfigHelper::getConfig('payments.deadline', 14);
 $sdate_next = ConfigHelper::getConfig('payments.saledate_next_month', 0);
 $paytype = ConfigHelper::getConfig('payments.paytype', 2); // TRANSFER
@@ -142,6 +158,8 @@ $s_comment = ConfigHelper::getConfig('payments.settlement_comment', ConfigHelper
 $suspension_description = ConfigHelper::getConfig('payments.suspension_description', '');
 $suspension_percentage = ConfigHelper::getConfig('finances.suspension_percentage', 0);
 $unit_name = trans(ConfigHelper::getConfig('payments.default_unit_name'));
+$check_invoices = ConfigHelper::checkConfig('payments.check_invoices');
+$proforma_generates_commitment = ConfigHelper::checkConfig('phpui.proforma_invoice_generates_commitment');
 
 function localtime2() {
 	global $fakedate;
@@ -291,15 +309,16 @@ function get_period($period) {
 	return array('start' => $start, 'end' => $end);
 }
 
-$query = "SELECT n.id, n.period, COALESCE(a.divisionid, 0) AS divid, isdefault 
+$plans = array();
+$query = "SELECT n.id, n.period, doctype, COALESCE(a.divisionid, 0) AS divid, isdefault 
 		FROM numberplans n 
 		LEFT JOIN numberplanassignments a ON (a.planid = n.id) 
-		WHERE doctype = ?";
-$results = $DB->GetAll($query, array(DOC_INVOICE));
+		WHERE doctype IN (?, ?)";
+$results = $DB->GetAll($query, array(DOC_INVOICE, DOC_INVOICE_PRO));
 if (!empty($results))
 	foreach ($results as $row) {
 		if ($row['isdefault'])
-			$plans[$row['divid']] = $row['id'];
+			$plans[$row['divid']][$row['doctype']] = $row['id'];
 		$periods[$row['id']] = ($row['period'] ? $row['period'] : YEARLY);
 	}
 
@@ -321,29 +340,30 @@ if (!empty($groupsql))
 
 # let's go, fetch *ALL* assignments in given day
 $query = "SELECT a.tariffid, a.liabilityid, a.customerid, a.recipient_address_id,
-		a.period, a.at, a.suspended, a.settlement, a.datefrom, a.pdiscount, a.vdiscount, 
-		a.invoice, t.description AS description, a.id AS assignmentid, 
+		a.period, a.at, a.suspended, a.settlement, a.datefrom, a.pdiscount, a.vdiscount,
+		a.invoice, a.separatedocument, t.description AS description, a.id AS assignmentid,
 		c.divisionid, c.paytype, a.paytype AS a_paytype, a.numberplanid, a.attribute,
 		d.inv_paytype AS d_paytype, t.period AS t_period, t.numberplanid AS tariffnumberplanid,
-		(CASE a.liabilityid WHEN 0 THEN t.type ELSE -1 END) AS tarifftype, 
-		(CASE a.liabilityid WHEN 0 THEN t.name ELSE l.name END) AS name, 
-		(CASE a.liabilityid WHEN 0 THEN t.taxid ELSE l.taxid END) AS taxid, 
-		(CASE a.liabilityid WHEN 0 THEN t.prodid ELSE l.prodid END) AS prodid, 
-		ROUND(((((100 - a.pdiscount) * (CASE a.liabilityid WHEN 0 THEN t.value ELSE l.value END)) / 100) - a.vdiscount) *
+		(CASE WHEN a.liabilityid IS NULL THEN t.type ELSE -1 END) AS tarifftype,
+		(CASE WHEN a.liabilityid IS NULL THEN t.name ELSE l.name END) AS name,
+		(CASE WHEN a.liabilityid IS NULL THEN t.taxid ELSE l.taxid END) AS taxid,
+		(CASE WHEN a.liabilityid IS NULL THEN t.prodid ELSE l.prodid END) AS prodid,
+		ROUND(((((100 - a.pdiscount) * (CASE WHEN a.liabilityid IS NULL THEN t.value ELSE l.value END)) / 100) - a.vdiscount) *
 			(CASE a.suspended WHEN 0
 				THEN 1.0
 				ELSE $suspension_percentage / 100
 			END), 2) AS value,
-		(SELECT COUNT(id) FROM assignments 
-			WHERE customerid = c.id AND tariffid = 0 AND liabilityid = 0 
+		(SELECT COUNT(id) FROM assignments
+			WHERE customerid = c.id AND tariffid IS NULL AND liabilityid IS NULL
 			AND datefrom <= $currtime
-			AND (dateto > $currtime OR dateto = 0)) AS allsuspended 
-	FROM assignments a 
-	JOIN customers c ON (a.customerid = c.id) 
-	LEFT JOIN tariffs t ON (a.tariffid = t.id) 
-	LEFT JOIN liabilities l ON (a.liabilityid = l.id) 
-	LEFT JOIN divisions d ON (d.id = c.divisionid) 
+			AND (dateto > $currtime OR dateto = 0)) AS allsuspended
+	FROM assignments a
+	JOIN customers c ON (a.customerid = c.id)
+	LEFT JOIN tariffs t ON (a.tariffid = t.id)
+	LEFT JOIN liabilities l ON (a.liabilityid = l.id)
+	LEFT JOIN divisions d ON (d.id = c.divisionid)
 	WHERE (c.status = ? OR c.status = ?)
+		AND a.commited = 1
 		AND ((a.period = ? AND at = ?)
 			OR ((a.period = ?
 			OR (a.period = ? AND at = ?)
@@ -358,56 +378,62 @@ $assigns = $DB->GetAll($query, array(CSTATUS_CONNECTED, CSTATUS_DEBT_COLLECTION,
 	DISPOSABLE, $today, DAILY, WEEKLY, $weekday, MONTHLY, $dom, QUARTERLY, $quarter, HALFYEARLY, $halfyear, YEARLY, $yearday,
 	$currtime, $currtime));
 
-$billing_invoice_description = ConfigHelper::getConfig('payments.billing_invoice_description', 'Phone calls between %backward_periods');
+$billing_invoice_description = ConfigHelper::getConfig('payments.billing_invoice_description', 'Phone calls between %backward_periods (for %phones)');
 
-$query = 'SELECT
-            a.tariffid, a.customerid, a.period, a.at, a.suspended, a.settlement, a.datefrom,
-            a.pdiscount, a.vdiscount, a.invoice, t.description AS description, a.id AS assignmentid,
+$query = "SELECT
+			a.tariffid, a.customerid, a.period, a.at, a.suspended, a.settlement, a.datefrom,
+			a.pdiscount, a.vdiscount, a.invoice, a.separatedocument, t.description AS description, a.id AS assignmentid,
 			c.divisionid, c.paytype, a.paytype AS a_paytype, a.numberplanid, a.attribute,
 			d.inv_paytype AS d_paytype, t.period AS t_period, t.numberplanid AS tariffnumberplanid,
-			t.type AS tarifftype, t.taxid AS taxid, \'\' as prodid, '
-			. "'set' as liabilityid,"
-			. "'$billing_invoice_description' as name,
-		    ROUND((SELECT
-			          CASE WHEN sum(price) IS NULL THEN 0 ELSE sum(price) END
-			       FROM
-			          voip_cdr vc
-			       JOIN voipaccounts va ON vc.callervoipaccountid = va.id AND va.ownerid = a.customerid
-			       JOIN voip_numbers vn ON vn.voip_account_id = va.id AND vn.phone = vc.caller
-			       JOIN voip_number_assignments vna ON vna.number_id = vn.id AND vna.assignment_id = a.id
-			       WHERE
-			          vc.call_start_time >= (CASE a.period
-				                               WHEN " . YEARLY     . ' THEN ' . mktime(0, 0, 0, $month  , 1, $year-1) . '
-				                               WHEN ' . HALFYEARLY . ' THEN ' . mktime(0, 0, 0, $month-6, 1, $year)   . '
-				                               WHEN ' . QUARTERLY  . ' THEN ' . mktime(0, 0, 0, $month-3, 1, $year)   . '
-				                               WHEN ' . MONTHLY    . ' THEN ' . mktime(0, 0, 0, $month-1, 1, $year)   . '
-				                               WHEN ' . DISPOSABLE . ' THEN ' . $currtime . "
-				                             END) AND
-			          vc.call_start_time < (CASE a.period
-				                               WHEN " . YEARLY     . ' THEN ' . mktime(0, 0, 0, $month, 0, $year) . '
-				                               WHEN ' . HALFYEARLY . ' THEN ' . mktime(0, 0, 0, $month, 0, $year) . '
-				                               WHEN ' . QUARTERLY  . ' THEN ' . mktime(0, 0, 0, $month, 0, $year) . '
-				                               WHEN ' . MONTHLY    . ' THEN ' . mktime(0, 0, 0, $month, 0, $year) . '
-				                               WHEN ' . DISPOSABLE . ' THEN ' . ($currtime + 86400) . "
-				                             END)
-	              ),2) AS value,
-		  (SELECT
-		     COUNT(id)
-		   FROM
-		     assignments
-		   WHERE
-		     customerid  = c.id    AND
-		     tariffid    = 0       AND
-			 datefrom <= $currtime AND
-			 (dateto > $currtime OR dateto = 0)) AS allsuspended
-	       FROM assignments a
-	            JOIN customers c ON (a.customerid = c.id)
-	            LEFT JOIN tariffs t ON (a.tariffid = t.id)
-	            LEFT JOIN divisions d ON (d.id = c.divisionid
-	      )
+			t.type AS tarifftype, t.taxid AS taxid, '' as prodid, voipcost.value, voipphones.phones,
+			'set' AS liabilityid, '$billing_invoice_description' AS name,
+			(SELECT COUNT(id)
+				FROM assignments
+				WHERE
+					customerid  = c.id    AND
+					tariffid    IS NULL   AND
+					liabilityid IS NULL   AND
+					datefrom <= $currtime AND
+					(dateto > $currtime OR dateto = 0)) AS allsuspended
+			FROM assignments a
+			JOIN customers c ON (a.customerid = c.id)
+			JOIN (
+				SELECT ROUND(sum(price), 2) AS value, va.ownerid AS customerid,
+					a2.id AS assignmentid
+				FROM voip_cdr vc
+				JOIN voipaccounts va ON vc.callervoipaccountid = va.id
+				JOIN voip_numbers vn ON vn.voip_account_id = va.id AND vn.phone = vc.caller
+				JOIN voip_number_assignments vna ON vna.number_id = vn.id
+				JOIN assignments a2 ON a2.id = vna.assignment_id
+				WHERE
+					vc.call_start_time >= (CASE a2.period
+						WHEN " . YEARLY     . ' THEN ' . mktime(0, 0, 0, $month  , 1, $year-1) . '
+						WHEN ' . HALFYEARLY . ' THEN ' . mktime(0, 0, 0, $month-6, 1, $year)   . '
+						WHEN ' . QUARTERLY  . ' THEN ' . mktime(0, 0, 0, $month-3, 1, $year)   . '
+						WHEN ' . MONTHLY    . ' THEN ' . mktime(0, 0, 0, $month-1, 1, $year)   . '
+						WHEN ' . DISPOSABLE . ' THEN ' . $currtime . "
+					END) AND
+					vc.call_start_time < (CASE a2.period
+						WHEN " . YEARLY     . ' THEN ' . mktime(0, 0, 0, $month, 0, $year) . '
+						WHEN ' . HALFYEARLY . ' THEN ' . mktime(0, 0, 0, $month, 0, $year) . '
+						WHEN ' . QUARTERLY  . ' THEN ' . mktime(0, 0, 0, $month, 0, $year) . '
+						WHEN ' . MONTHLY    . ' THEN ' . mktime(0, 0, 0, $month, 0, $year) . '
+						WHEN ' . DISPOSABLE . ' THEN ' . ($currtime + 86400) . "
+					END)
+				GROUP BY va.ownerid, a2.id
+			) voipcost ON voipcost.customerid = a.customerid AND voipcost.assignmentid = a.id
+			LEFT JOIN (
+				SELECT vna2.assignment_id, " . $DB->GroupConcat('vn2.phone') . " AS phones
+				FROM voip_number_assignments vna2
+				LEFT JOIN voip_numbers vn2 ON vn2.id = vna2.number_id
+				GROUP BY vna2.assignment_id
+			) voipphones ON voipphones.assignment_id = a.id
+			LEFT JOIN tariffs t ON (a.tariffid = t.id)
+			LEFT JOIN divisions d ON (d.id = c.divisionid)
 	    WHERE
 	      (c.status  = ? OR c.status = ?) AND
 	      t.type = ? AND
+	      a.commited = 1 AND
 		  ((a.period = ? AND at = ?) OR
 		  ((a.period = ? OR
 		  (a.period  = ? AND at = ?) OR
@@ -418,7 +444,7 @@ $query = 'SELECT
 		   a.datefrom <= ? AND
 		  (a.dateto > ? OR a.dateto = 0)))"
 		.(!empty($groupnames) ? $customergroups : "")
-	." ORDER BY a.customerid, a.invoice, a.paytype, a.numberplanid, value DESC";
+	." ORDER BY a.customerid, a.invoice, a.paytype, a.numberplanid, voipcost.value DESC";
 
 $billings = $DB->GetAll($query, array(CSTATUS_CONNECTED, CSTATUS_DEBT_COLLECTION, TARIFF_PHONE,
 	DISPOSABLE, $today, DAILY, WEEKLY, $weekday, MONTHLY, $dom, QUARTERLY, $quarter, HALFYEARLY, $halfyear, YEARLY, $yearday,
@@ -434,9 +460,18 @@ if (empty($assigns))
 
 $suspended = 0;
 $invoices = array();
+$doctypes = array();
 $paytypes = array();
 $addresses = array();
 $numberplans = array();
+$divisions = array();
+
+$result = $LMS->ExecuteHook('payments_before_assignment_loop',
+	array(
+		'assignments' => $assigns,
+	));
+if ($result['assignments'])
+	$assigns = $result['assignments'];
 
 foreach ($assigns as $assign) {
 	$cid = $assign['customerid'];
@@ -475,12 +510,17 @@ foreach ($assigns as $assign) {
 	$desc = preg_replace("/\%period/"                  , $forward_periods[$p]         , $desc);
 	$desc = preg_replace("/\%aligned_period/"          , $forward_aligned_periods[$p] , $desc);
 
+	// for phone calls
+    if (isset($assign['phones']))
+        $desc = preg_replace('/\%phones/', $assign['phones'], $desc);
+
 	if ($suspension_percentage && ($assign['suspended'] || $assign['allsuspended']))
 		$desc .= " ".$suspension_description;
 
-	if (!array_key_exists($cid, $invoices)) $invoices[$cid] = 0;
-	if (!array_key_exists($cid, $paytypes)) $paytypes[$cid] = 0;
-	if (!array_key_exists($cid, $numberplans)) $numberplans[$cid] = 0;
+	if (!isset($invoices[$cid]) || $assign['separatedocument']) $invoices[$cid] = 0;
+	if (!isset($doctypes[$cid])) $doctypes[$cid] = 0;
+	if (!isset($paytypes[$cid])) $paytypes[$cid] = 0;
+	if (!isset($numberplans[$cid])) $numberplans[$cid] = 0;
 
 	if ($assign['value'] != 0)
 	{
@@ -525,41 +565,44 @@ foreach ($assigns as $assign) {
 			elseif ($assign['tariffnumberplanid'])
 				$plan = $assign['tariffnumberplanid'];
 			else
-				$plan = (array_key_exists($divid, $plans) ? $plans[$divid] : 0);
+				$plan = isset($plans[$divid][$assign['invoice']]) ? $plans[$divid][$assign['invoice']] : 0;
 
-			if ($invoices[$cid] == 0 || $paytypes[$cid] != $inv_paytype || $numberplans[$cid] != $plan || $assign['recipient_address_id'] != $addresses[$cid])
+			if ($invoices[$cid] == 0 || $doctypes[$cid] != $assign['invoice'] || $paytypes[$cid] != $inv_paytype
+                || $numberplans[$cid] != $plan || $assign['recipient_address_id'] != $addresses[$cid])
 			{
-				if (!isset($numbers[$plan]))
+				if (!isset($numbers[$assign['invoice']][$plan]))
 				{
 					$period = get_period($periods[$plan]);
-					$numbers[$plan] = (($number = $DB->GetOne("SELECT MAX(number) AS number FROM documents 
-							WHERE cdate >= ? AND cdate <= ? AND type = 1 AND numberplanid = ?",
-							array($period['start'], $period['end'], $plan))) != 0 ? $number : 0);
+					$numbers[$assign['invoice']][$plan] = (($number = $DB->GetOne("SELECT MAX(number) AS number FROM documents 
+							WHERE cdate >= ? AND cdate <= ? AND type = ? AND numberplanid = ?",
+							array($period['start'], $period['end'], $assign['invoice'], $plan))) != 0 ? $number : 0);
 					$numbertemplates[$plan] = $DB->GetOne("SELECT template FROM numberplans WHERE id = ?", array($plan));
 				}
 
 				$itemid = 0;
-				$numbers[$plan]++;
+				$numbers[$assign['invoice']][$plan]++;
 
 				$customer = $DB->GetRow("SELECT lastname, name, address, city, zip, postoffice, ssn, ten, countryid, divisionid, paytime 
 						FROM customeraddressview WHERE id = $cid");
 
-				$division = $DB->GetRow("SELECT name, shortname, address, city, zip, countryid, ten, regon,
+				if (!isset($divisions[$customer['divisionid']]))
+					$divisions[$customer['divisionid']] = $DB->GetRow("SELECT name, shortname, address, city, zip, countryid, ten, regon,
 						account, inv_header, inv_footer, inv_author, inv_cplace
 						FROM vdivisions WHERE id = ?", array($customer['divisionid']));
+				$division = $divisions[$customer['divisionid']];
 
 				$paytime = $customer['paytime'];
 				if ($paytime == -1) $paytime = $deadline;
 
 				$fullnumber = docnumber(array(
-					'number' => $numbers[$plan],
+					'number' => $numbers[$assign['invoice']][$plan],
 					'template' => $numbertemplates[$plan],
 					'cdate' => $currtime,
 					'customerid' => $cid,
 				));
 
 				if ( $assign['recipient_address_id'] ) {
-					$addr = $DB->GetRow('SELECT * FROM addresses WHERE id = ?;', array($assign['recipient_address_id']));
+					$addr = $DB->GetRow('SELECT * FROM addresses WHERE id = ?', array($assign['recipient_address_id']));
 					unset($addr['id']);
 
 					$copy_address_query = "INSERT INTO addresses (" . implode(",", array_keys($addr)) . ") VALUES (" . implode(",", array_fill(0, count($addr), '?'))  . ")";
@@ -575,9 +618,10 @@ foreach ($assigns as $assign) {
 					div_name, div_shortname, div_address, div_city, div_zip, div_countryid, div_ten, div_regon,
 					div_account, div_inv_header, div_inv_footer, div_inv_author, div_inv_cplace, fullnumber,
 					recipient_address_id)
-					VALUES(?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-					array($numbers[$plan], $plan,
-					$customer['countryid'] ? $customer['countryid'] : 0,
+					VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+					array($numbers[$assign['invoice']][$plan], $plan ? $plan : null,
+					$assign['invoice'],
+					$customer['countryid'] ? $customer['countryid'] : null,
 					$customer['divisionid'], $cid,
 					$customer['lastname']." ".$customer['name'],
 					($customer['postoffice'] && $customer['postoffice'] != $customer['city'] && $customer['street']
@@ -590,7 +634,7 @@ foreach ($assigns as $assign) {
 					($division['address'] ? $division['address'] : ''),
 					($division['city'] ? $division['city'] : ''),
 					($division['zip'] ? $division['zip'] : ''),
-					($division['countryid'] ? $division['countryid'] : 0),
+					($division['countryid'] ? $division['countryid'] : null),
 					($division['ten'] ? $division['ten'] : ''),
 					($division['regon'] ? $division['regon'] : ''), 
 					($division['account'] ? $division['account'] : ''),
@@ -603,6 +647,8 @@ foreach ($assigns as $assign) {
 					));
 
 				$invoices[$cid] = $DB->GetLastInsertID("documents");
+				$doctypes[$cid] = $assign['invoice'];
+				$LMS->UpdateDocumentPostAddress($invoices[$cid], $cid);
 				$paytypes[$cid] = $inv_paytype;
 				$addresses[$cid] = $assign['recipient_address_id'];
 				$numberplans[$cid] = $plan;
@@ -614,24 +660,23 @@ foreach ($assigns as $assign) {
 				$DB->Execute("UPDATE invoicecontents SET count=count+1 
 					WHERE tariffid=? AND docid=? AND value=? AND description=? AND pdiscount=? AND vdiscount=?",
 					array($assign['tariffid'], $invoices[$cid], $assign['value'], $desc, $assign['pdiscount'], $assign['vdiscount']));
-				$DB->Execute("UPDATE cash SET value=value+($val*-1) 
-					WHERE docid = ? AND itemid = $tmp_itemid", array($invoices[$cid]));
-			}
-			else
-			{
+                if ($assign['invoice'] == DOC_INVOICE || $proforma_generates_commitment)
+                    $DB->Execute("UPDATE cash SET value=value+($val*-1) 
+                        WHERE docid = ? AND itemid = $tmp_itemid", array($invoices[$cid]));
+			} else {
 				$itemid++;
 
 				$DB->Execute("INSERT INTO invoicecontents (docid, value, taxid, prodid, 
 					content, count, description, tariffid, itemid, pdiscount, vdiscount) 
 					VALUES (?, $val, ?, ?, ?, 1, ?, ?, $itemid, ?, ?)",
 					array($invoices[$cid], $assign['taxid'], $assign['prodid'], $unit_name,
-					$desc, $assign['tariffid'], $assign['pdiscount'], $assign['vdiscount']));
-				$DB->Execute("INSERT INTO cash (time, value, taxid, customerid, comment, docid, itemid) 
-					VALUES ($currtime, $val * -1, ?, $cid, ?, ?, $itemid)",
-					array($assign['taxid'], $desc, $invoices[$cid]));
+					$desc, empty($assign['tariffid']) ? null : $assign['tariffid'], $assign['pdiscount'], $assign['vdiscount']));
+				if ($assign['invoice'] == DOC_INVOICE || $proforma_generates_commitment)
+                    $DB->Execute("INSERT INTO cash (time, value, taxid, customerid, comment, docid, itemid) 
+                        VALUES ($currtime, $val * -1, ?, $cid, ?, ?, $itemid)",
+                        array($assign['taxid'], $desc, $invoices[$cid]));
 			}
-		}
-		else
+		} else
 			$DB->Execute("INSERT INTO cash (time, value, taxid, customerid, comment) 
 				VALUES ($currtime, $val * -1, ?, $cid, ?)", array($assign['taxid'], $desc));
 
@@ -705,25 +750,24 @@ foreach ($assigns as $assign) {
 						WHERE tariffid=? AND docid=? AND description=?",
 						array($assign['tariffid'], $invoices[$cid], $sdesc));
 
-					$DB->Execute("UPDATE cash SET value = value + ($value * -1) 
-						WHERE docid = ? AND itemid = $tmp_itemid",
-						array($invoices[$cid]));
-				}
-				else
-				{
+					if ($assign['invoice'] == DOC_INVOICE || $proforma_generates_commitment)
+                        $DB->Execute("UPDATE cash SET value = value + ($value * -1) 
+                            WHERE docid = ? AND itemid = $tmp_itemid",
+                            array($invoices[$cid]));
+				} else {
 					$itemid++;
 
 					$DB->Execute("INSERT INTO invoicecontents (docid, value, taxid, prodid, 
 						content, count, description, tariffid, itemid, pdiscount, vdiscount) 
 						VALUES (?, $value, ?, ?, ?, 1, ?, ?, $itemid, ?, ?)",
 						array($invoices[$cid], $assign['taxid'], $assign['prodid'], $unit_name,
-						$sdesc, $assign['tariffid'], $assign['pdiscount'], $assign['vdiscount']));
-					$DB->Execute("INSERT INTO cash (time, value, taxid, customerid, comment, docid, itemid) 
-						VALUES($currtime, $value * -1, ?, $cid, ?, ?, $itemid)",
-						array($assign['taxid'], $sdesc, $invoices[$cid]));
+						$sdesc, empty($assign['tariffid']) ? null : $assign['tariffid'], $assign['pdiscount'], $assign['vdiscount']));
+					if ($assign['invoice'] == DOC_INVOICE || $proforma_generates_commitment)
+                        $DB->Execute("INSERT INTO cash (time, value, taxid, customerid, comment, docid, itemid) 
+                            VALUES($currtime, $value * -1, ?, $cid, ?, ?, $itemid)",
+                            array($assign['taxid'], $sdesc, $invoices[$cid]));
 				}
-			}
-			else
+			} else
 				$DB->Execute("INSERT INTO cash (time, value, taxid, customerid, comment) 
 					VALUES ($currtime, $value * -1, ?, $cid, ?)", array($assign['taxid'], $sdesc));
 
@@ -752,12 +796,28 @@ if (!empty($assigns))
 		if (!$quiet) print "CID:0\tVAL:".$assign['value']."\tDESC:".$assign['name']."/".$assign['creditor'] . PHP_EOL;
 	}
 
+// invoice auto-closes
+if ($check_invoices) {
+	$DB->Execute("UPDATE documents SET closed = 1
+		WHERE customerid IN (
+			SELECT c.customerid
+			FROM cash c
+			WHERE c.time <= ?NOW?
+				" . (!empty($groupnames) ? $customergroups : '') . "
+			GROUP BY c.customerid
+			HAVING SUM(c.value) >= 0
+		) AND type IN (?, ?, ?)
+			AND cdate <= ?NOW?
+			AND closed = 0",
+		array(DOC_INVOICE, DOC_CNOTE, DOC_DNOTE));
+}
+
 // delete old assignments
-$DB->Execute("DELETE FROM liabilities WHERE id IN ( 
-	SELECT liabilityid FROM assignments 
-	WHERE dateto < ?NOW? - 86400 * 30 AND dateto <> 0 AND at < $today - 86400 * 30 
-		AND liabilityid != 0)");
-$DB->Execute("DELETE FROM assignments 
+$DB->Execute("DELETE FROM liabilities WHERE id IN (
+	SELECT liabilityid FROM assignments
+	WHERE dateto < ?NOW? - 86400 * 30 AND dateto <> 0 AND at < $today - 86400 * 30
+		AND liabilityid IS NOT NULL)");
+$DB->Execute("DELETE FROM assignments
 	WHERE dateto < ?NOW? - 86400 * 30 AND dateto <> 0 AND at < $today - 86400 * 30");
 
 // clear voip tariff rule states

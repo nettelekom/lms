@@ -3,7 +3,7 @@
 /*
  *  LMS version 1.11-git
  *
- *  Copyright (C) 2001-2016 LMS Developers
+ *  Copyright (C) 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -27,7 +27,6 @@
 /**
  * LMSNetDevManager
  *
- * @author Maciej Lew <maciej.lew.1987@gmail.com>
  */
 class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
 {
@@ -50,7 +49,7 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
 			LEFT JOIN location_boroughs lb ON lb.id = lc.boroughid
 			LEFT JOIN location_districts ld ON ld.id = lb.districtid
 			LEFT JOIN location_states ls ON ls.id = ld.stateid
-			WHERE n.netdev = ? AND ownerid > 0
+			WHERE n.netdev = ? AND ownerid IS NOT NULL
 			ORDER BY n.name ASC', array($id));
     }
 
@@ -71,7 +70,7 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
 		}
 
         $args = array(
-            SYSLOG::RES_NETDEV => $devid,
+            SYSLOG::RES_NETDEV => empty($devid) ? null : $devid,
             'linktype'         => $type,
             'linkradiosector'  => $radiosector,
             'linktechnology'   => $technology,
@@ -213,46 +212,70 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
 
     public function NetDevUpdate($data)
     {
-        global $LMS;
+		$old_ownerid = $this->db->GetOne('SELECT ownerid FROM netdevices WHERE id = ?', array($data['id']));
+		$ownerid = empty($data['ownerid']) ? NULL: intval($data['ownerid']);
 
-        $args = array(
-            'name'             => $data['name'],
-            'description'      => $data['description'],
-            'producer'         => $data['producer'],
-            'model'            => $data['model'],
-            'serialnumber'     => $data['serialnumber'],
-            'ports'            => $data['ports'],
-            'purchasetime'     => $data['purchasetime'],
-            'guaranteeperiod'  => $data['guaranteeperiod'],
-            'shortname'        => $data['shortname'],
-            'nastype'          => $data['nastype'],
-            'clients'          => $data['clients'],
-            'secret'           => $data['secret'],
-            'community'        => $data['community'],
-            'channelid'        => !empty($data['channelid']) ? $data['channelid'] : NULL,
-            'longitude'        => !empty($data['longitude']) ? str_replace(',', '.', $data['longitude']) : null,
-            'latitude'         => !empty($data['latitude'])  ? str_replace(',', '.', $data['latitude'])  : null,
-            'invprojectid'     => $data['invprojectid'],
-            'netnodeid'        => $data['netnodeid'],
-            'status'           => $data['status'],
-            'netdevicemodelid' => !empty($data['netdevicemodelid']) ? $data['netdevicemodelid'] : null,
-            'ownerid'          => (empty($data['ownerid'])) ? NULL: intval($data['ownerid']),
-            SYSLOG::RES_NETDEV => $data['id'],
-        );
-        $res = $this->db->Execute('UPDATE netdevices SET name=?, description=?, producer=?,
-				model=?, serialnumber=?, ports=?, purchasetime=?, guaranteeperiod=?, shortname=?,
-				nastype=?, clients=?, secret=?, community=?, channelid=?, longitude=?, latitude=?,
-				invprojectid=?, netnodeid=?, status=?, netdevicemodelid=?, ownerid=?
-				WHERE id=?', array_values($args));
+		$args = array();
 
-		if ( $data['address_id'] && $data['address_id'] < 0 ) {
+		if (array_key_exists('name', $data))
+			$args['name'] = $data['name'];
+		if (array_key_exists('description', $data))
+			$args['description'] = empty($data['description']) ? '' : $data['description'];
+		if (array_key_exists('producer', $data))
+			$args['producer'] = empty($data['producer']) ? '' : $data['producer'];
+		if (array_key_exists('model', $data))
+			$args['model'] = empty($data['model']) ? '' : $data['model'];
+		if (array_key_exists('serialnumber', $data))
+			$args['serialnumber'] = empty($data['serialnumber']) ? '' : $data['serialnumber'];
+		if (array_key_exists('ports', $data))
+			$args['ports'] = empty($data['ports']) ? 0 : $data['ports'];
+		if (array_key_exists('purchasetime', $data))
+			$args['purchasetime'] = empty($data['purchasetime']) ? 0 : $data['purchasetime'];
+		if (array_key_exists('guaranteeperiod', $data))
+			$args['guaranteeperiod'] = $data['guaranteeperiod'];
+		if (array_key_exists('shortname', $data))
+			$args['shortname'] = empty($data['shortname']) ? '' : $data['shortname'];
+		if (array_key_exists('nastype', $data))
+			$args['nastype'] = empty($data['nastype']) ? 0 : $data['nastype'];
+		if (array_key_exists('clients', $data))
+			$args['clients'] = empty($data['clients']) ? 0 : $data['clients'];
+		if (array_key_exists('secret', $data))
+			$args['secret'] = empty($data['secret']) ? '' : $data['secret'];
+		if (array_key_exists('community', $data))
+			$args['community'] = empty($data['community']) ? '' : $data['community'];
+		if (array_key_exists('channelid', $data))
+			$args['channelid'] = !empty($data['channelid']) ? $data['channelid'] : NULL;
+		if (array_key_exists('longitude', $data))
+			$args['longitude'] = !empty($data['longitude']) ? str_replace(',', '.', $data['longitude']) : null;
+		if (array_key_exists('latitude', $data))
+			$args['latitude'] = !empty($data['latitude']) ? str_replace(',', '.', $data['latitude']) : null;
+		if (array_key_exists('invprojectid', $data))
+			$args['invprojectid'] = $data['invprojectid'];
+		if (array_key_exists('netnodeid', $data))
+			$args['netnodeid'] = $data['netnodeid'];
+		if (array_key_exists('status', $data))
+			$args['status'] = empty($data['status']) ? 0 : $data['status'];
+		if (array_key_exists('netdevicemodelid', $data))
+			$args['netdevicemodelid'] = !empty($data['netdevicemodelid']) ? $data['netdevicemodelid'] : null;
+		if (array_key_exists('ownerid', $data))
+			$args['ownerid'] = empty($data['ownerid']) ? null : $data['ownerid'];
+
+		if (empty($args))
+			return null;
+
+        $res = $this->db->Execute('UPDATE netdevices SET ' . implode(' = ?, ', array_keys($args)) . ' = ?
+        	WHERE id = ?', array_merge(array_values($args), array($data['id'])));
+
+        $args[SYSLOG::RES_NETDEV] = $data['id'];
+
+		if ($data['address_id'] && $data['address_id'] < 0)
 			$data['address_id'] = null;
-		}
+
+		$location_manager = new LMSLocationManager($this->db, $this->auth, $this->cache, $this->syslog);
 
 		if ( $data['ownerid'] ) {
-			if ( $data['address_id'] && !$this->db->GetOne('SELECT 1 FROM customer_addresses WHERE address_id = ?', array($data['address_id'])) ) {
-				$LMS->DeleteAddress( $data['address_id'] );
-			}
+			if ( $data['address_id'] && !$this->db->GetOne('SELECT 1 FROM customer_addresses WHERE address_id = ?', array($data['address_id'])) )
+				$location_manager->DeleteAddress( $data['address_id'] );
 
 			$this->db->Execute('UPDATE netdevices SET address_id = ? WHERE id = ?',
 								array(
@@ -262,46 +285,67 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
 								);
 		} else {
 			if ( !$data['address_id'] || $data['address_id'] && $this->db->GetOne('SELECT 1 FROM customer_addresses WHERE address_id = ?', array($data['address_id'])) ) {
-				$address_id = $LMS->InsertAddress($data);
+				$address_id = $location_manager->InsertAddress($data);
 
 				$this->db->Execute('UPDATE netdevices SET address_id = ? WHERE id = ?',
-									array(
-										($address_id >= 0 ? $address_id : null),
-										$data['id']
-										)
-									);
-			} else {
-				$LMS->UpdateAddress($data);
+					array(
+						($address_id >= 0 ? $address_id : null),
+						$data['id']
+						)
+					);
+			} else
+				$location_manager->UpdateAddress($data);
+		}
+
+		if ($this->syslog && $res) {
+			$this->syslog->AddMessage(SYSLOG::RES_NETDEV, SYSLOG::OPER_UPDATE, $args);
+
+			if ($old_ownerid != $ownerid) {
+				$nodeassigns = $this->db->GetAll('SELECT id, nodeid, assignmentid FROM nodeassignments
+					WHERE nodeid IN (SELECT id FROM nodes WHERE netdev = ? AND ownerid IS NULL)', array($data['id']));
+				if (!empty($nodeassigns))
+					foreach ($nodeassigns as $nodeassign) {
+						$args = array(
+							SYSLOG::RES_NODEASSIGN => $nodeassign['id'],
+							SYSLOG::RES_NETDEV => $data['id'],
+							SYSLOG::RES_NODE => $nodedata['id'],
+							SYSLOG::RES_ASSIGN => $nodedata['assignmentid'],
+							SYSLOG::RES_CUST => $nodedata['ownerid']
+						);
+						$this->syslog->AddMessage(SYSLOG::RES_NODEASSIGN, SYSLOG::OPER_DELETE, $args);
+					}
 			}
 		}
 
-        if ($this->syslog && $res) {
-            $this->syslog->AddMessage(SYSLOG::RES_NETDEV, SYSLOG::OPER_UPDATE, $args);
-        }
+		if ($old_ownerid != $ownerid)
+			$this->db->Execute('DELETE FROM nodeassignments
+				WHERE nodeid IN (SELECT id FROM nodes WHERE netdev = ? AND ownerid IS NULL)', array($data['id']));
+
+		return $res;
     }
 
     public function NetDevAdd($data)
     {
         $args = array(
             'name'             => $data['name'],
-            'description'      => $data['description'],
-            'producer'         => $data['producer'],
-            'model'            => $data['model'],
-            'serialnumber'     => $data['serialnumber'],
-            'ports'            => $data['ports'],
-            'purchasetime'     => $data['purchasetime'],
+            'description'      => empty($data['description']) ? '' : $data['description'],
+            'producer'         => empty($data['producer']) ? '' : $data['producer'],
+            'model'            => empty($data['model']) ? '' : $data['model'],
+            'serialnumber'     => empty($data['serialnumber']) ? '' : $data['serialnumber'],
+            'ports'            => empty($data['ports']) ? 0 : $data['ports'],
+            'purchasetime'     => empty($data['purchasetime']) ? 0 : $data['purchasetime'],
             'guaranteeperiod'  => $data['guaranteeperiod'],
-            'shortname'        => $data['shortname'],
-            'nastype'          => $data['nastype'],
-            'clients'          => $data['clients'],
-            'secret'           => $data['secret'],
-            'community'        => $data['community'],
+            'shortname'        => empty($data['shortname']) ? '' : $data['shortname'],
+            'nastype'          => empty($data['nastype']) ? 0 : $data['nastype'],
+            'clients'          => empty($data['clients']) ? 0 : $data['clients'],
+            'secret'           => empty($data['secret']) ? '' : $data['secret'],
+            'community'        => empty($data['community']) ? '' : $data['community'],
             'channelid'        => !empty($data['channelid']) ? $data['channelid'] : NULL,
             'longitude'        => !empty($data['longitude']) ? str_replace(',', '.', $data['longitude']) : NULL,
             'latitude'         => !empty($data['latitude'])  ? str_replace(',', '.', $data['latitude'])  : NULL,
             'invprojectid'     => $data['invprojectid'],
             'netnodeid'        => $data['netnodeid'],
-            'status'           => $data['status'],
+            'status'           => empty($data['status']) ? 0 : $data['status'],
             'netdevicemodelid' => !empty($data['netdevicemodelid']) ? $data['netdevicemodelid'] : null,
             'address_id'       => ($data['address_id'] >= 0 ? $data['address_id'] : null),
             'ownerid'          => !empty($data['ownerid'])  ? $data['ownerid']    : null
@@ -367,7 +411,7 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
 
     public function CountNetDevLinks($id)
     {
-        return $this->db->GetOne('SELECT COUNT(*) FROM netlinks WHERE src = ? OR dst = ?', array($id, $id)) + $this->db->GetOne('SELECT COUNT(*) FROM vnodes WHERE netdev = ? AND ownerid > 0', array($id));
+        return $this->db->GetOne('SELECT COUNT(*) FROM netlinks WHERE src = ? OR dst = ?', array($id, $id)) + $this->db->GetOne('SELECT COUNT(*) FROM vnodes WHERE netdev = ? AND ownerid IS NOT NULL', array($id));
     }
 
     public function GetNetDevLinkType($dev1, $dev2)
@@ -384,12 +428,12 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
 			l.technology AS linktechnology, l.speed AS linkspeed, l.srcport, l.dstport,
 			srcrs.name AS srcradiosector, dstrs.name AS dstradiosector,
 			(SELECT COUNT(*) FROM netlinks WHERE src = d.id OR dst = d.id)
-			+ (SELECT COUNT(*) FROM vnodes WHERE netdev = d.id AND ownerid > 0)
+			+ (SELECT COUNT(*) FROM vnodes WHERE netdev = d.id AND ownerid IS NOT NULL)
 			AS takenports,
 			lc.name AS city_name, lb.name AS borough_name, lb.type AS borough_type,
-			ld.name AS district_name, ls.name AS state_name
+			ld.name AS district_name, ls.name AS state_name, addr.location
 			FROM netdevices d
-			LEFT JOIN addresses addr ON d.address_id = addr.id
+			LEFT JOIN vaddresses addr ON d.address_id = addr.id
 			JOIN (SELECT DISTINCT type, technology, speed,
 				(CASE src WHEN ? THEN dst ELSE src END) AS dev,
 				(CASE src WHEN ? THEN dstport ELSE srcport END) AS srcport,
@@ -477,20 +521,25 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
 
 		$netdevlist = $this->db->GetAll('SELECT d.id, d.name,
 				d.description, d.producer, d.model, d.serialnumber, d.ports, d.ownerid,
-				(SELECT COUNT(*) FROM nodes WHERE ipaddr <> 0 AND netdev=d.id AND ownerid > 0)
+				d.invprojectid, p.name AS project, d.status,
+				(SELECT COUNT(*) FROM nodes WHERE ipaddr <> 0 AND netdev=d.id AND ownerid IS NOT NULL)
 				+ (SELECT COUNT(*) FROM netlinks WHERE src = d.id OR dst = d.id)
 				AS takenports, d.netnodeid, n.name AS netnode,
-				lb.name AS borough_name, lb.type AS borough_type,
-				ld.name AS district_name, ls.name AS state_name,
+				lb.name AS borough_name, lb.type AS borough_type, lb.ident AS borough_ident,
+				ld.name AS district_name, ld.ident AS district_ident,
+				ls.name AS state_name, ls.ident AS state_ident,
 				addr.state as location_state_name, addr.state_id as location_state,
 				addr.zip as location_zip, addr.country_id as location_country,
-				addr.city as location_city_name, addr.street as location_street_name,
-				addr.city_id as location_city, addr.street_id as location_street,
+				addr.city as location_city_name, addr.city_id as location_city,
+				lc.ident AS city_ident,
+				addr.street AS location_street_name, addr.street_id as location_street,
+				lst.ident AS street_ident,
 				addr.house as location_house, addr.flat as location_flat, addr.location
 			FROM netdevices d
 				LEFT JOIN vaddresses addr       ON d.address_id = addr.id
 				LEFT JOIN invprojects p         ON p.id = d.invprojectid
 				LEFT JOIN netnodes n            ON n.id = d.netnodeid
+				LEFT JOIN location_streets lst  ON lst.id = addr.street_id
 				LEFT JOIN location_cities lc    ON lc.id = addr.city_id
 				LEFT JOIN location_boroughs lb  ON lb.id = lc.boroughid
 				LEFT JOIN location_districts ld ON ld.id = lb.districtid
@@ -498,14 +547,20 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
 				. (!empty($where) ? ' WHERE ' . implode(' AND ', $where) : '')
                 . ($sqlord != '' ? $sqlord . ' ' . $direction : ''));
 
-		if ( $netdevlist ) {
-			global $LMS;
+		if ($netdevlist) {
+			$customer_manager = new LMSCustomerManager($this->db, $this->auth, $this->cache, $this->syslog);
 
-			foreach ($netdevlist as $k=>$acc) {
-				if ( !$acc['location'] && $acc['ownerid'] ) {
-					$netdevlist[$k]['location'] = $LMS->getAddressForCustomerStuff( $acc['ownerid'] );
+			foreach ($netdevlist as &$netdev) {
+				if (!$netdev['location'] && $netdev['ownerid']) {
+					$netdev['location'] = $customer_manager->getAddressForCustomerStuff($netdev['ownerid']);
 				}
+				$netdev['terc'] = empty($netdev['state_ident']) ? null
+					: $netdev['state_ident'] . $netdev['district_ident']
+						. $netdev['borough_ident'] . $netdev['borough_type'];
+				$netdev['simc'] = empty($netdev['city_ident']) ? null : $netdev['city_ident'];
+				$netdev['ulic'] = empty($netdev['street_ident']) ? null : $netdev['street_ident'];
 			}
+			unset($netdev);
 		}
 
         $netdevlist['total'] = sizeof($netdevlist);
@@ -610,7 +665,7 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
                     		'dst_' . SYSLOG::getResourceKey(SYSLOG::RES_NETDEV))
                     );
                 }
-            $nodes = $this->db->GetAll('SELECT id, netdev, ownerid FROM vnodes WHERE netdev=? AND ownerid>0', array($id));
+            $nodes = $this->db->GetAll('SELECT id, netdev, ownerid FROM vnodes WHERE netdev=? AND ownerid IS NOT NULL', array($id));
             if (!empty($nodes))
                 foreach ($nodes as $node) {
                     $args = array(
@@ -623,8 +678,8 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
                 }
         }
         $this->db->Execute('DELETE FROM netlinks WHERE src=? OR dst=?', array($id, $id));
-        $this->db->Execute('UPDATE nodes SET netdev=0, port=0
-				WHERE netdev=? AND ownerid>0', array($id));
+        $this->db->Execute('UPDATE nodes SET netdev = NULL, port=0
+				WHERE netdev=? AND ownerid IS NOT NULL', array($id));
     }
 
     public function DeleteNetDev($id)
@@ -643,7 +698,7 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
                     	array('src_' . SYSLOG::getResourceKey(SYSLOG::RES_NETDEV),
                     		'dst_' . SYSLOG::getResourceKey(SYSLOG::RES_NETDEV)));
                 }
-            $nodes = $this->db->GetCol('SELECT id FROM vnodes WHERE ownerid = 0 AND netdev = ?', array($id));
+            $nodes = $this->db->GetCol('SELECT id FROM vnodes WHERE ownerid IS NULL AND netdev = ?', array($id));
             if (!empty($nodes))
                 foreach ($nodes as $node) {
                     $macs = $this->db->GetCol('SELECT id FROM macs WHERE nodeid = ?', array($node));
@@ -661,7 +716,7 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
                     );
                     $this->syslog->AddMessage(SYSLOG::RES_NODE, SYSLOG::OPER_DELETE, $args);
                 }
-            $nodes = $this->db->GetAll('SELECT id, ownerid FROM vnodes WHERE ownerid <> 0 AND netdev = ?', array($id));
+            $nodes = $this->db->GetAll('SELECT id, ownerid FROM vnodes WHERE ownerid IS NOT NULL AND netdev = ?', array($id));
             if (!empty($nodes))
                 foreach ($nodes as $node) {
                     $args = array(
@@ -682,10 +737,13 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
         }
 
         $this->db->Execute('DELETE FROM netlinks WHERE src=? OR dst=?', array($id, $id));
-        $this->db->Execute('DELETE FROM nodes WHERE ownerid=0 AND netdev=?', array($id));
-        $this->db->Execute('UPDATE nodes SET netdev=0 WHERE netdev=?', array($id));
-        $this->db->Execute('DELETE FROM netdevices WHERE id=?', array($id));
+        $this->db->Execute('DELETE FROM nodes WHERE ownerid IS NULL AND netdev=?', array($id));
+        $this->db->Execute('UPDATE nodes SET netdev = NULL WHERE netdev=?', array($id));
+        $result = $this->db->Execute('DELETE FROM netdevices WHERE id=?', array($id));
+
         $this->db->CommitTrans();
+
+        return $result;
     }
 
 }

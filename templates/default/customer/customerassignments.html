@@ -1,4 +1,5 @@
 <!--// $Id$ //-->
+<script src="img/sprintf.min.js"></script>
 {assign var=today value=$smarty.now|date_format:"%x 00:00:00"}{assign var=today value=$today|date_format:"%s"}
 <TABLE class="lmsbox lms-ui-sortable" id="customerassignments">
 	<COLGROUP>
@@ -7,9 +8,22 @@
 	</COLGROUP>
 	<THEAD>
 	<TR class="hand lmsbox-titlebar" data-lmsbox-content="customerassignmentpanel">
-		<TD class="bold">
+		<TD>
 			<IMG src="img/money.gif" alt="">
-			{trans("Customer Liabilities:")}
+			<span class="bold">{trans("Customer Liabilities:")}</span>
+			<label id="assignment_type_filter">
+				{trans("Type:")}
+				<select id="assignment_type">
+					<option value="">{trans("- all -")}</option>
+				</select>
+			</label>
+			<label id="document_filter">
+				{trans("Document")}
+				<select id="document">
+					<option value="">{trans("- all -")}</option>
+				</select>
+			</label>
+			<a id="clear_filter" href="#"><img src="img/delete.gif"><a>
 		</TD>
 		<TD class="text-right nobr">
 			{if !$customerinfo.deleted}
@@ -60,11 +74,21 @@
 				</THEAD>
 				<TBODY class="lms-ui-multi-check">
 				<form method="post" name="customerassignments" action="?m=customerassignmentdel">
-				{cycle name=assign values="light,lucid" print=false}
+				{*cycle name=assign values="light,lucid" print=false*}
 				{foreach $assignments as $a}
 				{block name="customerassignments-list-row"}
-				<TR class="highlight {cycle name=assign}
-					{if ($a.dateto < $today && $a.dateto) || ($a.liabilityid && $a.at < $today && $a.at > 365)} blend{elseif ($a.datefrom > $today && $a.datefrom && $a.period) && !($a.suspended)} alertblend{elseif ($a.suspended)}suspended{/if}">
+				<TR class="highlight {*cycle name=assign*}
+					{if ($a.dateto < $today && $a.dateto) || ($a.liabilityid && $a.at < $today && $a.at > 365)} blend{elseif ($a.datefrom > $today && $a.datefrom && $a.period) && !($a.suspended)} alertblend{elseif ($a.suspended)}suspended{/if}"
+					data-tariff-type="{$a.tarifftype}"
+					data-document="{if $a.doctype}{t a=$_DOCTYPES[$a.doctype] b=$a.fullnumber c=$a.cdate|date_format:"%Y/%m/%d"}$a no. $b issued on $c{/t}{/if}"
+					{if ConfigHelper::checkConfig('privileges.superuser') || !ConfigHelper::checkConfig('privileges.hide_finances')}
+					data-value="{$a.real_value|default:"0"|replace:",":"."}"
+					{/if}
+					{if ConfigHelper::checkConfig('privileges.superuser') || !ConfigHelper::checkConfig('privileges.hide_finances')}
+					data-disc-value="{$a.real_disc_value|default:"0"|replace:",":"."}"
+					{/if}
+					data-downceil="{$a.real_downceil|default:"0"}"
+					data-upceil="{$a.real_upceil|default:"0"}">
 					{if !$a.tariffid && !$a.liabilityid}
 					<TD colspan="7" class="bold" OnClick="return self.location.href='?m=customerassignmentedit&id={$a.id}'">
 						{trans("Suspending of all liabilities")}
@@ -72,7 +96,7 @@
 					{else}
 					<TD OnClick="return self.location.href='?m=customerassignmentedit&id={$a.id}'">
 						{if $a.tariffid}
-							<A href="?m=tariffinfo&id={$a.tariffid}"><span class="bold">{$a.name}</span></A><b>{if $a.attribute} - {$a.attribute}{/if}</b>
+							<A href="?m=tariffinfo&id={$a.tariffid}"><span class="bold">{$a.name} {if count($assignments)>1} ({$a.id}){/if}</span></A><b>{if $a.attribute} - {$a.attribute}{/if}</b>
 						{else}
 							{$a.name}
 						{/if}
@@ -110,14 +134,14 @@
 						{if ($a.tariffid || $a.liabilityid) && (($a.dateto > $today || !$a.dateto) || ($a.liabilityid && $a.at > $today))}
 						<A href="?m=customerassignmentedit&action=suspend&id={$a.id}&suspend={if $a.suspended}0{else}1{/if}"
 							{tip text="Enable/disable accounting of selected liability"}>
-							<IMG SRC="img/wait.gif" alt="[ {if $a.suspended}{trans("Restore")}{else}{trans("Suspend")}{/if} ]">
+							<IMG SRC="img/wait.gif" alt="{if $a.suspended}{trans("Restore")}{else}{trans("Suspend")}{/if}">
 						</A>
 						{/if}
 						<A onClick="return confirmLink(this, '{trans("Are you sure, you want to delete this liability?")}')"
 							href="?m=customerassignmentdel&id={$a.id}" {tip text="Delete customer's liability"}>
-							<IMG SRC="img/delete.gif" alt="[ {trans("Delete")} ]">
+							<IMG SRC="img/delete.gif" alt="{trans("Delete")}">
 						</A>
-						<A href="?m=customerassignmentedit&id={$a.id}"><IMG SRC="img/edit.gif" ALT="[ {trans("Edit")} ]" title="[ {trans("Edit")} ]"></A>
+						<A href="?m=customerassignmentedit&id={$a.id}"><IMG SRC="img/edit.gif" ALT="{trans("Edit")}" title="{trans("Edit")}"></A>
 						<input type="checkbox" name="customerassignments[{$a.id}]" value="{$a.id}" class="lms-ui-multi-check">
 					</TD>
 				</TR>
@@ -135,19 +159,11 @@
 				{block name="customerassignments-list-footer"}
 				<TR>
 					<TD class="ftop text-right bold">{trans("Total:")}</TD>
-					<TD class="ftop text-right nobr">
-						{if ConfigHelper::checkConfig('privileges.superuser') || !ConfigHelper::checkConfig('privileges.hide_finances')}
-						{sum array=$assignments column="real_value" string_format=$LANGDEFS.$_language.money_format}
-						{/if}
-					</TD>
-					<TD class="ftop text-left nobr">
-						{if ConfigHelper::checkConfig('privileges.superuser') || !ConfigHelper::checkConfig('privileges.hide_finances')}
-						({sum array=$assignments column="real_disc_value" string_format=$LANGDEFS.$_language.money_format})
-						{/if}
-					</TD>
+					<TD class="ftop text-right nobr" id="total-value"></TD>
+					<TD class="ftop text-left nobr" id="total-disc-value"></TD>
 					<TD class="ftop">&nbsp;</TD>
-					<TD class="ftop text-right nobr">{sum array=$assignments column="real_downceil" assign=downceilsum}{if $downceilsum}{$downceilsum} kbit/s{/if}</TD>
-					<TD class="ftop text-right nobr">{sum array=$assignments column="real_upceil" assign=upceilsum}{if $upceilsum}{$upceilsum} kbit/s{/if}</TD>
+					<TD class="ftop text-right nobr" id="total-downceil"></TD>
+					<TD class="ftop text-right nobr" id="total-upceil"></TD>
 					<TD class="ftop text-right nobr" colspan="3">
 						<A id="delete-assignments">{trans("Delete")} <img src="img/delete.gif" alt="{trans("Delete")}"></A>
 						<label>
@@ -182,5 +198,109 @@
 <!--
 	if (getCookie('customerassignmentpanel') == '1')
 		document.getElementById('customerassignmentpanel').style.display = '';
+
+	var tariff_types = [];
+	{foreach $_TARIFFTYPES as $type => $name}
+	tariff_types[{$type}] = '{$name}';
+	{/foreach}
+
+	var money_format = '{$LANGDEFS.$_language.money_format}';
+
+	var assignment_types = [];
+	var documents = [];
+	$('tr[data-tariff-type]').each(function() {
+		var tariff_type = $(this).attr('data-tariff-type');
+		var document = $(this).attr('data-document');
+		if (tariff_type.length && assignment_types.indexOf(tariff_type) == -1) {
+			assignment_types.push(tariff_type);
+		}
+		if (document.length && documents.indexOf(document) == -1) {
+			documents.push(document);
+		}
+	});
+	documents.sort();
+
+	var selected_type = getCookie('customerassignment_tariff_type_{$customerinfo.id}');
+	var selected_document = getCookie('customerassignment_document_{$customerinfo.id}');
+
+	$.each(assignment_types, function(key, value) {
+		$('#assignment_type').append('<option value="' + value + '"'
+			+ (parseInt(selected_type) == value ? ' selected' : '') + '>' + tariff_types[value] + '</option>');
+	});
+	if (assignment_types.length <= 1) {
+		$('#assignment_type_filter').hide();
+	}
+	$.each(documents, function(key, value) {
+		$('#document').append('<option value="' + value + '"'
+			+ (selected_document && selected_document.length && selected_document == value ? ' selected' : '') + '>'
+			+ value + '</option>');
+	});
+	if (documents.length <= 1) {
+		$('#document_filter').hide();
+	}
+	if (assignment_types.length <= 1 && documents.length <= 1) {
+		$('#clear_filter').hide();
+	}
+
+	function updateAssignments() {
+		var selected_type = $('#assignment_type').val();
+		var selected_document = $('#document').val();
+		var selector = '';
+		if (selected_type.length) {
+			selector += '[data-tariff-type="' + selected_type + '"]';
+		}
+		if (selected_document.length) {
+			selector += '[data-document="' + selected_document + '"]';
+		}
+		if (!selector.length) {
+			selector = '[data-tariff-type]';
+		}
+
+		$('tr[data-tariff-type]').hide();
+		$('tr' + selector).show();
+
+		var total_downceil = 0;
+		var total_upceil = 0;
+		var total_value = 0;
+		var total_disc_value = 0;
+		$('tr' + selector).each(function() {
+			total_downceil += parseInt($(this).attr('data-downceil'));
+			total_upceil += parseInt($(this).attr('data-upceil'));
+			{if ConfigHelper::checkConfig('privileges.superuser') || !ConfigHelper::checkConfig('privileges.hide_finances')}
+			total_value += parseFloat($(this).attr('data-value'));
+			total_disc_value += parseFloat($(this).attr('data-disc-value'));
+			{/if}
+			});
+
+		$('#total-downceil').html(total_downceil ? total_downceil + ' kbit/s' : '-');
+		$('#total-upceil').html(total_upceil ? total_upceil + ' kbit/s' : '-');
+		{if ConfigHelper::checkConfig('privileges.superuser') || !ConfigHelper::checkConfig('privileges.hide_finances')}
+		$('#total-value').html(total_value ? sprintf(money_format, total_value) : '-');
+		$('#total-disc-value').html(total_disc_value ? sprintf(money_format, total_disc_value) : '-');
+		{/if}
+
+		var backgrounds = ['lucid', 'light'];
+		$('tr[data-tariff-type]').removeClass(backgrounds.join(' '));
+		$('tr[data-tariff-type]:visible').each(function(key) {
+			$(this).addClass(backgrounds[key & 1]);
+		});
+
+		if ($('tr[data-tariff-type]').length) {
+			$('tr[data-tariff-type]').closest('tbody').get(0).updateCheckAll();
+		}
+
+		setCookie('customerassignment_tariff_type_{$customerinfo.id}', selected_type);
+		setCookie('customerassignment_document_{$customerinfo.id}', selected_document);
+	}
+
+	$(function() {
+		$('#assignment_type').change(updateAssignments).trigger('change');
+		$('#document').change(updateAssignments);
+		$('#clear_filter').click(function() {
+			$('#document').val('');
+			$('#assignment_type').val('').trigger('change');
+			return false;
+		});
+	});
 //-->
 </SCRIPT>

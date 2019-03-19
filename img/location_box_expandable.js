@@ -63,19 +63,25 @@ $(function() {
         });
     });
 
+	var timer = null;
+
     /*!
      * \brief Update address string name on box input change.
      */
     $('body').on('input', '.location-box-expandable input', function(){
+
         var box = getLocationBox(this);
 
-        var city   = box.find('[data-address="city"]').val();
+		var teryt = box.find('[data-address="teryt-checkbox"]').prop('checked');
+		var city   = box.find('[data-address="city"]').val();
+		var cityid = teryt ? box.find('[data-address="city-hidden"]').val() : null;
         var street = box.find('[data-address="street"]').val();
-        var house  = box.find('[data-address="house"]').val();
+		var streetid = teryt ? box.find('[data-address="street-hidden"]').val() : null;
+		var house  = box.find('[data-address="house"]').val();
         var flat   = box.find('[data-address="flat"]').val();
         var zip    = box.find('[data-address="zip"]').val();
         var postoffice = box.find('[data-address="postoffice"]').val();
-        var adtype = box.find('[data-address="address_type"]').val();
+        //var adtype = box.find('[data-address="address_type"]').val();
 
         var location = location_str({
             city: city,
@@ -89,7 +95,65 @@ $(function() {
 
         box.find('[data-address="location"]').val( location );
         box.find('.address-full').text( location );
+
+        var elem = this;
+
+        if (timer) {
+            clearTimeout(timer);
+        }
+		if (city.length && house.length && !$(this).is('[data-address="zip"]') && !zip.length) {
+			timer = window.setTimeout(function () {
+				if (lmsSettings.zipCodeBackend == 'pna') {
+					pna_get_zip_code(city, cityid, street, streetid, house, function (zip) {
+						if (zip.length) {
+							box.find('[data-address="zip"]').val(zip);
+							$(elem).trigger('input');
+						} else {
+							osm_get_zip_code(city, street, house, function (zip) {
+								box.find('[data-address="zip"]').val(zip);
+								$(elem).trigger('input');
+							});
+						}
+					});
+				} else {
+					osm_get_zip_code(city, street, house, function (zip) {
+						box.find('[data-address="zip"]').val(zip);
+						$(elem).trigger('input');
+					});
+				}
+			}, 500);
+		}
     });
+
+	$('.zip-code-button').click(function() {
+		var box = $(this).closest('.location-box-expandable');
+        var teryt = box.find('[data-address="teryt-checkbox"]').prop('checked');
+		var city   = box.find('[data-address="city"]').val();
+		var cityid = teryt ? box.find('[data-address="city-hidden"]').val() : null;
+		var street = box.find('[data-address="street"]').val();
+		var streetid = teryt ? box.find('[data-address="street-hidden"]').val() : null;
+		var house  = box.find('[data-address="house"]').val();
+		var zipelem = box.find('[data-address="zip"]');
+
+		if (city.length && house.length) {
+		    if (lmsSettings.zipCodeBackend == 'pna') {
+				pna_get_zip_code(city, cityid, street, streetid, house, function (zip) {
+					if (zip.length) {
+						zipelem.val(zip).trigger('input');
+					} else {
+						osm_get_zip_code(city, street, house, function (zip) {
+							zipelem.val(zip).trigger('input');
+						});
+					}
+				});
+			} else {
+				osm_get_zip_code(city, street, house, function (zip) {
+					zipelem.val(zip).trigger('input');
+				});
+			}
+		}
+		return false;
+	});
 
     /*!
      * \brief Function insert row content into table.
@@ -125,7 +189,7 @@ $(function() {
      * \brief Remove address box.
      */
     $('body').on('click', '.delete-location-box', function() {
-        if ( confirm(lmsMessages['Are you shure that you want to remove address?']) == true ) {
+        if ( confirm(lmsMessages.removeAddressConfirmation) == true ) {
             getLocationBox(this).closest('tr').remove();
         }
     });

@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2016 LMS Developers
+ *  (C) Copyright 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -29,26 +29,29 @@ $id = intval($_GET['id']);
 if($id && $_GET['is_sure'] == '1') {
 	if (isset($_GET['recover'])) {
 		$DB->Execute('UPDATE documents SET cancelled = 0 WHERE id = ?', array($id));
-		$document = $DB->GetRow('SELECT customerid, cdate FROM documents WHERE id = ?', array($id));
-		$invoices = $DB->GetAll('SELECT * FROM invoicecontents WHERE docid = ?', array($id));
-		$itemid = 1;
-		foreach ($invoices as $invoice) {
+
+		$invoice = $LMS->GetInvoiceContent($id);
+
+		foreach ($invoice['content'] as $idx => $content) {
+			if ($invoice['doctype'] == DOC_CNOTE)
+				$value = $content['total'] - $invoice['invoice']['content'][$idx]['total'];
+			else
+				$value = $content['total'];
 			$LMS->AddBalance(array(
-				'time' => $document['cdate'],
-				'value' => $invoice['value'] * $invoice['count'] * -1,
-				'taxid' => $invoice['taxid'],
-				'customerid' => $document['customerid'],
-				'comment' => $invoice['description'],
+				'time' => $invoice['cdate'],
+				'value' => $value * -1,
+				'taxid' => $content['taxid'],
+				'customerid' => $invoice['customerid'],
+				'comment' => $content['description'],
 				'docid' => $id,
-				'itemid' => $itemid
+				'itemid' => $content['itemid'],
 			));
-			$itemid += 1;
 		}
 		if ($SYSLOG) {
 			$args = array(
 				SYSLOG::RES_DOC => $document['id'],
 				SYSLOG::RES_CUST => $document['customerid'],
-				SYSLOG::RES_USER => $AUTH->id
+				SYSLOG::RES_USER => Auth::GetCurrentUser()
 			);
 			$SYSLOG->AddMessage(SYSLOG::RES_DOC, SYSLOG::OPER_UPDATE, $args);
 		}
@@ -62,7 +65,7 @@ if($id && $_GET['is_sure'] == '1') {
 			$args = array(
 				SYSLOG::RES_DOC => $document['id'],
 				SYSLOG::RES_CUST => $document['customerid'],
-				SYSLOG::RES_USER => $AUTH->id
+				SYSLOG::RES_USER => Auth::GetCurrentUser()
 			);
 			$SYSLOG->AddMessage(SYSLOG::RES_DOC, SYSLOG::OPER_UPDATE, $args);
 		}

@@ -1,5 +1,207 @@
 $Id$
 
+version ?.??.?? (????-??-??):
+
+  - improvement: create db dumps with multi records inserts statements which
+    dramatically reduces db restore time [chilan]
+  - enhancement: allow to backup all financial documents issued a given day
+    in selected output directory (--backup and --output-directory parameters
+    were introduced for lms-sendinvoices.php) [chilan]
+  - enhancement: added payments.check_invoices ('false' by default) configuration
+    variable support and its behavior is the same as deprecated daemon payments
+    module configuration variable [chilan]
+  - enhancement: added support for default queue categories used during new ticket
+    creation [chilan]
+  - improvement: pdf ticket and document attachments are displayed in popup window
+    instead of forcing writing them to disk [chilan]
+  - improvement: phpui.pin_min_size, phpui.pin_max_size and phpui.pin_allowed_characters
+    configurtion variables control customer pin constraints (by default: 4, 6 and
+    '0123456789' respectively) [chilan]
+  - improvement: suppport for teryt locations where city consists of many sections/districts
+    [chilan]
+  - improvement: phpui.category_adjustments_in_ticketedit (false by default) controls if selected
+    categories in ticket edit form are automatically adjusted with queue change [chilan]
+  - improvement: pdf and html unification of receipts.default_printpage ('original,copy' by
+    default) configuration variable support which controls how many receipts are printed [chilan]
+  - enhancement: log ticket category changes [chilan]
+  - enhancement: implemented helpdesk notification mail threading compatible with RFC5322 [chilan]
+  - enhancement: added ticket source information [interduo]
+  - enhancement: allow to define ticket with which sources are visible in userpanel helpdesk
+    module [chilan]
+  - enhancement: Fake delete operations in helpdesk to regular users. After deleting queue,
+    ticket or message regular user can't see deleted items, only superuser can see
+    deleted items [ravvar/chilan]
+  - enhancement: added support for array parameter to LMSDB class [kosa/chilan]
+  - improvement: allow to add new network device directly from customer box [chilan]
+  - enhancement: allow to quick search by external customer id fragment [chilan]
+  - improvement: all url in helpdesk notifications open ticket immediately
+    on comment added before the moment [chilan]
+  - enhancement: helpdesk ticket <-> customer locations (this allows to assign locations
+    to tickets) [chilan]
+  - enhancement: helpdesk ticket <-> customer nodes (only customer nodes which have the same
+    location as selected ticket customer location are displayed) [chilan]
+  - enhancement: added support for event <-> customer location assignment [chilan]
+  - enhancement: allow to filter tariffs by tags in customer assignment forms [chilan]
+  - improvement: added support for named state list in lms-teryt.php [chilan]
+  - improvement: added special user privilege which controls if helpdesk queues, tickets,
+    messages, notes are only archived (with permanent remove option) instead of removing
+    them [ravvar/chilan]
+  - enhancement: tax rate reverse charge flag support added (JPK generators use it) [chilan]
+  - improvement: show invoice pro forma items in customer balance box [chilan]
+  - enhancement: phpui.proforma_invoice_generates_commitment configuration variable
+    ('false' by default) controls if related cash records are created for proforma
+    invoices [chilan]
+  - enhancement: allow to view and search tickets from many queues and categories [chilan]
+  - enhancement: allow to view and search events selecting many types and owners [chilan]
+  - improvement: helpdesk_notification_mail_subject, helpdesk_notification_mail_body
+    helpdesk_notification_sms_body, helpdesk_customerinfo_email_body and
+    helpdesk_customerinfo_sms_body configurtion variables control additional information
+    in helpdesk ticket notice via templates [ravvar/chilan]
+  - improvement: userpanel/info: customer properties which have pending value changes
+    assigned to them are presented in different color [chilan]
+  - enhancement: userpanel/info: customer data change which requires operator confirmation
+    triggers mail notification [chilan]
+  - enhancement: userpanel/info: customer data change confirmations and rejections are sent
+    to customers [chilan]
+  - improvement: added customer status filter in message add form (opened documents) [chilan]
+  - improvement: added lmsd systemd unit file which automatically restart lmsd process
+    when it fails [chilan]
+  - improvement: minor tcpdf invoice look improvements [interduo]
+  - enhancement: rewrite of old lms-makedhcpconf perl script in php; dhcp.use_network_authtype
+    configuration variable controls which networks are processes by default [chilan]
+  - enhancement: new lms-maketcnew.php backend script which allows to generate
+    almost any traffic shaper configuration [chilan]
+  - improvement: message send - allow to filter recipients by expired customer balances [chilan]
+  - improvement: allow to download recorded voip calls [chilan]
+  - enhancement: sms.queue configuration variable allow to specify outgoing queue
+    for smstools service [chilan]
+  - enhancement: allow to force separate invoice issuing for liabilities [chilan]
+  - enhancement: optional support of Google reCAPTCHA mechanism for userpanel logins and
+    credential reminders [chilan]
+  - improvement: all userpanel styles/themes have the same features [chilan]
+  - improvement: quicksearch: if many customers with the same full name has been found,
+    we add their billing/main addresses as description [chilan]
+  - improvement: receipt with cash move allows to get total balance of source cash
+    registry [chilan]
+  - enhancement: allow to filter customer list by assignments to so many customergroups
+    as were selected [chilan]
+  - improvement: customerinfo: show assignmentid when more then one. show ticketid in eventspanel [interduo]
+  - enhancement: netnodes: added creationtime, administrative contact, lastinspectiontime [interduo]
+  - enhancement: customerraports: added sending book generator for sending letters/packages [interduo]
+  - improvement: show queue name in queuelist [interduo]
+  - improvement: show count of assigned events in rtqueueview [interduo]
+  - improvement: show categories in rtqueueview (rt.show_ticket_categories configuration
+    variable allows to control their visiblity) [interduo]
+  - improvement: lmsuser can define category color [interduo]
+  - improvement: rtmodule: more filtering options in "User"-->"no owner" [interduo]
+  - improvement: rtmodule: multiselect in filtering in status field [interduo]
+  - enhancement: rtmodule: if ticket status is waiting and has no opened events
+    show "+" image and link [interduo]
+  - improvement: eventsearch: added posibility to search by ticketid [interduo]
+  - improvement: event: id of ticket moved into more ui friendly place [interduo]
+  - enhancement: reference documents were introduced - it allows to create
+    document chains [chilan]
+  - enhancement: document templates support reference_types and references_templates properties
+    which define to which document given template can refer to [chilan]
+  - enhancement: allow to sort customer by external id [chilan]
+  - improvement: published_document_modification privilege controls if user can modify/delete
+    published documents [chilan]
+  - enhancement: allow to add new note for created helpdesk ticket [interduo]
+  - introduced: rt: requestor_phone, requestor_mail in rtticketadd [interduo]
+  - improvement: allow to fast-clone existing customer node to new one [chilan]
+  - enhancement: introduced payments_before_assignment_loop plugin hook in lms-payments.php backend script;
+    it has potential to be used for now at least by Adescom plugin [chilan]
+  - cleanup: all columns in database related to other tables are foreign keys [chilan]
+  - enhancement: when application is called with api GET parameter we avoid running some code which
+    is needed only for webui [chilan]
+  - improvement: allow to search customers by different address types [chilan]
+  - enhancement: instant receipt issuing is possible during customer balance add [chilan]
+  - enhancement: allow to create receipt with one click near customer balance info [chilan]
+  - improvement: added support for mail.reply_email configuration variable which controls
+    what email address is set in Reply-To header in messageadd [chilan]
+  - improvement: phpui.promotion_activation_at_next_day configuration variable controls
+    if activation assignment is setup to next day [chilan]
+  - improvement: receipts.instant_payment_print variable controls if instant payment
+    is marked for printing by default [interduo]
+  - improvement: show/hide customer credentials on debit notes - notes.customer_credentials
+    configuration variable [interduo]
+  - improvement: phpui.promotion_preserve_at_day configuration variable controls if assignments added
+    from promotion scheme have at day the same as given assignment day [chilan]
+  - improvement: downrates and uprates don't need upper limit [chilan]
+  - enhancement: assignments can be commited together with document closing/commiting [chilan]
+  - improvement: if there is only one division in database we use its properties
+    for receipt division header [chilan]
+  - enhancement: allow to visually filter customer assignments by tariff type [chilan]
+  - enhancement: promotion tariff selections are named selection lists [chilan]
+  - enhancement: promotion schema tariffs can be ordered using drag & drop technique [chilan]
+  - enhancement: customer post addresses are stored within financial documents in the state
+    of issue time [chilan]
+  - enhancement: all promotion schema tariffs can have labels applied [chilan]
+  - enhancement: added clear date button in datepicker dialogs [chilan]
+  - enhancement: added auth/session type property for tariffs [chilan]
+  - enhancement: only nodes matched with selected tariff auth/session types are show
+    for edited customer assignments [chilan]
+  - enhancement: nodes can be separately selected for all promotion schema tariffs [chilan]
+  - improvement: show location and device id on customer network device list [chilan]
+  - enhancement: assignments can be created basing on promotion schema during document
+    creation [chilan]
+  - enhancement: creating new assignment/document we can decide what should be applied
+    to already existing assignments [chilan]
+  - enhancement: added document selection to filter on customer assignment list [chilan]
+  - enhancement: option for new assignment to allow impact on existing assignments
+    with the same tariff type [chilan]
+  - improvement: store commit flags for later use if created document is not closed
+    and then use it during document close process [chilan]
+  - enhancement: multi document operations are possible from customer document box [chilan]
+  - enhancement: lms-notify.php: added documents type support which takes document end
+    dates into consideration [chilan]
+  - enhancement: allow to select permanent attachments which are included with generated
+    document [chilan]
+  - improvement: phpui.default_link{type,technology,speed} configuration variables allow to preselect
+    link properties for new and edited nodes [chilan]
+  - improvement: negative credit notes are taken immediately to account, by for positive ones
+    we wait for their pay time [chilan]
+  - enhancement: allow to send documents directly to mail [chilan]
+  - enhancement: phpui.document_password configuration variable controls if documents generated
+    by html2pdf conversion are protected [chilan]
+  - improvement: added support for CC and BCC headers in mail backends [chilan]
+  - enhancement: new userpanel authentication type - node name and password
+    (as pppoe login and password) [chilan]
+  - improvement: openlayers map: allow to copy gps coordinates of network devices from
+    coordinate selector popup [chilan]
+  - improvement: introduced 'mail' section configuration variables which allow to change
+    smtp ssl session behavior (mail.ssl_verify_peer, mail.ssl_verify_peer_name,
+    mail.ssl_allow_self_singed) [chilan]
+  - improvement: cashimport.folder configuration variable specifies which imap folder
+    to check for new cash import files [chilan]
+  - improvement: when customer has 'electronic invoice' not checked and we are trying to mark
+    mail contact as for invoice sending, we show alert popup [chilan]
+  - enhancement: allow to select issued document type for assignments [chilan]
+  - enhancement: helpdesk/rt: introduced ticket priorities [interduo]
+  - enhancement: allow to check all items with one click in lms-ui-multiselect [chilan]
+  - enhacement: userpanel: allow to limit reopening helpdesk tickets to newer than
+    configured seconds (userpanel.allow_reopen_tickets_newer_than configuration variable)
+    [chilan]
+  - cleanup: mysql and mysqli database types point to mysqli php extension [chilan]
+  - enhancement: allow to modify credit note and debit note numbers during their edits [chilan]
+  - enhancement: document cancellation support for debit notes [chilan]
+  - enhancement: allow to decide if customer data should be updated during
+    credit note creation, modification and invoice modification [chilan]
+  - enhancement: simple api support - netnodelist, netnodeadd, netnodedel, netnodeedit,
+    netdevlist, netdevadd, netdevdel, netdevedit, nodelist, nodeservicelist,
+    customerlist [chilan]
+  - enhancement: added telecom number support for divisions [chilan]
+  - enhancement: aadded qr2pay payment method on TcpdfInvoice [wdjag/chilan]
+  - enhancement: gusapi support added which allows to get company details from GUS REGON
+    database (phpui.gusapi_key configuration variable stores API key) [chilan]
+  - enhancement: zip code auto and manual completion using OpenStreetMap API [chilan]
+  - enhancement: zip code auto and manual completion using PNA database [chilan]
+  - enhancement: phpui.zipcode_backend controls which zip code auto completion backend
+    is used (by default: 'osm'; 'pna' is second supported backend) [chilan]
+  - enhancement: pna codes which are not assigned to existing teryt locations are
+    also stored in database and are searchable by streetname [chilan]
+  - bugfix: sql schema compatibility with PowerDNS 4.x [chilan]
+
 version 1.11.22 (2017-06-08):
 
   - userpanel enhancement: show confirmed documents only checkbox decides if confirmed

@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2013 LMS Developers
+ *  (C) Copyright 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -42,7 +42,7 @@ else
 if (!$LMS->NodeExists($nodeid)) {
 	if (isset($_GET['ownerid']))
 		$SESSION->redirect('?m=customerinfo&id=' . $_GET['ownerid']);
-	else if ($DB->GetOne('SELECT 1 FROM vnodes WHERE id = ? AND ownerid = 0', array($nodeid)))
+	else if ($DB->GetOne('SELECT 1 FROM vnodes WHERE id = ? AND ownerid IS NULL', array($nodeid)))
 		$SESSION->redirect('?m=netdevinfo&ip=' . $nodeid . '&id=' . $LMS->GetNetDevIDByNode($nodeid));
 	else
 		$SESSION->redirect('?m=nodelist');
@@ -78,13 +78,12 @@ $layout['pagetitle'] = trans('Node Info: $a', $nodeinfo['name']);
 
 $nodeinfo['projectname'] = trans('none');
 if ($nodeinfo['invprojectid']) {
-	$prj = $DB->GetRow("SELECT * FROM invprojects WHERE id=?", array($nodeinfo['invprojectid']));
+	$prj = $LMS->GetProject($nodeinfo['invprojectid']);
 	if ($prj) {
 		if ($prj['type'] == INV_PROJECT_SYSTEM && intval($prj['id']==1)) {
 			/* inherited */ 
 			if ($nodeinfo['netdev']) {
-				$prj = $DB->GetRow("SELECT * FROM invprojects WHERE id=?",
-					array($netdevices['invprojectid']));
+				$prj = $LMS->GetProject($netdevices['invprojectid']);
 				if ($prj) {
 					if ($prj['type'] == INV_PROJECT_SYSTEM && intval($prj['id'])==1) {
 						/* inherited */
@@ -126,6 +125,12 @@ $hook_data = $LMS->executeHook('nodeinfo_before_display',
 $nodeinfo = $hook_data['nodeinfo'];
 
 $SMARTY->assign('xajax', $LMS->RunXajax());
+
+$SMARTY->assign(array(
+	'linktype' => intval(ConfigHelper::getConfig('phpui.default_linktype', LINKTYPE_WIRE)),
+	'linktechnology' => intval(ConfigHelper::getConfig('phpui.default_linktechnology', 0)),
+	'linkspeed' => intval(ConfigHelper::getConfig('phpui.default_linkspeed', 100000)),
+));
 
 $SMARTY->assign('nodesessions', $LMS->GetNodeSessions($nodeid));
 $SMARTY->assign('netdevices', $netdevices);

@@ -96,6 +96,14 @@
 	</TR>
 	{/if}
 	<TR>
+		<td class="bold nobr">
+			<label for="use_current_customer_data">{trans("Use current customer data:")}</label>
+		</td>
+		<TD class="nobr">
+			<input type="checkbox" id="use_current_customer_data" name="cnote[use_current_customer_data]" value="1"{if $cnote.use_current_customer_data} checked{/if} {tip text="Check it if you want to use current customer data"}>
+		</TD>
+	</TR>
+	<TR>
 		<TD WIDTH="1%" NOWRAP>
 			<B>{trans("Reason:")}</B>
 		</TD>

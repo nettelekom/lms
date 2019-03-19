@@ -263,13 +263,15 @@ INPUT {
   font-size: 8pt;
   font-family: Arial, Helvetica, Verdana;
 }
-INPUT.alert {
+INPUT.alert,
+INPUT:invalid {
   background-color: #FF9B9B;
 }
 INPUT[type="checkbox"].alert {
   outline: 2px solid #FF6060;
 }
-INPUT[type="radio"].alert {
+INPUT[type="radio"].alert,
+INPUT[type="radio"]:invalid {
   outline: 2px solid #FF6060;
 }
 INPUT.hiddenbtn {
@@ -297,7 +299,8 @@ TEXTAREA {
   background-color: #EBE4D6;
   vertical-align: middle;
 }
-TEXTAREA.alert {
+TEXTAREA.alert,
+TEXTAREA:invalid {
   font-size: 8pt;
   font-family: Arial, Helvetica, Verdana;
   border-style: solid;
@@ -313,7 +316,8 @@ SELECT {
   background-color: #EBE4D6;
   vertical-align: middle;
 }
-SELECT.alert {
+SELECT.alert,
+SELECT:invalid {
   font-size: 8pt;
   font-family: Arial, Helvetica, Verdana;
   border-style: solid;
@@ -344,6 +348,10 @@ div.lms-ui-multiselect {
   max-width: 200px;
   white-space: pre-wrap;
   min-width: 200px;
+  display: inline-block;
+}
+div.lms-ui-multiselect.lms-ui-multiselect-filter {
+  min-width: 100px;
 }
 div.lms-ui-multiselect-tiny {
   overflow: hidden;
@@ -394,6 +402,12 @@ div.lms-ui-multiselectlayer ul li:hover {
 }
 div.lms-ui-multiselectlayer ul span {
   padding-left: 3px;
+}
+div.lms-ui-multiselectlayer div {
+  border-left: solid 1px #888888;
+  border-right: solid 1px #888888;
+  border-bottom: solid 1px #888888;
+  background-color: #DFD5BD;
 }
 .click-menu {
   width: 150px;
@@ -515,7 +529,8 @@ div.lms-ui-multiselectlayer ul span {
 .white {
   color: #FFFFFF;
 }
-.alert {
+.alert,
+input:invalid {
   color: #FF0000 !important;
 }
 .alertblend {
@@ -592,7 +607,6 @@ div.lms-ui-multiselectlayer ul span {
   .phone_number:link {
     pointer-events: none;
     cursor: default;
-    color: black;
   }
 }
 @media print {
@@ -609,6 +623,24 @@ div.lms-ui-multiselectlayer ul span {
   color: #336600;
   cursor: pointer;
   text-decoration: underline;
+}
+.lms-ui-rt-deleted.light:not(:hover) {
+  background-color: #ffb1b1;
+}
+.lms-ui-rt-deleted.lucid:not(:hover) {
+  background-color: #fccdcd;
+}
+.lms-ui-rt-partly-deleted.light {
+  background-image: repeating-linear-gradient(145deg, transparent, transparent 10px, #ffb1b1 10px, #ffb1b1 20px);
+}
+.lms-ui-rt-partly-deleted.lucid {
+  background-image: repeating-linear-gradient(145deg, transparent, transparent 10px, #fccdcd 10px, #fccdcd 20px);
+}
+.lms-ui-rtmessage-deleted.light {
+  background-color: #ffb1b1;
+}
+.lms-ui-rtmessage-deleted.lucid {
+  background-color: #fccdcd;
 }
 .lms-ui-multi-check-all {
   -webkit-user-select: none;
@@ -641,12 +673,14 @@ table.lmsbox-inner > tbody {
 table.lmsbox > thead,
 table.lmsbox > tfoot,
 table.lmsbox > tbody,
-table.lmsbox-inner > tfoot,
 table.lmsbox-innerbox > thead,
 table.lmsbox-innerbox > tfoot {
   border-width: 1px;
   border-style: solid;
   border-color: black;
+}
+table.lmsbox-inner > tfoot {
+  border-top: 1px solid black;
 }
 table.lmsbox-inner td {
   border-spacing: 0px;
@@ -1123,11 +1157,14 @@ table.dataTable thead tr:last-child th {
 .address-full:hover {
   cursor: pointer;
 }
+.lms-ui-address-select.alert {
+  background-color: #FF9B9B !important;
+}
 .lms-ui-address-select {
   padding-left: 4px;
   padding-right: 4px;
   border: 1px solid #a9a9a9 !important;
-  background-color: #ebe4d6 !important;
+  background-color: #EBE4D6 !important;
   box-shadow: none !important;
   border-radius: 0 !important;
   color: black !important;
@@ -1145,6 +1182,9 @@ table.dataTable thead tr:last-child th {
 .ui-menu-item .ui-state-active:hover {
   color: white;
   background-color: #4a90d9 !important;
+}
+.ui-tooltip.lms-ui-tooltip-nodelist {
+  max-width: initial;
 }
 .lms-ui-cursor-pointer:hover {
   cursor: pointer;

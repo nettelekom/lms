@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2016 LMS Developers
+ *  (C) Copyright 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -24,37 +24,7 @@
  *  $Id$
  */
 
-function GetNodesLocation($customerid) {
-	return LMSDB::getInstance()->GetAll('SELECT n.id, n.name, location FROM vnodes n WHERE ownerid = ? ORDER BY n.name ASC', array($customerid));
-}
-
-function select_customer($id)
-{
-    $JSResponse = new xajaxResponse();
-	if (!empty($id))
-		$JSResponse->call('update_nodes_location', (array)GetNodesLocation($id));
-    return $JSResponse;
-}
-
-function getUsersForGroup($groupid) {
-	$JSResponse = new xajaxResponse();
-
-	if (empty($groupid))
-		$users = null;
-	else
-		$users = LMSDB::getInstance()->GetCol('SELECT u.id FROM users u
-			JOIN userassignments ua ON ua.userid = u.id
-			WHERE u.deleted = 0 AND u.access = 1 AND ua.usergroupid = ?',
-			array($groupid));
-
-	$JSResponse->call('update_user_selection', $users);
-
-	return $JSResponse;
-}
-
-$LMS->InitXajax();
-$LMS->RegisterXajaxFunction(array('select_customer', 'getUsersForGroup'));
-$SMARTY->assign('xajax', $LMS->RunXajax());
+include(MODULES_DIR . DIRECTORY_SEPARATOR . 'eventxajax.inc.php');
 
 if (!empty($_GET['ticketid'])) {
 	$eventticketid = intval($_GET['ticketid']);
@@ -102,72 +72,57 @@ if(isset($_POST['event']))
 	if ($enddate && $date > $enddate)
 		$error['enddate'] = trans('End time must not precede start time!');
 
+	if (!isset($event['customerid']))
+		$event['customerid'] = $event['custid'];
+
+	$event['status'] = isset($event['status']) ? 1 : 0;
+
 	if (!$error) {
-		$event['status'] = isset($event['status']) ? 1 : 0;
-		if (isset($event['customerid']))
-			$event['custid'] = $event['customerid'];
-		if ($event['custid'] == '')
-			$event['custid'] = 0;
+		$event['address_id'] = !isset($event['address_id']) || $event['address_id'] == -1 ? null : $event['address_id'];
+		$event['nodeid'] = !isset($event['nodeid']) || empty($event['nodeid']) ? null : $event['nodeid'];
 
-		$event['nodeid'] = (isset($event['customer_location'])||is_null($event['nodeid'])) ? NULL : $event['nodeid'];
-
-                if (isset($event['helpdesk']))
-                {
-                    $ticket['queue'] = $event['rtqueue'];
-                    $ticket['customerid'] = $event['customerid'];
-                    $ticket['requestor'] = $event['name']." ".$event['surname'];
-                    $ticket['subject'] = $event['title'];
-                    $ticket['mailfrom'] = $event['email'];
-                    $ticket['categories'] = $event['categories'];
-                    $ticket['owner'] = '0';
-                    $event['ticketid'] = $LMS->TicketAdd($ticket);
-                }
-
-		$DB->BeginTrans();
-
-		$DB->Execute('INSERT INTO events (title, description, date, begintime, enddate,
-                                                endtime, userid, creationdate, private, customerid, type, nodeid, ticketid)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?NOW?, ?, ?, ?, ?, ?)',
-				array($event['title'],
-					$event['description'],
-					$date,
-					$event['begintime'],
-					$enddate,
-					$event['endtime'],
-					$AUTH->id,
-					$event['status'],
-					intval($event['custid']),
-					$event['type'],
-					$id,
-					empty($event['ticketid']) ? null : $event['ticketid'],
-					));
-
-		if (!empty($event['userlist'])) {
-			$id = $DB->GetLastInsertID('events');
-			foreach($event['userlist'] as $userid)
-				$DB->Execute('INSERT INTO eventassignments (eventid, userid)
-					VALUES (?, ?)', array($id, $userid));
+		if (isset($event['helpdesk'])) {
+			$ticket['queue'] = $event['rtqueue'];
+			$ticket['customerid'] = $event['customerid'];
+			$ticket['body'] = $event['description'];
+			$ticket['requestor'] = $event['name']." ".$event['surname'];
+			$ticket['subject'] = $event['title'];
+			$ticket['mailfrom'] = $event['email'];
+			$ticket['categories'] = $event['categories'];
+			$ticket['owner'] = '0';
+			$ticket['address_id'] = $event['address_id'];
+			$ticket['nodeid'] = $event['nodeid'];
+			$event['ticketid'] = $LMS->TicketAdd($ticket);
 		}
 
-		$DB->CommitTrans();
+		$event['date'] = $date;
+		$event['enddate'] = $enddate;
 
-		if(!isset($event['reuse']))
-		{
+		$LMS->EventAdd($event);
+
+		if (!isset($event['reuse'])) {
+			$backto = $SESSION->get('backto');
+			if (isset($backto) && preg_match('/m=rtticketview/', $backto))
+				$SESSION->redirect('?' . $backto);
 			$SESSION->redirect('?m=eventlist');
 		}
 
 		unset($event['title']);
 		unset($event['description']);
-                                unset($event['categories']);
+		unset($event['categories']);
 	}
 } else {
 	$event['helpdesk'] = ConfigHelper::checkConfig('phpui.default_event_ticket_assignment');
 }
 
 $event['date'] = isset($event['date']) ? $event['date'] : $SESSION->get('edate');
-if(empty($event['customerid']) && !empty($_GET['customerid'])) {
+
+if (isset($_GET['customerid']))
 	$event['customerid'] = intval($_GET['customerid']);
-	$SMARTY->assign('nodes_location', GetNodesLocation($event['customerid']));
+if (isset($event['customerid'])) {
+	$event['customername'] = $LMS->GetCustomerName($event['customerid']);
+	$SMARTY->assign('nodes', $LMS->GetNodeLocations($event['customerid'],
+		isset($event['address_id']) && intval($event['address_id']) > 0 ? $event['address_id'] : null));
 }
 
 if(isset($_GET['day']) && isset($_GET['month']) && isset($_GET['year']))
@@ -178,7 +133,8 @@ if(isset($_GET['day']) && isset($_GET['month']) && isset($_GET['year']))
 
 $layout['pagetitle'] = trans('New Event');
 
-$SESSION->save('backto', $_SERVER['QUERY_STRING']);
+if (!isset($_GET['ticketid']))
+	$SESSION->save('backto', $_SERVER['QUERY_STRING']);
 
 $usergroups = $DB->GetAll('SELECT id, name FROM usergroups');
 $userlist = $DB->GetAll('SELECT id, rname FROM vusers
@@ -193,7 +149,7 @@ if (!ConfigHelper::checkConfig('phpui.big_networks'))
 if (isset($eventticketid))
 	$event['ticketid'] = $eventticketid;
 
-$categories = $LMS->GetCategoryListByUser($AUTH->id);
+$categories = $LMS->GetCategoryListByUser(Auth::GetCurrentUser());
 $SMARTY->assign('max_userlist_size', ConfigHelper::getConfig('phpui.event_max_userlist_size'));
 $SMARTY->assign('userlist', $userlist);
 $SMARTY->assign('tqname',$tqname);

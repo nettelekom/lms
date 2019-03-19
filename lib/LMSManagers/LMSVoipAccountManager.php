@@ -3,7 +3,7 @@
 /*
  *  LMS version 1.11-git
  *
- *  Copyright (C) 2001-2013 LMS Developers
+ *  Copyright (C) 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -27,7 +27,6 @@
 /**
  * LMSVoipAccountManager
  *
- * @author Maciej Lew <maciej.lew.1987@gmail.com>
  */
 class LMSVoipAccountManager extends LMSManager implements LMSVoipAccountManagerInterface
 {
@@ -118,7 +117,7 @@ class LMSVoipAccountManager extends LMSManager implements LMSVoipAccountManagerI
             }
         }
 
-        $tmp_phone_list = $this->db->GetAll('SELECT voip_account_id, phone FROM voip_numbers;');
+        $tmp_phone_list = $this->db->GetAll('SELECT voip_account_id, phone FROM voip_numbers');
         $phone_list = array();
 		if (!empty($tmp_phone_list)) {
 			foreach ($tmp_phone_list as $k=>$v)
@@ -254,7 +253,7 @@ class LMSVoipAccountManager extends LMSManager implements LMSVoipAccountManagerI
                 $voipaccountdata['ownerid'],
                 $voipaccountdata['login'],
                 $voipaccountdata['passwd'],
-                $this->auth->id,
+                Auth::GetCurrentUser(),
                 $voipaccountdata['access'],
                 $voipaccountdata['balance']    ? $voipaccountdata['balance']    : ConfigHelper::getConfig('voip.default_cost_limit', 200),
                 $voipaccountdata['flags']      ? $voipaccountdata['flags']      : ConfigHelper::getConfig('voip.default_account_flags', 0),
@@ -354,7 +353,7 @@ class LMSVoipAccountManager extends LMSManager implements LMSVoipAccountManagerI
             $result['modifiedby']    = $user_manager->getUserName($result['modid']);
             $result['creationdateh'] = date('Y/m/d, H:i', $result['creationdate']);
             $result['moddateh']      = date('Y/m/d, H:i', $result['moddate']);
-            $result['phones']        = $this->db->GetAll('SELECT phone, number_index FROM voip_numbers WHERE voip_account_id = ?;', array($id));
+            $result['phones']        = $this->db->GetAll('SELECT phone, number_index FROM voip_numbers WHERE voip_account_id = ?', array($id));
             $result['owner']         = $customer_manager->getCustomerName($result['ownerid']);
             return $result;
         }
@@ -427,7 +426,7 @@ class LMSVoipAccountManager extends LMSManager implements LMSVoipAccountManagerI
                 $data['login'],
                 $data['passwd'],
                 $data['access'],
-                $this->auth->id,
+                Auth::GetCurrentUser(),
                 $data['ownerid'],
                 $data['flags']      ? $data['flags']      : ConfigHelper::getConfig('voip.default_account_flags', 0),
                 $data['balance']    ? $data['balance']    : 0,
@@ -439,7 +438,7 @@ class LMSVoipAccountManager extends LMSManager implements LMSVoipAccountManagerI
 
         if ($result) {
             $this->db->Execute('UPDATE voip_numbers SET number_index = null WHERE voip_account_id = ?', array($data['id']));
-            $current_phones = $this->db->GetAllByKey('SELECT phone FROM voip_numbers WHERE voip_account_id = ?;', 'phone', array($data['id']));
+            $current_phones = $this->db->GetAllByKey('SELECT phone FROM voip_numbers WHERE voip_account_id = ?', 'phone', array($data['id']));
             $phone_index = 0;
 
             $phone_to_delete = array();
@@ -480,7 +479,7 @@ class LMSVoipAccountManager extends LMSManager implements LMSVoipAccountManagerI
      * @return array VoIP accounts data
      */
     public function getCustomerVoipAccounts($id) {
-        $result['accounts'] = $this->db->GetAll(
+        $result = $this->db->GetAll(
             'SELECT v.id, login, passwd, ownerid, access,
                 lb.name AS borough_name, ld.name AS district_name,
                 lst.name AS state_name, lc.name AS city_name,
@@ -501,12 +500,11 @@ class LMSVoipAccountManager extends LMSManager implements LMSVoipAccountManagerI
             ORDER BY login ASC', array($id)
         );
 
-        if ( $result['accounts'] ) {
-            foreach ($result['accounts'] as $k=>$v) {
-                $result['accounts'][$k]['phones']   = $this->db->GetAll('SELECT * FROM voip_numbers WHERE voip_account_id = ?', array($v['id']) );
-            }
-
-            $result['total'] = count($result['accounts']);
+        if (!empty($result)) {
+            foreach ($result as &$account)
+                $account['phones'] = $this->db->GetAll('SELECT * FROM voip_numbers WHERE voip_account_id = ?',
+					array($account['id']));
+            unset($account);
         }
 
         return $result;

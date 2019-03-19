@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2016 LMS Developers
+ *  (C) Copyright 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -163,7 +163,7 @@ switch($action)
 		if($contents && $customer)
 		{
 			$DB->BeginTrans();
-			$DB->LockTables(array('documents', 'cash', 'debitnotecontents', 'numberplans', 'divisions'));
+			$DB->LockTables(array('documents', 'cash', 'debitnotecontents', 'numberplans', 'divisions', 'vdivisions'));
 
 			if(!$note['number'])
 				$note['number'] = $LMS->GetNewDocumentNumber(array(
@@ -210,7 +210,7 @@ switch($action)
 
 			$division = $DB->GetRow('SELECT name, shortname, address, city, zip, countryid, ten, regon,
 				account, inv_header, inv_footer, inv_author, inv_cplace 
-				FROM vdivisions WHERE id = ? ;',array($customer['divisionid']));
+				FROM vdivisions WHERE id = ?',array($customer['divisionid']));
 
 			if ($note['numberplanid'])
 				$fullnumber = docnumber(array(
@@ -224,10 +224,10 @@ switch($action)
 
 			$args = array(
 				'number' => $note['number'],
-				SYSLOG::RES_NUMPLAN => !empty($note['numberplanid']) ? $note['numberplanid'] : 0,
+				SYSLOG::RES_NUMPLAN => !empty($note['numberplanid']) ? $note['numberplanid'] : null,
 				'type' => DOC_DNOTE,
 				'cdate' => $cdate,
-				SYSLOG::RES_USER => $AUTH->id,
+				SYSLOG::RES_USER => Auth::GetCurrentUser(),
 				SYSLOG::RES_CUST => $customer['id'],
 				'name' => $customer['customername'],
 				'address' => ($customer['postoffice'] && $customer['postoffice'] != $customer['city'] && $customer['street']
@@ -237,14 +237,14 @@ switch($action)
 				'ssn' => $customer['ssn'],
 				'zip' => $customer['zip'],
 				'city' => $customer['postoffice'] ? $customer['postoffice'] : $customer['city'],
-				SYSLOG::RES_COUNTRY => $customer['countryid'] ? $customer['countryid'] : 0,
-				SYSLOG::RES_DIV => $customer['divisionid'],
+				SYSLOG::RES_COUNTRY => !empty($customer['countryid']) ? $customer['countryid'] : null,
+				SYSLOG::RES_DIV => !empty($customer['divisionid']) ? $customer['divisionid'] : null,
 				'div_name' => ($division['name'] ? $division['name'] : ''),
 				'div_shortname' => ($division['shortname'] ? $division['shortname'] : ''),
 				'div_address' => ($division['address'] ? $division['address'] : ''), 
 				'div_city' => ($division['city'] ? $division['city'] : ''), 
 				'div_zip' => ($division['zip'] ? $division['zip'] : ''),
-				'div_' . SYSLOG::getResourceKey(SYSLOG::RES_COUNTRY) => ($division['countryid'] ? $division['countryid'] : 0),
+				'div_' . SYSLOG::getResourceKey(SYSLOG::RES_COUNTRY) => !empty($division['countryid']) ? $division['countryid'] : null,
 				'div_ten'=> ($division['ten'] ? $division['ten'] : ''),
 				'div_regon' => ($division['regon'] ? $division['regon'] : ''),
 				'div_account' => ($division['account'] ? $division['account'] : ''),
@@ -263,6 +263,8 @@ switch($action)
 						?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', array_values($args));
 
 			$nid = $DB->GetLastInsertID('documents');
+
+			$LMS->UpdateDocumentPostAddress($nid, $customer['id']);
 
 			if ($SYSLOG) {
 				$args[SYSLOG::RES_DOC] = $nid;

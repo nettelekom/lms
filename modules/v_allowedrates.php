@@ -4,7 +4,7 @@ $layout['pagetitle'] = 'Dozwolone strefy';
 if($_POST['id'])
 {
 	$voip->wsdl->AddAllowedRates($_POST);
-	$voip->wsdl->ModifyAccount($AUTH->id, $_GET['account']);
+	$voip->wsdl->ModifyAccount(Auth::GetCurrentUser(), $_GET['account']);
 	$SESSION->redirect('?m=v_nodeinfo&id=' . $_GET['account']);
 }
 $SMARTY->assign('sip', $_GET['account']);

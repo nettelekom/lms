@@ -51,24 +51,19 @@ if (!isset($_POST['xjxfun'])) {                  // xajax was called and handled
 
 	$netdevinfo['id'] = $_GET['id'];
 
-	if ($netdevinfo['netnodeid']) {
-		$netnode = $DB->GetRow("SELECT * FROM netnodes WHERE id=".$netdevinfo['netnodeid']);
-		if ($netnode) {
-			$netdevinfo['nodename'] = $netnode['name'];
-		}
-	}
+	if ($netdevinfo['netnodeid'])
+		$netdevinfo['netnode'] = $LMS->GetNetNode($netdevinfo['netnodeid']);
 
 	$netdevinfo['projectname'] = trans('none');
 	if ($netdevinfo['invprojectid']) {
-		$prj = $DB->GetRow("SELECT * FROM invprojects WHERE id = ?", array($netdevinfo['invprojectid']));
+		$prj = $LMS->GetProject($netdevinfo['invprojectid']);
 		if ($prj) {
 			if ($prj['type'] == INV_PROJECT_SYSTEM && intval($prj['id'])==1) {
 				/* inherited */
-				if ($netnode) {
-					$prj = $DB->GetRow("SELECT * FROM invprojects WHERE id=?",
-						array($netnode['invprojectid']));
+				if ($netdevinfo['netnodeid']) {
+					$prj = $LMS->GetProject($netnode['invprojectid']);
 					if ($prj)
-						$netdevinfo['projectname'] = trans('$a (from network node $b)', $prj['name'], $netnode['name']);
+						$netdevinfo['projectname'] = trans('$a (from network node $b)', $prj['name'], $netdevinfo['netnode']['name']);
 				}
 			} else
 				$netdevinfo['projectname'] = $prj['name'];

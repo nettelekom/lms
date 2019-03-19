@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2013 LMS Developers
+ *  (C) Copyright 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -143,6 +143,10 @@ if(isset($_GET['search']))
 	if (isset($_GET['print']))
 		$SMARTY->display('print/printcustomerlist.html');
 	elseif (isset($_GET['export'])) {
+		$SMARTY->assign('contactlist', $DB->GetAllByKey('SELECT customerid, (' . $DB->GroupConcat('contact') . ') AS phone
+			FROM customercontacts WHERE contact <> \'\' AND type & ? > 0 GROUP BY customerid',
+				'customerid', array(CONTACT_MOBILE | CONTACT_LANDLINE | CONTACT_LINE)));
+
 		$filename = 'customers-' . date('YmdHis') . '.csv';
 		header('Content-Type: text/plain; charset=utf-8');
 		header('Content-Disposition: attachment; filename=' . $filename);
@@ -166,7 +170,7 @@ else
 	$SMARTY->assign('nodegroups', $LMS->GetNodeGroupNames());
 	$SMARTY->assign('cstateslist', $LMS->GetCountryStates());
 	$SMARTY->assign('tariffs', $LMS->GetTariffs());
-	$SMARTY->assign('divisions', $DB->GetAll('SELECT id, shortname FROM divisions ORDER BY shortname'));
+	$SMARTY->assign('divisions', $LMS->GetDivisions());
 	$SMARTY->assign('k', $sqlskey);
 	$SMARTY->display('customer/customersearch.html');
 }

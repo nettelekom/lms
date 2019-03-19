@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2013 LMS Developers
+ *  (C) Copyright 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -86,7 +86,7 @@ function GetReceiptList($registry, $order='', $search=NULL, $cat=NULL, $from=0, 
 
 	if($list = $DB->GetAll(
 	        'SELECT documents.id AS id, SUM(value) AS value, number, cdate, customerid,
-		documents.name AS customer, address, zip, city, template, extnumber, closed,
+		documents.name AS customer, address, zip, city, numberplans.template, extnumber, closed,
 		MIN(description) AS title, COUNT(*) AS posnumber, vusers.name AS user
 		FROM documents
 		LEFT JOIN numberplans ON (numberplanid = numberplans.id)
@@ -94,7 +94,7 @@ function GetReceiptList($registry, $order='', $search=NULL, $cat=NULL, $from=0, 
 		LEFT JOIN receiptcontents ON (documents.id = docid AND type = ?)
 		WHERE regid = ?'
 		.$where
-		.' GROUP BY documents.id, number, cdate, customerid, documents.name, address, zip, city, template, vusers.name, extnumber, closed '
+		.' GROUP BY documents.id, number, cdate, customerid, documents.name, address, zip, city, numberplans.template, vusers.name, extnumber, closed '
 		.$having
 		.($sqlord != '' ? $sqlord : ''),
 		array(DOC_RECEIPT, $registry)
@@ -165,33 +165,40 @@ else
 	$SESSION->restore('rlreg', $regid);
 $SESSION->save('rlreg', $regid);
 
-if(isset($_POST['from']))
-{
-	if($_POST['from'] != '')
-	{
-		list($year, $month, $day) = explode('/', $_POST['from']);
-		$from = mktime(0,0,0, $month, $day, $year);
+if (isset($_POST['from'])) {
+	if (!empty($_POST['from'])) {
+		$from = date_to_timestamp($_POST['from']);
+		if (empty($from))
+			$error['datefrom'] = trans('Invalid date format!');
 	}
-}
-elseif($SESSION->is_set('rlf'))
+} elseif ($SESSION->is_set('rlf'))
 	$SESSION->restore('rlf', $from);
 else
-	$from = mktime(0,0,0);
-$SESSION->save('rlf', $from);
+	$from = 0;
 
-if(isset($_POST['to']))
-{
-	if($_POST['to'] != '')
-	{
-		list($year, $month, $day) = explode('/', $_POST['to']);
-		$to = mktime(23,59,59, $month, $day, $year);
+if (isset($_POST['to'])) {
+	if (!empty($_POST['to'])) {
+		$to = date_to_timestamp($_POST['to']);
+		if (empty($to))
+			$error['dateto'] = trans('Invalid date format!');
+		else
+			$to += 86399;
 	}
-}
-elseif($SESSION->is_set('rlt'))
+} elseif ($SESSION->is_set('rlt'))
 	$SESSION->restore('rlt', $to);
 else
-	$to = mktime(23,59,59);
-$SESSION->save('rlt', $to);
+	$to = 0;
+
+if ($from && $to)
+	if($from > $to) {
+		$error['datefrom'] = trans('Incorrect date range!');
+		$error['dateto'] = trans('Incorrect date range!');
+	}
+else
+{
+	$SESSION->save('rlf', $from);
+	$SESSION->save('rlt', $to);
+}
 
 if(isset($_POST['advances']))
 	$a = 1;
@@ -204,7 +211,8 @@ if(!$regid)
 	$SESSION->redirect('?m=cashreglist');
 }
 
-if (!$DB->GetOne('SELECT rights FROM cashrights WHERE userid = ? AND regid = ?', array($AUTH->id, $regid))) {
+if (!$DB->GetOne('SELECT rights FROM cashrights WHERE userid = ? AND regid = ? AND (rights & 1) > 0',
+	array(Auth::GetCurrentUser(), $regid))) {
 	$SMARTY->display('noaccess.html');
 	$SESSION->close();
 	die;
@@ -256,6 +264,8 @@ if($receipt = $SESSION->get('receiptprint'))
 	$SMARTY->assign('receipt', $receipt);
 	$SESSION->remove('receiptprint');
 }
+
+$SMARTY->assign('error',$error);
 $SMARTY->assign('logentry', $logentry);
 $SMARTY->assign('listdata',$listdata);
 $SMARTY->assign('pagelimit',$pagelimit);

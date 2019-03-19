@@ -11,10 +11,11 @@
 <!--
 	var lmsSettings = {
 		language: '{$language}',
-		settingsTimeout: {intval(ConfigHelper::getConfig('phpui.settings_timout', 28800))},
+		settingsTimeout: {intval(ConfigHelper::getConfig('phpui.settings_timeout', 28800))},
 		wysiwygEditor: {if ConfigHelper::getConfig('phpui.default_editor') == 'wysiwyg'}true{else}false{/if},
 		quickSearchAutoSubmit: '{ConfigHelper::getConfig('phpui.quicksearch_autosubmit', 'true')}',
-		defaultTerytCity: '{ConfigHelper::getConfig('phpui.default_teryt_city')}'
+		defaultTerytCity: '{ConfigHelper::getConfig('phpui.default_teryt_city')}',
+        zipCodeBackend: '{ConfigHelper::getConfig('phpui.zipcode_backend', 'osm')}'
 	};
 	var lmsMessages = {
 		persistentSettingSaveError: '{trans("AJAX: Error during persistent setting save on server:")}',
@@ -30,7 +31,16 @@
 		postalAddress           : '{trans('postal address')}',
 		defaultLocationAddress  : '{trans('default location address')}',
 		locationRecipientAddress: '{trans('location/recipient address')}',
-		'Are you shure that you want to remove address?': '{trans('Are you shure that you want to remove address?')}'
+        removeAddressConfirmation: '{trans('Are you sure that you want to remove address?')}',
+        datePickerClear : '{trans('<!datepicker>Clear')}',
+        nodes: '{trans("Nodes:")}',
+        netdevices: '{trans("Network Devices:")}',
+        voipAccounts: '{trans("Voip Accounts:")}',
+        nodeAssignmentWarning: '{trans("No nodes has been selected for assignment, by at least one is recommended! Are you sure you want to continue despite of this?")}',
+        noAssignmentWarning: '{trans("No assignment selected, by at least one is recommended! Are you sure you want to continue despite of this?")}',
+        allLocations: '{trans("- all -")}',
+	    noAddress: '{trans("none")}',
+        checkAll: '{trans("check all<!items>")}'
 	}
 
 	{if ConfigHelper::checkValue(ConfigHelper::getConfig('phpui.disable_mobile_tooltips', true))}
@@ -60,3 +70,5 @@
 </script>
 <script type="text/javascript" src="img/jquery.js"></script>
 <script type="text/javascript" src="img/lms-ui-dialog.js"></script>
+<script type="text/javascript" src="img/lms-ui-iconselectmenu.js"></script>
+<script type="text/javascript" src="img/lms-ui-multiselect.js"></script>

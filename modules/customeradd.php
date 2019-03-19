@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2016 LMS Developers
+ *  (C) Copyright 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -66,6 +66,16 @@ if (isset($_GET['ajax'])) {
 }
 
 require_once(LIB_DIR . DIRECTORY_SEPARATOR . 'customercontacttypes.php');
+
+$pin_min_size = intval(ConfigHelper::getConfig('phpui.pin_min_size', 4));
+if (!$pin_min_size)
+	$pin_min_size = 4;
+$pin_max_size = intval(ConfigHelper::getConfig('phpui.pin_max_size', 6));
+if (!$pin_max_size)
+	$pin_max_size = 6;
+if ($pin_min_size > $pin_max_size)
+	$pin_max_size = $pin_min_size;
+$pin_allowed_characters = ConfigHelper::getConfig('phpui.pin_allowed_characters', '0123456789');
 
 $customeradd = array();
 
@@ -147,8 +157,8 @@ if (isset($_POST['customeradd'])) {
 
 	if ($customeradd['pin'] == '')
 		$error['pin'] = trans('PIN code is required!');
-    else if (!preg_match('/^[0-9]{4,6}$/', $customeradd['pin']))
-	    $error['pin'] = trans('Incorrect PIN code!');
+	elseif (!validate_random_string($customeradd['pin'], $pin_min_size, $pin_max_size, $pin_allowed_characters))
+		$error['pin'] = trans('Incorrect PIN code!');
 
 	$contacts = array();
 
@@ -185,13 +195,9 @@ if (isset($_POST['customeradd'])) {
 		$cutoffstop = intval(pow(2, 31) - 1);
 	elseif ($customeradd['cutoffstop'] == '')
 		$cutoffstop = 0;
-	elseif (check_date($customeradd['cutoffstop'])) {
-			list ($y, $m, $d) = explode('/', $customeradd['cutoffstop']);
-			if (checkdate($m, $d, $y))
-				$cutoffstop = mktime(23, 59, 59, $m, $d, $y);
-			else
-				$error['cutoffstop'] = trans('Incorrect date of cutoff suspending!');
-	} else
+	elseif ($cutoffstop = date_to_timestamp($customeradd['cutoffstop']))
+		$cutoffstop += 86399;
+	else
 		$error['cutoffstop'] = trans('Incorrect date of cutoff suspending!');
 
         $hook_data = $LMS->executeHook(
@@ -254,6 +260,21 @@ if (isset($_POST['customeradd'])) {
 		$customeradd = $reuse;
 		$customeradd['reuse'] = '1';
 	}
+} else {
+	$customeradd['emails'] = array(
+		0 => array(
+			'contact' => '',
+			'name' => '',
+			'type' => CONTACT_LANDLINE
+		)
+	);
+	$customeradd['phones'] = array(
+		0 => array(
+			'contact' => '',
+			'name' => '',
+			'type' => ''
+		)
+	);
 }
 
 if (!isset($customeradd['cutoffstopindefinitely']))
@@ -273,9 +294,10 @@ $hook_data = $LMS->executeHook(
 $customeradd = $hook_data['customeradd'];
 
 $SMARTY->assign('xajax'        , $LMS->RunXajax());
+$SMARTY->assign(compact('pin_min_size', 'pin_max_size', 'pin_allowed_characters'));
 $SMARTY->assign('cstateslist'  , $LMS->GetCountryStates());
 $SMARTY->assign('countrieslist', $LMS->GetCountries());
-$SMARTY->assign('divisions'    , $DB->GetAll('SELECT id, shortname, status FROM divisions ORDER BY shortname'));
+$SMARTY->assign('divisions'    , $LMS->GetDivisions());
 $SMARTY->assign('customeradd'  , $customeradd);
 if (ConfigHelper::checkValue(ConfigHelper::getConfig('phpui.add_customer_group_required',false))) {
 		$SMARTY->assign('groups',$DB->GetAll('SELECT id,name FROM customergroups ORDER BY id'));

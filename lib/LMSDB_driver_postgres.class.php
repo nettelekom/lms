@@ -252,6 +252,8 @@ class LMSDB_driver_postgres extends LMSDB_common implements LMSDBDriverInterface
             return 'NULL';
         } elseif (gettype($input) == 'string') {
             return '\'' . @pg_escape_string($this->_dblink, $input) . '\'';
+        } elseif (is_array($input)) {
+            return $this->_quote_array($input);
         } else {
             return $input;
         }
@@ -336,6 +338,10 @@ class LMSDB_driver_postgres extends LMSDB_common implements LMSDBDriverInterface
 
     }
 
+	private function _driver_locktables_filter_helper($table) {
+		return !$this->_driver_resourceexists($table, LMSDB::RESOURCE_TYPE_VIEW);
+	}
+
     /**
      * Locks table.
      * 
@@ -346,6 +352,7 @@ class LMSDB_driver_postgres extends LMSDB_common implements LMSDBDriverInterface
     public function _driver_locktables($table, $locktype = null)
     {
         if (is_array($table)) {
+            $table = array_filter($table, array($this, '_driver_locktables_filter_helper'));
             $this->Execute('LOCK ' . implode(', ', $table));
         } else {
             $this->Execute('LOCK ' . $table);

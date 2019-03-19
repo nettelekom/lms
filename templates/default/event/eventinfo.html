@@ -183,15 +183,28 @@
 	</TR>
 	<TR>
 		<TD>
-			<IMG src="img/node.gif" alt="">
+			<IMG src="img/home.gif" alt="">
 		</TD>
 		<TD class="bold">
 			{trans("Location:")}
 		</TD>
 		<TD class="nobr">
-			{if isset($event.location)}{$event.location}{else}{$event.customerlocation}{/if}
+			{if !empty($event.address_id)}{$event.location}{else}{$event.customerlocation}{/if}
 		</TD>
 	</TR>
+	{if !empty($event.nodeid)}
+	<TR>
+		<TD>
+			<IMG src="img/node.gif" alt="">
+		</TD>
+		<TD class="bold">
+			{trans("Node:")}
+		</TD>
+		<TD class="nobr">
+			<a href="?m=nodeinfo&id={$event.nodeid}">{$event.node_name}: {$event.node_location}</a>
+		</TD>
+	</TR>
+	{/if}
 {if $event.note}
 	<TR>
 		<TD>
@@ -220,12 +233,13 @@
 			{trans("Users:")}
 		</TD>
 		<TD class="nobr">
-			{foreach $event.userlist as $user}
-				<A href="?m=userinfo&id={$user.id}">{$user.name}</A><BR>
+			{foreach $event.userlist as $userid}
+				<A href="?m=userinfo&id={$userid}">{$userlist[$userid].rname}</A><BR>
 			{/foreach}
 		</TD>
 	</TR>
 {/if}
+{if isset($event.ticketid)}
 	<TR>
 		<TD>
                                     <IMG src="img/helpdesk.png" alt="">
@@ -234,15 +248,13 @@
                                     {trans("Helpdesk assignment:")}
                                 </TD>
 		<TD>
-                                    {if isset($event.ticketid)}
                                         <a href="?m=rtticketview&id={$event.ticketid}">#{$event.ticketid}</a>
-                                    {else}
-                                        {trans("This event is not assigned to any helpdesk request.")}
-                                    {/if}
 		</TD>
 	</TR>
+{/if}
 	<TR>
 		<TD class="text-right" colspan="3">
+			<a href="?m=eventdel&id={$event.id}" OnClick="return confirmLink(this, '{trans("Are you sure, you want to delete that event?")}')"><img src="img/delete.gif" alt=""> {trans("Delete")}</A>
 			<A href="?m=eventedit&id={$event.id}"><IMG src="img/edit.gif" alt=""> {trans("Edit")}</A>
 			{if !$event.closed}
 			<A href="?m=eventedit&id={$event.id}&action=close"><IMG src="img/dead.gif" alt=""> {trans("Close")}</A>

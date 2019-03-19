@@ -1914,7 +1914,7 @@ if(isset($_GET['l']) && sprintf('%d',$_GET['l']) > 0 && sprintf('%d',$_GET['l'])
 			    'sh_limit' => 0, 'www_limit' => 0, 'mail_limit' => 0, 'sql_limit' => 0, 'ftp_limit' => 0,
 			    'quota_sh_limit' => 0, 'quota_www_limit' => 0, 'quota_mail_limit' => 0, 'quota_sql_limit' => 0, 'quota_ftp_limit' => 0,
 			    'domain_limit' => 0, 'alias_limit' => 0,
-			    'type' => TARIFF_INTERNET);
+			    'type' => TARIFF_INTERNET, 'authtype' => 0);
 	$t1 = $LMS->TariffAdd($tariffdata);
 	$tariffdata = array( 'name' => 'Standart', 'description' => 'Standart Tariff', 
 			    'value' => '60', 'taxid' => '2', 'prodid' => '', 
@@ -1924,7 +1924,7 @@ if(isset($_GET['l']) && sprintf('%d',$_GET['l']) > 0 && sprintf('%d',$_GET['l'])
 			    'sh_limit' => 0, 'www_limit' => 0, 'mail_limit' => 0, 'sql_limit' => 0, 'ftp_limit' => 0,
 			    'quota_sh_limit' => 0, 'quota_www_limit' => 0, 'quota_mail_limit' => 0, 'quota_sql_limit' => 0, 'quota_ftp_limit' => 0,
 			    'domain_limit' => 0, 'alias_limit' => 0,
-			    'type' => TARIFF_INTERNET);
+			    'type' => TARIFF_INTERNET, 'authtype' => 0);
 	$t2 = $LMS->TariffAdd($tariffdata);
 	$tariffdata = array( 'name' => 'Gold', 'description' => 'Gold Tariff', 
 			    'value' => '120', 'taxid' => '3', 'prodid' => '', 
@@ -1934,7 +1934,7 @@ if(isset($_GET['l']) && sprintf('%d',$_GET['l']) > 0 && sprintf('%d',$_GET['l'])
 			    'sh_limit' => 0, 'www_limit' => 0, 'mail_limit' => 0, 'sql_limit' => 0, 'ftp_limit' => 0,
 			    'quota_sh_limit' => 0, 'quota_www_limit' => 0, 'quota_mail_limit' => 0, 'quota_sql_limit' => 0, 'quota_ftp_limit' => 0,
 			    'domain_limit' => 0, 'alias_limit' => 0,
-			    'type' => TARIFF_INTERNET);
+			    'type' => TARIFF_INTERNET, 'authtype' => 0);
 	$t3 = $LMS->TariffAdd($tariffdata);
 	echo ($t1 && $t2 && $t3) ? ' [OK]<BR>' : ' <span style="color: red;">[FAIL]</span><br>';
 
@@ -2056,7 +2056,7 @@ if(isset($_GET['l']) && sprintf('%d',$_GET['l']) > 0 && sprintf('%d',$_GET['l'])
 			$cnt++;
 			$startip++;
 			$nodedata['netid'] = $netid;
-			$nodedata['ipaddr'] = long2ip($startip);
+			$nodedata['ipaddr'] = long_ip($startip);
 			$nodedata['ipaddr_pub'] = '0.0.0.0';
 			$nodedata['macs'] = (array) makemac();
 			$nodedata['ownerid'] = $id;
@@ -2111,7 +2111,7 @@ if(isset($_GET['l']) && sprintf('%d',$_GET['l']) > 0 && sprintf('%d',$_GET['l'])
 		}
 /*
 		$ip['ownerid'] = 0;
-		$ip['ipaddr'] = long2ip($startip);
+		$ip['ipaddr'] = long_ip($startip);
 		$ip['ipaddr_pub'] = '0.0.0.0';
 		$ip['macs'] = (array) makemac();
 		$ip['name'] = 'SWITCH_'.$i;

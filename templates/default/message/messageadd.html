@@ -127,6 +127,25 @@
 		}
 		$('textarea[name="message[' + messageelem + ']"]').html(message);
 	}
+
+	function submit_try() {
+		$.ajax('?m=messageadd&count_recipients=1', {
+				method: "POST",
+				dataType: "json",
+				data: $('form[name="message"]').serialize()
+			}
+		).done(function (data) {
+			if (data.recipients <= 50) {
+				document.message.submit();
+			} else {
+				var message = '{t}Are you sure you want to send messages to $a customer(s)?{/t}'.replace('$a', data.recipients);
+				if (confirm(message)) {
+					document.message.submit();
+				}
+			}
+		});
+		return false;
+	}
 -->
 </SCRIPT>
 <TABLE class="lmsbox">
@@ -165,9 +184,14 @@
 							<option value="50"{if $message.group == "50"} selected{/if}>{trans("deleted<!plural>")}</option>
 							<option value="51"{if $message.group == "51"} selected{/if}>{trans("with disconnected nodes")}</option>
 							<option value="52"{if $message.group == "52"} selected{/if}>{trans("in debt")}</option>
+							<option value="61"{if $message.group == "61"} selected{/if}>{trans("in debt (expired)")}</option>
 							<option value="57"{if $message.group == "57"} selected{/if}>{trans("in debt above 100%")}</option>
+							<option value="62"{if $message.group == "62"} selected{/if}>{trans("in debt above 100% (expired)")}</option>
 							<option value="58"{if $message.group == "58"} selected{/if}>{trans("in debt above 200%")}</option>
+							<option value="63"{if $message.group == "63"} selected{/if}>{trans("in debt above 200% (expired)")}</option>
 							<option value="53"{if $message.group == "53"} selected{/if}>{trans("not in debt")}</option>
+							<option value="60"{if $message.group == "60"} selected{/if}>{trans("not in debt (expired)")}</option>
+							<option value="59"{if $message.group == "59"} selected{/if}>{trans("opened documents")}</option>
 						</SELECT>
 					</TD>
 					<TD style="width: 1%;" class="nobr">{trans("Group:")}</TD>
@@ -421,7 +445,7 @@
 	</TR>
 	<TR>
 		<TD class="text-right" colspan="3">
-			 <A href="javascript:document.message.submit();" accesskey="s">{trans("Send")} <IMG src="img/save.gif" alt=""></A>
+			 <A href="#" onClick="submit_try();" accesskey="s">{trans("Send")} <IMG src="img/save.gif" alt=""></A>
 		</TD>
 	</TR>
     </TBODY>

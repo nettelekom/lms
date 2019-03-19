@@ -62,7 +62,7 @@ if(isset($nodedata))
 
 	if(!$error)
 	{
-		$nodedata['creatorid'] = $AUTH->id;
+	    $nodedata['creatorid'] = Auth::GetCurrentUser();
 		$nodeid = $voip->wsdl->NodeAdd($nodedata);
 		$voip->wsdl->AddFreeSec($nodedata['ownerid'], $nodedata['id_subscriptions']);
 		if(!isset($nodedata['reuse']))

@@ -24,13 +24,20 @@
  *  $Id$
  */
 
-$LMS->InitXajax();
-include(MODULES_DIR . DIRECTORY_SEPARATOR . 'geocodexajax.inc.php');
-$SMARTY->assign('xajax', $LMS->RunXajax());
+if ($api) {
+	if (!isset($_POST['in']))
+		die;
+	$netdevdata = json_decode(base64_decode($_POST['in']), true);
+} else {
+	$LMS->InitXajax();
+	include(MODULES_DIR . DIRECTORY_SEPARATOR . 'geocodexajax.inc.php');
+	$SMARTY->assign('xajax', $LMS->RunXajax());
 
-if (isset($_POST['netdev'])) {
-	$netdevdata = $_POST['netdev'];
+	if (isset($_POST['netdev']))
+		$netdevdata = $_POST['netdev'];
+}
 
+if (isset($netdevdata)) {
 	$netdevdata['ports']   = ($netdevdata['ports'] == '')    ? 0 : intval($netdevdata['ports']);
 	$netdevdata['clients'] = (empty($netdevdata['clients'])) ? 0 : intval($netdevdata['clients']);
 	$netdevdata['ownerid'] = (empty($netdevdata['ownerid'])) ? 0 : intval($netdevdata['ownerid']);
@@ -40,47 +47,51 @@ if (isset($_POST['netdev'])) {
 	elseif (strlen($netdevdata['name']) > 60)
 		$error['name'] = trans('Specified name is too long (max. $a characters)!', '60');
 
-	$netdevdata['purchasetime'] = 0;
 	if ($netdevdata['purchasedate'] != '')
 	{
-		// date format 'yyyy/mm/dd'
-		if (!preg_match('/^[0-9]{4}\/[0-9]{2}\/[0-9]{2}$/', $netdevdata['purchasedate'])) {
+		$netdevdata['purchasetime'] = date_to_timestamp($netdevdata['purchasedate']);
+		if(empty($netdevdata['purchasetime']))
 			$error['purchasedate'] = trans('Invalid date format!');
-		} else {
-			$date = explode('/', $netdevdata['purchasedate']);
+		else
+			if (time() < $netdevdata['purchasetime'])
+				$error['purchasedate'] = trans('Date from the future not allowed!');
+	}
+	else
+		$netdevdata['purchasetime'] = 0;
 
-			if (checkdate($date[1], $date[2], (int)$date[0])) {
-				$tmpdate = mktime(0, 0, 0, $date[1], $date[2], $date[0]);
+    if (!empty($netdevdata['ownerid']) && !$LMS->customerExists($netdevdata['ownerid']))
+        $error['ownerid'] = trans('Customer doesn\'t exist!');
 
-                if (mktime(0,0,0) < $tmpdate)
-                    $error['purchasedate'] = trans('Date from the future not allowed!');
-				else
-				    $netdevdata['purchasetime'] = $tmpdate;
-			}
-			else
-				$error['purchasedate'] = trans('Invalid date format!');
-		}
+	if ($netdevdata['guaranteeperiod'] != 0 && $netdevdata['purchasedate'] == NULL) {
+		$error['purchasedate'] = trans('Purchase date cannot be empty when guarantee period is set!');
 	}
 
-    if (!empty($netdevdata['ownerid']) && !$LMS->customerExists($netdevdata['ownerid'])) {
-        $error['ownerid'] = "doesnt exists";
-    }
-
-	if ($netdevdata['guaranteeperiod'] != 0 && $netdevdata['purchasetime'] == NULL) {
-		$error['purchasedate'] = trans('Purchase date cannot be empty when guarantee period is set!');
+	if ($api && isset($netdevdata['project'])) {
+		$project = $LMS->GetProjectByName($netdevdata['project']);
+		if (empty($project)) {
+			$netdevdata['projectname'] = $netdevdata['project'];
+			$netdevdata['invprojectid'] = -1;
+		} else
+			$netdevdata['invprojectid'] = $project['id'];
 	}
 
 	// new project
 	if ($netdevdata['invprojectid'] == '-1') {
-		if (!strlen(trim($netdevdata['projectname']))) {
+		if (!strlen(trim($netdevdata['projectname'])))
 			$error['projectname'] = trans('Project name is required');
-		}
-
-		$l = $DB->GetOne("SELECT * FROM invprojects WHERE name=? AND type<>?", array($netdevdata['projectname'], INV_PROJECT_SYSTEM));
-
-		if (sizeof($l)>0) {
+		if ($LMS->ProjectByNameExists($netdevdata['projectname']))
 			$error['projectname'] = trans('Project with that name already exists');
-		}
+	}
+
+	if (isset($netdevdata['terc']) && isset($netdevdata['simc']) && isset($netdevdata['ulic'])) {
+		$teryt = $LMS->TerytToLocation($netdevdata['terc'], $netdevdata['simc'], $netdevdata['ulic']);
+		$netdevdata['teryt'] = 1;
+		$netdevdata['location_state'] = $teryt['location_state'];
+		$netdevdata['location_state_name'] = $teryt['location_state_name'];
+		$netdevdata['location_city'] = $teryt['location_city'];
+		$netdevdata['location_city_name'] = $teryt['location_city_name'];
+		$netdevdata['location_street'] = $teryt['location_street'];
+		$netdevdata['location_street_name'] = $teryt['location_street_name'];
 	}
 
     if (!$error) {
@@ -111,13 +122,8 @@ if (isset($_POST['netdev'])) {
         }
 
 		$ipi = $netdevdata['invprojectid'];
-		if ($ipi == '-1') {
-			$DB->BeginTrans();
-			$DB->Execute("INSERT INTO invprojects (name, type) VALUES (?, ?)",
-				array($netdevdata['projectname'], INV_PROJECT_REGULAR));
-			$ipi = $DB->GetLastInsertID('invprojects');
-			$DB->CommitTrans();
-		}
+		if ($ipi == '-1')
+			$ipi = $LMS->AddProject($netdevdata);
 
 		if ($netdevdata['invprojectid'] == '-1' || intval($ipi)>0)
 			$netdevdata['invprojectid'] = intval($ipi);
@@ -142,26 +148,45 @@ if (isset($_POST['netdev'])) {
 
 		$netdevid = $LMS->NetDevAdd($netdevdata);
 
+		if ($api) {
+			if ($netdevid) {
+				header('Content-Type: application/json');
+				echo json_encode(array('id' => $netdevid));
+			}
+			die;
+		}
+
 		$SESSION->redirect('?m=netdevinfo&id='.$netdevid);
-    }
+    } elseif ($api) {
+		header('Content-Type: application/json');
+		echo json_encode($error);
+		die;
+	}
 
 	$SMARTY->assign('error', $error);
 	$SMARTY->assign('netdev', $netdevdata);
 } elseif (isset($_GET['id'])) {
 	$netdevdata = $LMS->GetNetDev($_GET['id']);
+	if ($netdevdata['purchasetime'])
+		$netdevdata['purchasedate'] = date('Y/m/d', $netdevdata['purchasetime']);
 	$netdevdata['name'] = trans('$a (clone)', $netdevdata['name']);
 	$netdevdata['teryt'] = !empty($netdevdata['location_city']) && !empty($netdevdata['location_street']);
+	$SMARTY->assign('netdev', $netdevdata);
+} else {
+	if (isset($_GET['customerid'])) {
+		$netdevdata['ownerid'] = intval($_GET['customerid']);
+		if (!$netdevdata['ownerid'])
+			$netdevdata['ownerid'] = '';
+	}
 	$SMARTY->assign('netdev', $netdevdata);
 }
 
 $layout['pagetitle'] = trans('New Device');
 
-$SMARTY->assign('nastype', $LMS->GetNAStypes());
+$SMARTY->assign('nastypes', $LMS->GetNAStypes());
 
-$nprojects = $DB->GetAll("SELECT * FROM invprojects WHERE type<>? ORDER BY name", array(INV_PROJECT_SYSTEM));
-$SMARTY->assign('NNprojects',$nprojects);
-$netnodes = $DB->GetAll("SELECT * FROM netnodes ORDER BY name");
-$SMARTY->assign('NNnodes',$netnodes);
+$SMARTY->assign('NNprojects', $LMS->GetProjects());
+$SMARTY->assign('NNnodes', $LMS->GetNetNodes());
 
 if (ConfigHelper::checkConfig('phpui.ewx_support'))
 	$SMARTY->assign('channels', $DB->GetAll('SELECT id, name FROM ewx_channels ORDER BY name'));

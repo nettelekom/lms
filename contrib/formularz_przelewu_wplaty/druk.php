@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2016 LMS Developers
+ *  (C) Copyright 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -12,7 +12,14 @@
 
 // REPLACE THIS WITH PATH TO YOU CONFIG FILE
 
-$CONFIG_FILE = (is_readable('lms.ini')) ? 'lms.ini' : '/etc/lms/lms.ini';
+if (is_readable('lms.ini'))
+	$CONFIG_FILE = 'lms.ini';
+elseif (is_readable(DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'lms' . DIRECTORY_SEPARATOR . 'lms-' . $_SERVER['HTTP_HOST'] . '.ini'))
+	$CONFIG_FILE = DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'lms' . DIRECTORY_SEPARATOR . 'lms-' . $_SERVER['HTTP_HOST'] . '.ini';
+elseif (is_readable(DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'lms' . DIRECTORY_SEPARATOR . 'lms.ini'))
+	$CONFIG_FILE = DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'lms' . DIRECTORY_SEPARATOR . 'lms.ini';
+else
+	die('Unable to read configuration file!');
 
 // PLEASE DO NOT MODIFY ANYTHING BELOW THIS LINE UNLESS YOU KNOW
 // *EXACTLY* WHAT ARE YOU DOING!!!
@@ -29,6 +36,7 @@ $CONFIG = (array) parse_ini_file($CONFIG_FILE, true);
 $CONFIG['directories']['sys_dir'] = (!isset($CONFIG['directories']['sys_dir']) ? getcwd() : $CONFIG['directories']['sys_dir']);
 $CONFIG['directories']['lib_dir'] = (!isset($CONFIG['directories']['lib_dir']) ? $CONFIG['directories']['sys_dir'] . DIRECTORY_SEPARATOR . 'lib' : $CONFIG['directories']['lib_dir']);
 
+define('SYS_DIR', $CONFIG['directories']['sys_dir']);
 define('LIB_DIR', $CONFIG['directories']['lib_dir']);
 
 // Load autoloader
@@ -150,14 +158,14 @@ for ( $j=0; $j<2; $j++ ) // pętla główna
      for ( $i=0; $i<27; $i++ ) 
      {
           $posy=62+$i*19;
-          echo('<span style="position: absolute; top: '. $posx .'px; left: '. $posy. 'px; font-family: Courier, Arial, Helvetica; font-size: 12pt; font-weight: bold;">'.$ISP1_DO[$i].'</span>');
+          echo('<span style="position: absolute; top: '. $posx .'px; left: '. $posy. 'px; font-family: Courier, Arial, Helvetica; font-size: 12pt; font-weight: bold;">'.mb_substr($ISP1_DO, $i, 1).'</span>');
      }
      
      $posx=109+$j*$SHIFT;
      for ( $i=0; $i<27; $i++ ) 
      {
           $posy=62+$i*19;
-          echo('<span style="position: absolute; top: '. $posx .'px; left: '. $posy. 'px; font-family: Courier, Arial, Helvetica; font-size: 12pt; font-weight: bold;">'.$ISP2_DO[$i].'</SpAn>');
+          echo('<span style="position: absolute; top: '. $posx .'px; left: '. $posy. 'px; font-family: Courier, Arial, Helvetica; font-size: 12pt; font-weight: bold;">'.mb_substr($ISP2_DO, $i, 1).'</SpAn>');
      }
 
 // numer konta beneficjenta:
@@ -188,36 +196,36 @@ for ( $j=0; $j<2; $j++ ) // pętla główna
 // dane płatnika:
 
 
-     if (strlen($USER_OD)>54)  // jeżeli nazwa+adres są dłuższe niz 54 znaki _nie_ wpisujemy w kratki
+     if (mb_strlen($USER_OD)>54)  // jeżeli nazwa+adres są dłuższe niz 54 znaki _nie_ wpisujemy w kratki
      {
           $posx=235+$j*$SHIFT;
-          echo('<span style="position: absolute; top: '. $posx .'px; left: 62px; font-family: Courier, Arial, Helvetica; font-size: 12pt; font-weight: bold;">'. substr($USER_OD,0,50) .'</span>');
+          echo('<span style="position: absolute; top: '. $posx .'px; left: 62px; font-family: Courier, Arial, Helvetica; font-size: 12pt; font-weight: bold;">'. mb_substr($USER_OD,0,50) .'</span>');
           $posx=265+$j*$SHIFT;
-          echo('<span style="position: absolute; top: '. $posx .'px; left: 62px; font-family: Courier, Arial, Helvetica; font-size: 12pt; font-weight: bold;">'. substr($USER_OD,50,100) .'</span>');
+          echo('<span style="position: absolute; top: '. $posx .'px; left: 62px; font-family: Courier, Arial, Helvetica; font-size: 12pt; font-weight: bold;">'. mb_substr($USER_OD,50,100) .'</span>');
      }
      else                // jeżeli nazwa+adres zmieszczą się w kratkach to wpisujemy w kratkach
      {
           $posx=235+$j*$SHIFT;
-          for ( $i=0; $i<27; $i++ ) if(isset($USER_OD[$i]))
+          for ( $i=0; $i<27; $i++ ) if ($i < mb_strlen($USER_OD))
           {
                $posy=62+$i*19;
-               echo('<span style="position: absolute; top: '. $posx .'px; left: '. $posy. 'px; font-family: Courier, Arial, Helvetica; font-size: 12pt; font-weight: bold;">'. $USER_OD[$i].'</span>');
+               echo('<span style="position: absolute; top: '. $posx .'px; left: '. $posy. 'px; font-family: Courier, Arial, Helvetica; font-size: 12pt; font-weight: bold;">'. mb_substr($USER_OD, $i, 1).'</span>');
           }
           $posx=265+$j*$SHIFT;
-          for ( $i=27; $i<54; $i++ ) if(isset($USER_OD[$i]))
+          for ( $i=27; $i<54; $i++ ) if ($i < mb_strlen($USER_OD))
           {
-               $posy=62+$i*19;
-               echo('<span style="position: absolute; top: '. $posx .'px; left: '. $posy. 'px; font-family: Courier, Arial, Helvetica; font-size: 12pt; font-weight: bold;">'. $USER_OD[$i].'</span>');
+               $posy=62+($i-27)*19;
+               echo('<span style="position: absolute; top: '. $posx .'px; left: '. $posy. 'px; font-family: Courier, Arial, Helvetica; font-size: 12pt; font-weight: bold;">'. mb_substr($USER_OD, $i, 1).'</span>');
           }
      }
 
 // tytułem:
 
      $posx=298+$j*$SHIFT;
-     for ( $i=0; $i<27; $i++ )  if(isset($USER_TY[$i]))
+     for ( $i=0; $i<27; $i++ )  if ($i < mb_strlen($USER_TY))
      {
           $posy=62+$i*19;
-          echo('<span style="position: absolute; top: '. $posx .'px; left: '. $posy. 'px; font-family: Courier, Arial, Helvetica; font-size: 12pt; font-weight: bold;">'. $USER_TY[$i].'</span>');
+          echo('<span style="position: absolute; top: '. $posx .'px; left: '. $posy. 'px; font-family: Courier, Arial, Helvetica; font-size: 12pt; font-weight: bold;">'. mb_substr($USER_TY, $i, 1).'</span>');
      }
 
 

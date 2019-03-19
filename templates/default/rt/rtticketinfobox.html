@@ -58,16 +58,26 @@
 							<TR>
 								<TD style="width: 1%;" class="bold nobr">
 									<IMG src="img/customer.gif" alt="">
-									{trans("Submitter:")}
+									{trans("Requestor:")}
 								</TD>
 								<TD style="width: 99%;" class="nobr">
 									{if $ticket.customerid}
 									<A href="?m=customerinfo&amp;id={$ticket.customerid}">{$ticket.customername|escape} ({$ticket.customerid|string_format:"%04d"})</A>
+									{if $ticket.requestor}<BR>{$ticket.requestor}{/if}
+									{if $ticket.requestor_phone}<BR>{$ticket.requestor_phone}{/if}
+									{if $ticket.requestor_mail}<BR>{$ticket.requestor_mail}{/if}
 									{else}
-									{$ticket.requestor|escape} 
-									{/if}
-									{if $ticket.requestoremail && !$ticket.customerid}
-									&lt;<A href="mailto:{$ticket.requestoremail}">{$ticket.requestoremail}</A>&gt;
+										{if $ticket.requestor_userid}
+										<A href="?m=userinfo&id={$ticket.requestor_userid}">{$ticket.requestor_username}</A>
+										{else}
+											{$ticket.requestor}
+											{if $ticket.requestor_mail}
+											<br><A href="mailto:{$ticket.requestor_mail}">{$ticket.requestor_mail}</A>
+											{/if}
+											{if $ticket.requestor_phone}
+											<br>{$ticket.requestor_phone}
+											{/if}
+										{/if}
 									{/if}
 								</TD>
 							</TR>
@@ -123,7 +133,11 @@
 									{trans("Owner:")}
 								</TD>
 								<TD style="width: 99%;">
-									<A href="?m=userinfo&amp;id={$ticket.owner}">{$ticket.ownername}</A>
+									{if $ticket.owner}
+									<A href="?m=userinfo&id={$ticket.owner}">{$ticket.ownername}</A>
+									{else}
+									{trans("none")}
+									{/if}
 								</TD>
 							</TR>
 							<TR>
@@ -141,7 +155,7 @@
 									{trans("Status:")}
 								</TD>
 								<TD style="width: 99%;">
-									{$ticket.status}
+									{$_RT_STATES[$ticket.state].label}
 								</TD>
 							</TR>
 							<TR>
@@ -155,6 +169,78 @@
 									{else}{trans("unknown/other")}{/if}
 								</TD>
 							</TR>
+							{if $ticket.deleted == 1 && (ConfigHelper::checkPrivilege('helpdesk_advanced_operations'))}
+							<TR>
+								<TD style="width: 1%;" class="bold nobr">
+									<IMG src="img/desc.gif" alt="">
+									{trans("Remover:")}
+								</TD>
+								<TD style="width: 99%;">
+									<A href="?m=userinfo&id={$ticket.deluserid}">{$ticket.delusername|escape}</A>
+								</TD>
+							</TR>
+							<TR>
+								<TD style="width: 1%;" class="bold nobr">
+									<IMG src="img/desc.gif" alt="">
+									{trans("Remove date:")}
+								</TD>
+								<TD style="width: 99%;">
+									{$ticket.deltime|date_format:"%Y/%m/%d %H:%M.%S"}
+								</TD>
+							</TR>
+							{/if}
+							<TR>
+								<TD class="bold nobr">
+									<IMG src="img/volcano.png" alt="">
+									{trans("Ticket source:")}
+								</TD>
+								<TD>
+									{$_RT_SOURCES[$ticket.source]}
+								</TD>
+							</TR>
+							<TR>
+								<TD class="bold nobr">
+									<IMG src="img/report.gif" alt="">
+									{trans("Priority:")}
+								</TD>
+								<TD>
+									<span style="{$_RT_PRIORITY_STYLES[$ticket.priority]}">{$_RT_PRIORITIES[$ticket.priority]}</span>
+								</TD>
+							{if $ticket.address_id}
+							<TR>
+								<TD class="bold nobr">
+									<IMG src="img/home.gif" alt="">
+									{trans("Location:")}
+								</TD>
+								<TD>
+									{$ticket.location}
+								</TD>
+							</TR>
+							{/if}
+							{if $ticket.nodeid}
+							<TR>
+								<TD class="bold nobr">
+									<IMG src="img/node.gif" alt="">
+									{trans("Node:")}
+								</TD>
+								<TD>
+									<a href="?m=nodeinfo&id={$ticket.nodeid}">
+										{$ticket.node_name}: {$ticket.node_location} ({$ticket.nodeid})
+									</a>
+								</TD>
+							</TR>
+							{/if}
+							{if $ticket.netnodeid}
+                                                        <TR>
+                                                                <TD class="bold nobr">
+                                                                        <IMG src="img/netdev.gif" alt="">
+                                                                        {trans("Network Device Node:")}
+                                                                </TD>
+                                                                <TD>
+                                                                        <A href="?m=netnodeinfo&id={$ticket.netnodeid}">{$ticket.netnode_name}</A>
+                                                                </TD>
+                                                        </TR>
+                                                        {/if}
 						</TABLE>
 					</TD>
 				</TR>
@@ -183,7 +269,12 @@
 			{if $ticket.state < 2}
 			<A href="?m=rtticketedit&amp;id={$ticket.ticketid}&amp;state=2"><IMG src="img/resolved.gif" alt=""> {trans("Resolve")}</A>&nbsp;
 			{/if}
-			<A href="?m=rtticketdel&amp;id={$ticket.ticketid}" onClick="return confirmLink(this, '{t a=$ticket.ticketid}Are you sure, you want to remove ticket $a?{/t}')"><IMG src="img/delete.gif" alt=""> {trans("Delete")}</A>
+			{if $ticket.deleted == 1 && $ticket.deltime != 0 && (ConfigHelper::checkPrivilege('helpdesk_advanced_operations'))}
+			<a href="?m=rtrestore&id={$ticket.ticketid}&amp;taction=restore" onClick="return confirmLink(this, '{t a=$ticket.ticketid|string_format:"%06d"}Are you sure, you want to restore ticket $a?{/t}')"><img src="img/reload.gif" alt="" title="{trans("Restore<!RT>")}"> {trans("Restore<!RT>")}</a>
+			<a href="?m=rtticketdel&id={$ticket.ticketid}&amp;taction=delperm" onClick="return confirmLink(this, '{t a=$ticket.ticketid|string_format:"%06d"}Are you sure, you want to permanently remove ticket $a?{/t}')"><img src="img/delete.gif" alt="" title="{trans("Delete permanently")}"> {trans("Delete permanently")}</a>
+			{else}
+			<a href="?m=rtticketdel&id={$ticket.ticketid}&amp;taction=delete" onClick="return confirmLink(this, '{t a=$ticket.ticketid|string_format:"%06d"}Are you sure, you want to remove ticket $a?{/t}')"><img src="img/delete.gif" alt="" title="{trans("Delete")}">{trans("Delete")}</a>
+			{/if}
 			<A href="?m=rtticketedit&amp;id={$ticket.ticketid}"><IMG src="img/edit.gif" alt=""> {trans("Edit")}</A>
 		</TD>
 	</TR>
@@ -202,6 +293,7 @@
 			{trans("customer's side")}: <span class="bold">{$stats.1.num|default:0}</span>,
 			{trans("unknown/other<!plural>")}: <span class="bold">{$stats.0.num|default:0}</span>,
 			{trans("all")}: <span class="bold">{$stats.0.num+$stats.1.num+$stats.2.num}</span>
+			&nbsp;&raquo;&nbsp;<A HREF="?m=rtsearch&amp;id={$customerinfo.id}"><IMG src="img/ticket.gif" alt="{trans("Show tickets")}"> {trans("Show tickets")}</A>
 		</TD>
 	</TR>
 	</TBODY>
@@ -234,3 +326,5 @@
 <br>
 {include file="customer/customernodesbox.html"}
 {/if}
+<br>
+{include file="rt/rtticketeventlist.html"}

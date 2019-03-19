@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2016 LMS Developers
+ *  (C) Copyright 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -28,10 +28,25 @@ $layout['pagetitle'] = trans('Event Search');
 
 $SESSION->save('backto', $_SERVER['QUERY_STRING']);
 
+if (!isset($_POST['event'])) {
+       $event = array();
+       if (isset($_GET['datefrom']))
+               $event['datefrom'] = $_GET['datefrom'];
+       if (isset($_GET['dateto']))
+               $event['dateto'] = $_GET['dateto'];
+       if (isset($_GET['ticketid']))
+               $event['ticketid'] = $_GET['ticketid'];
+       if (!empty($event))
+               $_POST['event'] = $event;
+}
+
 if(isset($_POST['event']))
 {
 	$event = $_POST['event'];
-	
+
+	if ($event['ticketid'])
+		$event['ticketid'] = intval($event['ticketid']);
+
 	if($event['datefrom'])
 	{
 		list($year, $month, $day) = explode('/', $event['datefrom']);

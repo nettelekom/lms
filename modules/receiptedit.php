@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2016 LMS Developers
+ *  (C) Copyright 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -27,15 +27,15 @@
 if(isset($_GET['id']))
 {
 	$regid = $DB->GetOne('SELECT DISTINCT regid FROM receiptcontents WHERE docid=?', array($_GET['id']));
-	if($DB->GetOne('SELECT rights FROM cashrights WHERE userid=? AND regid=?', array($AUTH->id, $regid))<256)
+	if($DB->GetOne('SELECT rights FROM cashrights WHERE userid=? AND regid=?', array(Auth::GetCurrentUser(), $regid))<256)
 	{
 	        $SMARTY->display('noaccess.html');
 	        $SESSION->close();
 	        die;
 	}			
 
-	$receipt = $DB->GetRow('SELECT documents.*, template 
-			    FROM documents 
+	$receipt = $DB->GetRow('SELECT documents.*, numberplans.template
+			    FROM documents
 			    LEFT JOIN numberplans ON (numberplanid = numberplans.id)
 			    WHERE documents.id = ? AND type = ?', array($_GET['id'], DOC_RECEIPT));
 
@@ -398,7 +398,7 @@ switch($action)
 				SYSLOG::RES_NUMPLAN => $receipt['numberplanid'],
 				'cdate' => $receipt['cdate'],
 				SYSLOG::RES_CUST => $customer['id'],
-				SYSLOG::RES_USER => $AUTH->id,
+				SYSLOG::RES_USER => Auth::GetCurrentUser(),
 				'name' => $customer['customername'],
 				'address' => $customer['address'],
 				'zip' => $customer['zip'],
@@ -474,7 +474,7 @@ switch($action)
 					'itemid' => $iid,
 					'value' => $value,
 					'comment' => $item['description'],
-					SYSLOG::RES_USER => $AUTH->id,
+					SYSLOG::RES_USER => Auth::GetCurrentUser(),
 					SYSLOG::RES_CUST => $customer['id']
 				);
 				$DB->Execute('INSERT INTO cash (type, time, docid, itemid, value, comment, userid, customerid)
@@ -511,7 +511,7 @@ switch($action)
 				'extnumber' => $receipt['extnumber'] ? $receipt['extnumber'] : '',
 				SYSLOG::RES_NUMPLAN => $receipt['numberplanid'],
 				'cdate' => $receipt['cdate'],
-				SYSLOG::RES_USER => $AUTH->id,
+				SYSLOG::RES_USER => Auth::GetCurrentUser(),
 				'name' => $receipt['o_type'] == 'advance' ? $receipt['adv_name'] : $receipt['other_name'],
 				'closed' => $receipt['closed'],
 				'fullnumber' => $fullnumber,
@@ -581,7 +581,7 @@ switch($action)
 					'itemid' => $iid,
 					'value' => $value,
 					'comment' => $item['description'],
-					SYSLOG::RES_USER => $AUTH->id,
+					SYSLOG::RES_USER => Auth::GetCurrentUser(),
 				);
 				$DB->Execute('INSERT INTO cash (type, time, docid, itemid, value, comment, userid)
 						VALUES(?, ?, ?, ?, ?, ?, ?)', array_values($args));

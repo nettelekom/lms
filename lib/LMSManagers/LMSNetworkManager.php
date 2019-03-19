@@ -3,7 +3,7 @@
 /*
  *  LMS version 1.11-git
  *
- *  Copyright (C) 2001-2016 LMS Developers
+ *  Copyright (C) 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -27,7 +27,6 @@
 /**
  * LMSNetworkManager
  *
- * @author Maciej Lew <maciej.lew.1987@gmail.com>
  */
 class LMSNetworkManager extends LMSManager implements LMSNetworkManagerInterface
 {
@@ -207,7 +206,7 @@ class LMSNetworkManager extends LMSManager implements LMSNetworkManagerInterface
         return $this->db->GetAll('SELECT n.*, inet_ntoa(n.ipaddr) AS ip, net.name AS netname
 			FROM vnodes n
 			JOIN networks net ON net.id = n.netid
-			WHERE netdev=0 ORDER BY name ASC');
+			WHERE netdev IS NULL ORDER BY name ASC');
     }
 
     public function GetNetDevIPs($id)
@@ -216,7 +215,7 @@ class LMSNetworkManager extends LMSManager implements LMSNetworkManagerInterface
 			ipaddr_pub, inet_ntoa(ipaddr_pub) AS ip_pub, access, info, port, n.netid, net.name AS netname, n.authtype
 			FROM vnodes n
 			JOIN networks net ON net.id = n.netid
-			WHERE ownerid = 0 AND netdev = ?', array($id));
+			WHERE ownerid IS NULL AND netdev = ?', array($id));
     }
 
     public function GetNetworkList( $search = 'id,asc' )
@@ -407,8 +406,9 @@ class LMSNetworkManager extends LMSManager implements LMSNetworkManagerInterface
     {
         if ($this->syslog) {
             $nodes = array_merge(
-                    (array) $this->db->GetAll('SELECT id, ownerid, ipaddr FROM vnodes
-					WHERE netid = ? AND ipaddr >= inet_aton(?) AND ipaddr <= inet_aton(?)', array($netid, $network, getbraddr($network, $mask))), (array) $this->db->GetAll('SELECT id, ownerid, ipaddr_pub FROM vnodes
+				(array) $this->db->GetAll('SELECT id, ownerid, ipaddr FROM vnodes
+					WHERE netid = ? AND ipaddr >= inet_aton(?) AND ipaddr <= inet_aton(?)', array($netid, $network, getbraddr($network, $mask))),
+				(array) $this->db->GetAll('SELECT id, ownerid, ipaddr_pub FROM vnodes
 					WHERE netid = ? AND ipaddr_pub >= inet_aton(?) AND ipaddr_pub <= inet_aton(?)', array($netid, $network, getbraddr($network, $mask)))
             );
             if (!empty($nodes))
@@ -426,8 +426,9 @@ class LMSNetworkManager extends LMSManager implements LMSNetworkManagerInterface
                 }
         }
         return ($this->db->Execute('UPDATE nodes SET ipaddr = ipaddr + ? 
-				WHERE ipaddr >= inet_aton(?) AND ipaddr <= inet_aton(?)', array($shift, $network, getbraddr($network, $mask))) + $this->db->Execute('UPDATE nodes SET ipaddr_pub = ipaddr_pub + ? 
-				WHERE ipaddr_pub >= inet_aton(?) AND ipaddr_pub <= inet_aton(?)', array($shift, $network, getbraddr($network, $mask))));
+				WHERE netid = ? AND ipaddr >= inet_aton(?) AND ipaddr <= inet_aton(?)', array($shift, $netid, $network, getbraddr($network, $mask)))
+			+ $this->db->Execute('UPDATE nodes SET ipaddr_pub = ipaddr_pub + ?
+				WHERE netid = ? AND ipaddr_pub >= inet_aton(?) AND ipaddr_pub <= inet_aton(?)', array($shift, $netid, $network, getbraddr($network, $mask))));
     }
 
     public function NetworkUpdate($networkdata)
@@ -604,7 +605,7 @@ class LMSNetworkManager extends LMSManager implements LMSNetworkManagerInterface
 				SELECT id, name, ipaddr, ownerid, netdev 
 				FROM vnodes WHERE netid = ? AND ipaddr > ? AND ipaddr < ?
 				UNION ALL
-				SELECT id, name, ipaddr_pub AS ipaddr, ownerid, netdev 
+				SELECT id, name, ipaddr_pub AS ipaddr, ownerid, netdev
 				FROM vnodes WHERE ipaddr_pub > ? AND ipaddr_pub < ?', 'ipaddr', array($id, $network['addresslong'], ip_long($network['broadcast']),
             $network['addresslong'], ip_long($network['broadcast'])));
 
@@ -636,7 +637,7 @@ class LMSNetworkManager extends LMSManager implements LMSNetworkManagerInterface
                 $longip = (string) ($network['addresslong'] + $i + $start);
 
                 $network['nodes']['addresslong'][$i] = $longip;
-                $network['nodes']['address'][$i] = long2ip($longip);
+                $network['nodes']['address'][$i] = long_ip($longip);
 
                 if (isset($nodes[$longip])) {
                     $network['nodes']['id'][$i] = $nodes[$longip]['id'];

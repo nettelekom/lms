@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2016 LMS Developers
+ *  (C) Copyright 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -47,10 +47,16 @@ if (isset($_GET['prenetwork']))
     $nodedata['netid'] = $_GET['prenetwork'];
 
 if (isset($_GET['premac']))
-	$nodedata['macs'][] = $_GET['premac'];
+	if (is_array($_GET['premac']))
+		$nodedata['macs'] = $_GET['premac'];
+	else
+		$nodedata['macs'][] = $_GET['premac'];
 
 if (isset($_GET['prename']))
 	$nodedata['name'] = $_GET['prename'];
+
+if (isset($_GET['pre_address_id']))
+	$nodedata['address_id'] = $_GET['pre_address_id'];
 
 if (isset($_POST['nodedata']))
 {
@@ -121,15 +127,24 @@ if (isset($_POST['nodedata']))
         $nodedata['ipaddr_pub'] = '0.0.0.0';
 
 	$macs = array();
-	foreach ($nodedata['macs'] as $key => $value)
+	$key = 0;
+	foreach ($nodedata['macs'] as $value) {
+		if (!$value)
+			continue;
+
 		if (check_mac($value)) {
 			if ($value != '00:00:00:00:00:00' && !ConfigHelper::checkConfig('phpui.allow_mac_sharing')) {
 				if ($LMS->GetNodeIDByMAC($value))
 					$error['mac' . $key] = trans('Specified MAC address is in use!');
 			}
-			$macs[] = $value;
-		} else if ($value != '')
+		} else {
 			$error['mac' . $key] = trans('Incorrect MAC address!');
+		}
+
+		$macs[$key] = $value;
+		++$key;
+	}
+
 	if (empty($macs))
 		$error['mac0'] = trans('MAC address is required!');
 	$nodedata['macs'] = $macs;
@@ -145,11 +160,32 @@ if (isset($_POST['nodedata']))
 	else
 	{
 		$status = $LMS->GetCustomerStatus($nodedata['ownerid']);
-		if ($status == 1) // unknown (interested)
+		if ($status == CSTATUS_INTERESTED) // unknown (interested)
 			$error['ownerid'] = trans('Selected customer is not connected!');
-		else if ($status == 2 && $nodedata['access']) // awaiting
+		else if ($status == CSTATUS_WAITING && $nodedata['access']) // awaiting
 	        $error['access'] = trans('Node owner is not connected!');
 	}
+
+	// check if customer address is selected or if default location address exists
+	// if both are not fullfilled we generate user interface warning
+	$customer_addresses_warning = $_POST['customer_addresses_warning'];
+	if (!$customer_addresses_warning && isset($nodedata['address_id'])
+		&& $nodedata['address_id'] == -1 && !empty($nodedata['ownerid'])) {
+		$addresses = $LMS->getCustomerAddresses($nodedata['ownerid'], true);
+		if (count($addresses) > 1) {
+			$i = 0;
+			foreach ($addresses as $address) {
+				if ($address['location_address_type'] == DEFAULT_LOCATION_ADDRESS)
+					break;
+				$i++;
+			}
+			if ($i == count($addresses)) {
+				$customer_addresses_warning = 1;
+				$error['address_id'] = trans('No address has been selected!');
+			}
+		}
+	}
+	$SMARTY->assign('customer_addresses_warning', $customer_addresses_warning);
 
 	if ($nodedata['netdev']) {
 		$ports = $DB->GetOne('SELECT ports FROM netdevices WHERE id = ?', array($nodedata['netdev']));
@@ -162,7 +198,7 @@ if (isset($_POST['nodedata']))
 			if (!preg_match('/^[0-9]+$/', $nodedata['port']) || $nodedata['port'] > $ports) {
 				$error['port'] = trans('Incorrect port number!');
 			}
-			else if ($DB->GetOne('SELECT id FROM vnodes WHERE netdev=? AND port=? AND ownerid>0',
+			else if ($DB->GetOne('SELECT id FROM vnodes WHERE netdev=? AND port=? AND ownerid IS NOT NULL',
 					array($nodedata['netdev'], $nodedata['port']))
 			        || $DB->GetOne('SELECT 1 FROM netlinks WHERE (src = ? OR dst = ?)
 			        AND (CASE src WHEN ? THEN srcport ELSE dstport END) = ?',
@@ -185,8 +221,7 @@ if (isset($_POST['nodedata']))
 		if (!strlen(trim($nodedata['projectname']))) {
 		 $error['projectname'] = trans('Project name is required');
 		}
-		if ($DB->GetOne("SELECT * FROM invprojects WHERE name=? AND type<>?",
-			array($nodedata['projectname'], INV_PROJECT_SYSTEM)))
+		if ($LMS->ProjectByNameExists($nodedata['projectname']))
 			$error['projectname'] = trans('Project with that name already exists');
 	}
 
@@ -208,14 +243,9 @@ if (isset($_POST['nodedata']))
 	if (!$error) {
         $nodedata = $LMS->ExecHook('node_add_before', $nodedata);
 
-        $ipi = $nodedata['invprojectid'];
-        if ($ipi == '-1') {
-			$DB->BeginTrans();
-			$DB->Execute("INSERT INTO invprojects (name, type) VALUES (?, ?)",
-				array($nodedata['projectname'], INV_PROJECT_REGULAR));
-			$ipi = $DB->GetLastInsertID('invprojects');
-			$DB->CommitTrans();
-		}
+		$ipi = $nodedata['invprojectid'];
+		if ($ipi == '-1')
+			$ipi = $LMS->AddProject($nodedata);
 
 		if ($nodedata['invprojectid'] == '-1' || intval($ipi)>0)
 			$nodedata['invprojectid'] = intval($ipi);
@@ -241,9 +271,11 @@ if (isset($_POST['nodedata']))
 		);
 		$nodedata = $hook_data['nodeadd'];
 
-		if (!isset($nodedata['reuse'])) {
-			$SESSION->redirect('?m=nodeinfo&id='.$nodeid);
-		}
+		if (!isset($nodedata['reuse']))
+			if (isset($nodedata['wholenetwork']))
+				$SESSION->redirect('?m=netinfo&id=' . $nodedata['netid']);
+			else
+				$SESSION->redirect('?m=nodeinfo&id=' . $nodeid);
 
 		$ownerid = $nodedata['ownerid'];
 		unset($nodedata);
@@ -255,6 +287,26 @@ if (isset($_POST['nodedata']))
 		if ($nodedata['ipaddr_pub']=='0.0.0.0')
 			$nodedata['ipaddr_pub'] = '';
     }
+} else {
+	$nodedata['linktype'] = intval(ConfigHelper::getConfig('phpui.default_linktype', LINKTYPE_WIRE));
+	$nodedata['linktechnology'] = intval(ConfigHelper::getConfig('phpui.default_linktechnology', 0));
+	$nodedata['linkspeed'] = intval(ConfigHelper::getConfig('phpui.default_linkspeed', 100000));
+
+	// check if customer address is selected or if default location address exists
+	// if both are not fullfilled we generate user interface warning
+	if (isset($_GET['ownerid'])) {
+		$addresses = $LMS->getCustomerAddresses($_GET['ownerid'], true);
+		if (count($addresses) > 1) {
+			$i = 0;
+			foreach ($addresses as $address) {
+				if ($address['location_address_type'] == DEFAULT_LOCATION_ADDRESS)
+					break;
+				$i++;
+			}
+			if ($i == count($addresses))
+				$error['address_id'] = trans('No address has been selected!');
+		}
+	}
 }
 
 if (empty($nodedata['macs']))
@@ -274,9 +326,8 @@ else
 if (!ConfigHelper::checkConfig('phpui.big_networks'))
 	$SMARTY->assign('customers', $LMS->GetCustomerNames());
 
-$nprojects = $DB->GetAll("SELECT * FROM invprojects WHERE type<>? ORDER BY name",
-	array(INV_PROJECT_SYSTEM));
-$SMARTY->assign('NNprojects',$nprojects);
+$nprojects = $LMS->GetProjects();
+$SMARTY->assign('NNprojects', $nprojects);
 
 $LMS->InitXajax();
 include(MODULES_DIR . DIRECTORY_SEPARATOR . 'nodexajax.inc.php');

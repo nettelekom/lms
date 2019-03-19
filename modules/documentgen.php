@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2016 LMS Developers
+ *  (C) Copyright 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -122,14 +122,37 @@ if (isset($_POST['document'])) {
 	extract($result);
 	$SMARTY->assign('fileupload', $fileupload);
 
+	if ($document['templ'])
+		foreach ($documents_dirs as $doc)
+			if (file_exists($doc . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $document['templ'])) {
+				$doc_dir = $doc;
+				$template_dir = $doc . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $document['templ'];
+				break;
+			}
+
 	$globalfiles = array();
-	if (!$error && !empty($attachments))
-		foreach ($attachments as $attachment) {
-			$attachment['tmpname'] = $tmppath . DIRECTORY_SEPARATOR . $attachment['name'];
-			$attachment['md5sum'] = md5_file($attachment['tmpname']);
-			$attachment['main'] = false;
-			$globalfiles[] = $attachment;
-		}
+	if (!$error) {
+		if (!empty($attachments))
+			foreach ($attachments as $attachment) {
+				$attachment['tmpname'] = $tmppath . DIRECTORY_SEPARATOR . $attachment['name'];
+				$attachment['md5sum'] = md5_file($attachment['tmpname']);
+				$attachment['main'] = false;
+				$globalfiles[] = $attachment;
+			}
+		if (isset($document['attachments']) && !empty($document['attachments']))
+			foreach ($document['attachments'] as $attachment => $value) {
+				$filename = $engine['attachments'][$attachment];
+				if ($filename[0] != DIRECTORY_SEPARATOR)
+					$filename = $template_dir . DIRECTORY_SEPARATOR . $filename;
+				$globalfiles[] = array(
+					'tmpname' => null,
+					'name' => $filename,
+					'type' => mime_content_type($filename),
+					'md5sum' => md5_file($filename),
+					'main' => false,
+				);
+			}
+	}
 
 	if (empty($globalfiles) && empty($document['templ']))
 		$error['files'] = trans('You must to specify file for upload or select document template!');
@@ -144,9 +167,10 @@ if (isset($_POST['document'])) {
 			// the new document file
 			// why? document attachment can be shared between different documents.
 			// we should rather use the other message digest in such case!
-			if ($DB->GetOne('SELECT docid FROM documentattachments WHERE md5sum = ?', array($file['md5sum']))
-				&& (filesize($file['newfile']) != filesize($file['tmpname'])
-					|| hash_file('sha256', $file['newfile']) != hash_file('sha256', $file['tmpname']))) {
+			$filename = empty($file['tmpname']) ? $file['name'] : $file['tmpname'];
+			if ($LMS->DocumentAttachmentExists($file['md5sum'])
+				&& (filesize($file['newfile']) != filesize($filename)
+					|| hash_file('sha256', $file['newfile']) != hash_file('sha256', $filename))) {
 				$error['files'] = trans('Specified file exists in database!');
 				break;
 			}
@@ -166,7 +190,7 @@ if (isset($_POST['document'])) {
 
 		if ($document['templ'])
 			// read template information
-			include(DOC_DIR . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $document['templ'] . DIRECTORY_SEPARATOR . 'info.php');
+			include($template_dir . DIRECTORY_SEPARATOR . 'info.php');
 
 		foreach ($customerlist as $gencust) {
 			if (!is_array($gencust))
@@ -182,9 +206,9 @@ if (isset($_POST['document'])) {
 
 			if ($document['templ']) {
 				// run template engine
-				if (file_exists(DOC_DIR . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR
+				if (file_exists($doc_dir . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR
 					. $engine['engine'] . DIRECTORY_SEPARATOR . 'engine.php'))
-					include(DOC_DIR . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR
+					include($doc_dir . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR
 						. $engine['engine'] . DIRECTORY_SEPARATOR . 'engine.php');
 				else
 					include(DOC_DIR . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . 'default'
@@ -216,7 +240,12 @@ if (isset($_POST['document'])) {
 				$files = array_merge($files, $globalfiles);
 				foreach ($files as $file) {
 					@mkdir($file['path'], 0700);
-					if (!file_exists($file['newfile']) && !@rename($file['tmpname'], $file['newfile'])) {
+					if (empty($file['tmpname'])) {
+						if (!@copy($file['name'], $file['newfile'])) {
+							$error['files'] = trans('Can\'t save file in "$a" directory!', $file['path']);
+							break;
+						}
+					} elseif (!file_exists($file['newfile']) && !@rename($file['tmpname'], $file['newfile'])) {
 						$error = trans('Can\'t save file in "$a" directory!', $file['path']);
 						break;
 					}
@@ -224,15 +253,13 @@ if (isset($_POST['document'])) {
 			}
 
 			if ($error) {
-				$genresult .= '<font class="alert">' . $error . '</font><br>';
+				$genresult .= '<span class="alert">' . $error . '</span><br>';
 				continue;
 			}
 
 			$DB->BeginTrans();
 
-			$division = $DB->GetRow('SELECT name, shortname, address, city, zip, countryid, ten, regon,
-				account, inv_header, inv_footer, inv_author, inv_cplace 
-				FROM vdivisions WHERE id = ? ;',array($gencust['divisionid']));
+			$division = $LMS->GetDivision($gencust['divisionid']);
 
 			if ($customernumtemplate)
 				$document['number'] = $LMS->GetNewDocumentNumber(array(
@@ -249,14 +276,14 @@ if (isset($_POST['document'])) {
 			));
 			$DB->Execute('INSERT INTO documents (type, number, numberplanid, cdate, customerid, userid, divisionid, name, address, zip, city, ten, ssn, closed,
 					div_name, div_shortname, div_address, div_city, div_zip, div_countryid, div_ten, div_regon,
-					div_account, div_inv_header, div_inv_footer, div_inv_author, div_inv_cplace, fullnumber)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', array($document['type'],
+					div_account, div_inv_header, div_inv_footer, div_inv_author, div_inv_cplace, fullnumber, template)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', array($document['type'],
 					$document['number'],
-					$document['numberplanid'],
+					empty($document['numberplanid']) ? null : $document['numberplanid'],
 					$time,
 					$document['customerid'],
-					$AUTH->id,
-					$gencust['divisionid'],
+					Auth::GetCurrentUser(),
+					$gencust['divisionid'] ? $gencust['divisionid'] : null,
 					$gencust['customername'],
 					$gencust['address'] ? $gencust['address'] : '',
 					$gencust['zip'] ? $gencust['zip'] : '',
@@ -269,7 +296,7 @@ if (isset($_POST['document'])) {
 					($division['address'] ? $division['address'] : ''), 
 					($division['city'] ? $division['city'] : ''), 
 					($division['zip'] ? $division['zip'] : ''),
-					($division['countryid'] ? $division['countryid'] : 0),
+					($division['countryid'] ? $division['countryid'] : null),
 					($division['ten'] ? $division['ten'] : ''), 
 					($division['regon'] ? $division['regon'] : ''), 
 					($division['account'] ? $division['account'] : ''),
@@ -278,6 +305,7 @@ if (isset($_POST['document'])) {
 					($division['inv_author'] ? $division['inv_author'] : ''), 
 					($division['inv_cplace'] ? $division['inv_cplace'] : ''),
 					$fullnumber,
+					empty($document['templ']) ? null : $document['templ'],
 			));
 
 			$docid = $DB->GetLastInsertID('documents');
@@ -293,7 +321,7 @@ if (isset($_POST['document'])) {
 			foreach ($files as $file)
 				$DB->Execute('INSERT INTO documentattachments (docid, filename, contenttype, md5sum, main)
 					VALUES (?, ?, ?, ?, ?)', array($docid,
-						$file['name'],
+						basename($file['name']),
 						$file['type'],
 						$file['md5sum'],
 						$file['main'] ? 1 : 0,
@@ -323,23 +351,47 @@ if (isset($_POST['document'])) {
 			$SMARTY->display('footer.html');
 		}
 
+		// deletes uploaded files
+		if (!empty($attachments))
+			rrmdir($tmppath);
+
 		die;
 	} else {
 		$document['fromdate'] = $oldfromdate;
 		$document['todate'] = $oldtodate;
 
 		if ($document['templ']) {
+			foreach ($documents_dirs as $doc)
+				if (file_exists($doc . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $document['templ'])) {
+					$doc_dir = $doc;
+					$template_dir = $doc . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $document['templ'];
+					break;
+				}
+
 			$result = '';
+			$script_result = '';
+
 			// read template information
-			include(DOC_DIR . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $document['templ']
-				 . DIRECTORY_SEPARATOR . 'info.php');
+			include($template_dir . DIRECTORY_SEPARATOR . 'info.php');
 			// set some variables
 			$SMARTY->assign('document', $document);
+
 			// call plugin
-			@include(DOC_DIR . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $engine['name']
-				 . DIRECTORY_SEPARATOR . $engine['plugin'] . '.php');
+			if (!empty($engine['plugin'])) {
+				if (file_exists($doc_dir . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR
+					. $engine['name'] . DIRECTORY_SEPARATOR . $engine['plugin'] . '.php'))
+					include($doc_dir . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $engine['name']
+						. DIRECTORY_SEPARATOR . $engine['plugin'] . '.php');
+				if (file_exists($doc_dir . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR
+					. $engine['name'] . DIRECTORY_SEPARATOR . $engine['plugin'] . '.js'))
+					$script_result = '<script src="' . $_SERVER['REQUEST_URI'] . '&template=' . $engine['name'] . '"></script>';
+			}
+
 			// get plugin content
 			$SMARTY->assign('plugin_result', $result);
+			$SMARTY->assign('script_result', $script_result);
+			$SMARTY->assign('attachment_result', GenerateAttachmentHTML($template_dir, $engine,
+				isset($document['attachments']) ? $document['attachments'] : array()));
 		}
 	}
 }
@@ -348,7 +400,7 @@ $SMARTY->setDefaultResourceType('extendsall');
 
 $SESSION->save('backto', $_SERVER['QUERY_STRING']);
 
-$rights = $DB->GetCol('SELECT doctype FROM docrights WHERE userid = ? AND (rights & 2) = 2', array($AUTH->id));
+$rights = $DB->GetCol('SELECT doctype FROM docrights WHERE userid = ? AND (rights & 2) = 2', array(Auth::GetCurrentUser()));
 
 if (!$rights) {
 	$SMARTY->display('noaccess.html');
@@ -358,12 +410,19 @@ if (!$rights) {
 if (!isset($document['numberplanid']))
 	$document['numberplanid'] = $DB->GetOne('SELECT id FROM numberplans WHERE doctype<0 AND isdefault=1 LIMIT 1');
 
+$allnumberplans = array();
 $numberplans = array();
 
 if ($templist = $LMS->GetNumberPlans(array()))
 	foreach ($templist as $item)
 		if ($item['doctype'] < 0)
-			$numberplans[] = $item;
+			$allnumberplans[] = $item;
+
+if (isset($document['type'])) {
+	foreach ($allnumberplans as $plan)
+		if ($plan['doctype'] == $document['type'])
+			$numberplans[] = $plan;
+}
 
 $SMARTY->assign('numberplans', $numberplans);
 
@@ -373,6 +432,7 @@ $SMARTY->assign('networks', $LMS->GetNetworks());
 $SMARTY->assign('customergroups', $LMS->CustomergroupGetAll());
 $SMARTY->assign('error', $error);
 $SMARTY->assign('docrights', $rights);
+$SMARTY->assign('allnumberplans', $allnumberplans);
 $SMARTY->assign('docengines', $docengines);
 $SMARTY->assign('document', $document);
 $SMARTY->display('document/documentgen.html');

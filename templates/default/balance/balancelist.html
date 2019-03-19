@@ -8,7 +8,7 @@
 	function DeleteMarked()
 	{
 		if ($('tr[data-published="1"] :checked').length) {
-			{if ConfigHelper::checkConfig('privileges.superuser')}
+			{if ConfigHelper::checkPrivilege('published_document_modification')}
 			if (!confirm('{trans("Some documents have been published already! Are you sure you want to delete them despite this?")}')) {
 				return;
 			}
@@ -151,8 +151,8 @@
                         </SELECT>
                         <INPUT type="checkbox" name="groupexclude" id="groupexclude"{if $listdata.groupexclude} CHECKED{/if}><label for="groupexclude">{trans("exclude group")}</label>&nbsp;
                         </div>
-                        {trans("From:")} <INPUT TYPE="text" NAME="from" SIZE="10" maxlength="10" value="{if $listdata.from > 0}{$listdata.from|date_format:"%Y/%m/%d"}{/if}" placeholder="{trans("yyyy/mm/dd")}" {tip class="calendar-time" text="Enter date in YYYY/MM/DD format (empty field means no limit) or click to choose it from calendar"}>
-                        {trans("To:")} <INPUT TYPE="text" NAME="to" SIZE="10" maxlength="10" value="{if $listdata.to > 0}{$listdata.to|date_format:"%Y/%m/%d"}{/if}" placeholder="{trans("yyyy/mm/dd")}" {tip class="calendar-time" text="Enter date in YYYY/MM/DD format (empty field means no limit) or click to choose it from calendar"}>
+                        {trans("From:")} <INPUT TYPE="text" NAME="from" SIZE="14" maxlength="14" value="{if $listdata.from > 0}{$listdata.from|date_format:"%Y/%m/%d"}{/if}" placeholder="{trans("yyyy/mm/dd")}" {tip class="calendar-time" text="Enter date in YYYY/MM/DD format (empty field means no limit) or click to choose it from calendar"}>
+                        {trans("To:")} <INPUT TYPE="text" NAME="to" SIZE="14" maxlength="14" value="{if $listdata.to > 0}{$listdata.to|date_format:"%Y/%m/%d"}{/if}" placeholder="{trans("yyyy/mm/dd")}" {tip class="calendar-time" text="Enter date in YYYY/MM/DD format (empty field means no limit) or click to choose it from calendar"}>
                         <A href="javascript:filter();">&raquo;&raquo;&raquo;</A><BR>
 		</TD>
 	</TR>
@@ -198,22 +198,22 @@
 		<TD class="text-right nobr">
 			{if $balancelist[balancelist].docid}
 				{if $balancelist[balancelist].doctype==$smarty.const.DOC_INVOICE}
-				{if !$balancelist[balancelist].published || ConfigHelper::checkConfig('privileges.superuser')}
-				<A HREF="?m=invoice&id={$balancelist[balancelist].docid}&dontpublish=1" class="lms-ui-tooltip-docnumber" data-resourceid="{$balancelist[balancelist].docid}" rel="external"><IMG SRC="img/view.gif" ALT="[ {trans("View")} ]"></A>
+				{if !$balancelist[balancelist].published || ConfigHelper::checkPrivilege('published_document_modification')}
+				<A HREF="?m=invoice&id={$balancelist[balancelist].docid}&dontpublish=1" class="lms-ui-tooltip-docnumber" data-resourceid="{$balancelist[balancelist].docid}" rel="external"><IMG SRC="img/view.gif" ALT="{trans("View")}"></A>
 				{/if}
-				<A HREF="?m=invoice&id={$balancelist[balancelist].docid}" class="lms-ui-tooltip-docnumber" data-resourceid="{$balancelist[balancelist].docid}" rel="external"><IMG SRC="img/print.gif" ALT="[ {trans("Invoice")} ]"></A>
+				<A HREF="?m=invoice&id={$balancelist[balancelist].docid}" class="lms-ui-tooltip-docnumber" data-resourceid="{$balancelist[balancelist].docid}" rel="external"><IMG SRC="img/print.gif" ALT="{trans("Invoice")}"></A>
 				{elseif $balancelist[balancelist].doctype==$smarty.const.DOC_CNOTE}
-				{if !$balancelist[balancelist].published || ConfigHelper::checkConfig('privileges.superuser')}
-				<A HREF="?m=invoice&id={$balancelist[balancelist].docid}&dontpublish=1" class="lms-ui-tooltip-docnumber" data-resourceid="{$balancelist[balancelist].docid}" rel="external"><IMG SRC="img/view.gif" ALT="[ {trans("View")} ]"></A>
+				{if !$balancelist[balancelist].published || ConfigHelper::checkPrivilege('published_document_modification')}
+				<A HREF="?m=invoice&id={$balancelist[balancelist].docid}&dontpublish=1" class="lms-ui-tooltip-docnumber" data-resourceid="{$balancelist[balancelist].docid}" rel="external"><IMG SRC="img/view.gif" ALT="{trans("View")}"></A>
 				{/if}
-				<A HREF="?m=invoice&id={$balancelist[balancelist].docid}" class="lms-ui-tooltip-docnumber" data-resourceid="{$balancelist[balancelist].docid}" rel="external"><IMG SRC="img/printn.gif" ALT="[ {trans("Credit note")} ]"></A>
+				<A HREF="?m=invoice&id={$balancelist[balancelist].docid}" class="lms-ui-tooltip-docnumber" data-resourceid="{$balancelist[balancelist].docid}" rel="external"><IMG SRC="img/printn.gif" alt="{trans("Credit note")}"></A>
 				{elseif $balancelist[balancelist].doctype==$smarty.const.DOC_RECEIPT}
-				<A HREF="?m=receipt&id={$balancelist[balancelist].docid}" class="lms-ui-tooltip-docnumber" data-resourceid="{$balancelist[balancelist].docid}" rel="external"><IMG SRC="img/printr.gif" ALT="[ {trans("Cash receipt")} ]"></A>
+				<A HREF="?m=receipt&id={$balancelist[balancelist].docid}" class="lms-ui-tooltip-docnumber" data-resourceid="{$balancelist[balancelist].docid}" rel="external"><IMG SRC="img/printr.gif" alt="{trans("Cash receipt")}"></A>
 				{elseif $balancelist[balancelist].doctype==$smarty.const.DOC_DNOTE}
-				{if !$balancelist[balancelist].published || ConfigHelper::checkConfig('privileges.superuser')}
-				<A HREF="?m=note&id={$balancelist[balancelist].docid}&dontpublish=1" class="lms-ui-tooltip-docnumber" data-resourceid="{$balancelist[balancelist].docid}" rel="external"><IMG SRC="img/view.gif" ALT="[ {trans("View")} ]"></A>
+				{if !$balancelist[balancelist].published || ConfigHelper::checkPrivilege('published_document_modification')}
+				<A HREF="?m=note&id={$balancelist[balancelist].docid}&dontpublish=1" class="lms-ui-tooltip-docnumber" data-resourceid="{$balancelist[balancelist].docid}" rel="external"><IMG SRC="img/view.gif" ALT="{trans("View")}"></A>
 				{/if}
-				<A HREF="?m=note&id={$balancelist[balancelist].docid}" class="lms-ui-tooltip-docnumber" data-resourceid="{$balancelist[balancelist].docid}" rel="external"><IMG SRC="img/printd.gif" ALT="[ {trans("Debit note")} ]"></A>
+				<A HREF="?m=note&id={$balancelist[balancelist].docid}" class="lms-ui-tooltip-docnumber" data-resourceid="{$balancelist[balancelist].docid}" rel="external"><IMG SRC="img/printd.gif" alt="{trans("Debit note")}"></A>
 				{/if}
 			{/if}
 			<INPUT TYPE="checkbox" NAME="marks[{$balancelist[balancelist].id}]" VALUE="{$balancelist[balancelist].id}">

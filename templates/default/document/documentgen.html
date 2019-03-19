@@ -6,19 +6,21 @@
 {$xajax}
 <script type="text/javascript">
 <!--
-	function getplugin() {
+	function DocTemplateChanged() {
 		reset_login_timeout();
-		xajax_plugin(document.forms['documentgen'].elements['document[templ]'].value, 0);
+		xajax_DocTemplateChanged($('[name="document[type]"]').val(),
+			$('[name="document[templ]"]').val(),
+			0);
 	}
 
-	function gettemplates() {
+	function DocTypeChanged() {
 		reset_login_timeout();
-		var doctype = document.forms['documentgen'].elements['document[type]'].value;
-		xajax_GetTemplates(doctype);
+		xajax_DocTypeChanged($('[name="document[type]"]').val(),
+			$('[name="document[numberplanid]"]').val(),
+			0);
 	}
 
-	function printdoc()
-	{
+	function printdoc() {
 		document.documentgen.action = "?m=documentgen&print=1";
 		document.documentgen.target = "_blank";
 		document.documentgen.submit();
@@ -56,7 +58,9 @@
 		</TD>
 		<TD>
 			<INPUT type="text" name="document[number]" value="{if $document.number}{$document.number}{/if}" size="15" {tip text="Enter document number (leave this field empty to obtain next number)" trigger="number"}>&nbsp;
+			<DIV id="numberplans" style="display: {if !$document.numberplanid}none{else}inline{/if};">
 			{include file="document/documentnumberplans.html" numberplanid=$document.numberplanid cdate=$document.cdate}
+			</DIV>
 		</TD>
 	</TR>
 	<TR>
@@ -90,7 +94,7 @@
 			{trans("Type:")}
 		</TD>
 		<TD>
-			<SELECT SIZE="1" NAME="document[type]" {tip text="Select document type" trigger="type"} onchange="gettemplates();">
+			<SELECT SIZE="1" NAME="document[type]" {tip text="Select document type" trigger="type"} onchange="DocTypeChanged();">
 				<OPTION VALUE="0">... {trans("select type")} ...</OPTION>
 				{foreach from=$_DOCTYPES key=key item=item}{if $key < 0 && in_array($key, $docrights)}
 				<OPTION VALUE="{$key}"{if $document.type==$key} SELECTED{/if}>{$item}</OPTION>
@@ -106,7 +110,7 @@
 			{trans("Template:")}
 		</TD>
 		<TD>
-			<SELECT SIZE="1" NAME="document[templ]" {tip text="Select document template" trigger="templ"} id="templ" onchange="getplugin();">
+			<SELECT SIZE="1" NAME="document[templ]" {tip text="Select document template" trigger="templ"} id="templ" onchange="DocTemplateChanged();">
 				<OPTION VALUE="0">... {trans("select template")} ...</OPTION>
 				{foreach $docengines as $docengine}
 				<OPTION VALUE="{$docengine.name}"{if $document.templ==$docengine.name} SELECTED{/if}>{$docengine.title}</OPTION>
@@ -123,6 +127,17 @@
 		</TD>
 		<TD>
 			{fileupload id="attachments" fileupload=$fileupload}
+		</TD>
+	</TR>
+	<TR id="attachment-row"{if !$attachment_result} style="display: none;"{/if}>
+		<TD>
+			<img src="img/attach.gif">
+		</TD>
+		<TD class="bold nobr">
+			{trans("Document attachments:")}
+		</TD>
+		<TD id="attachment-cell">
+			{$attachment_result}
 		</TD>
 	</TR>
 	<TR>
@@ -187,7 +202,10 @@
 		</TD>
 	</TR>
     </TBODY>
-</TABLE><BR><DIV id="plugin" name="plugin">{$plugin_result}</DIV>
+</TABLE>
+<BR>
+<DIV id="plugin" name="plugin">{$plugin_result}</DIV>
+{$script_result}
 </FORM>
 <SCRIPT type="text/javascript">
 <!--

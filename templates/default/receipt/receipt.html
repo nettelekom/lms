@@ -1,6 +1,6 @@
 <!--// $Id$ //-->
 {if !$receipt.last}<div style="page-break-after: always;">{/if}
-{if !$type || $type == "original"}
+{if in_array("original", $type)}
 <div>
 <table width="100%">
 	<tr><td>
@@ -39,7 +39,7 @@
 				<td width="1%" valign="top" nowrap>
 					{if $receipt.type == "out"}{trans("To whom:")}{else}{trans("From who:")}{/if}
 				</td>
-				<td width="99%" class="sdr"><b>{$receipt.name}<br>{$receipt.zip} {$receipt.city}, {$receipt.address}</b></td>
+				<td width="99%" class="sdr"><b>{$receipt.name}{if $receipt.address}<br>{$receipt.zip} {$receipt.city}, {$receipt.address}{/if}</b></td>
 			    </tr>
 			</table>
 		</td>
@@ -143,9 +143,9 @@
 	<tr><td style="border-top-width: 1pt; border-top-style: dashed;"></td></tr>
 </table>
 </div>
-{if !$type || $type == "copy"}<br><br>{/if}
+{if in_array("copy", $type)}<br><br>{/if}
 {/if}
-{if !$type || $type == "copy"}
+{if in_array("copy", $type)}
 <div>
 <table width="100%">
 	<tr><td>
@@ -183,7 +183,7 @@
 			    <tr>
 				<td width="1%" valign="top" nowrap>
 					{if $receipt.type == "out"}{trans("To whom:")}{else}{trans("From who:")}{/if}</td>
-				<td width="99%" class="sdr"><b>{$receipt.name}<br>{$receipt.zip} {$receipt.city} {$receipt.address}</b></td>
+				<td width="99%" class="sdr"><b>{$receipt.name}{if $receipt.address}<br>{$receipt.zip} {$receipt.city}, {$receipt.address}{/if}</b></td>
 			    </tr>
 			</table>
 		</td>

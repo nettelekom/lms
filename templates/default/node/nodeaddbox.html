@@ -133,7 +133,7 @@
 			<BR>
 			<SELECT NAME="nodedata[linktype]" id="linktype" {tip trigger="linktype" text="Select link type"} onchange="change_linktype(this.options[this.selectedIndex].value)">
 				{foreach from=$_LINKTYPES item=item key=key}
-				<OPTION value="{$key}">{$item}</OPTION>
+				<OPTION value="{$key}"{if $nodedata.linktype == $key} selected{/if}>{$item}</OPTION>
 				{/foreach}
 			</SELECT>
 			<SELECT NAME="nodedata[radiosector]" id="radiosector" {tip trigger="radiosector" text="Select radio sector"} style="display: none;">
@@ -141,13 +141,13 @@
 			</SELECT>
 			<SELECT NAME="nodedata[linktechnology]" id="linktechnology" {tip trigger="linktechnology" text="Select link technology"}>
 				<OPTION value="0">{trans("- unknown -")}</OPTION>
-				{foreach $_LINKTECHNOLOGIES[0] as $linktechnologyidx => $linktechnology}
-				<OPTION value="{$linktechnologyidx}">{$linktechnology}</OPTION>
+				{foreach $_LINKTECHNOLOGIES[$nodedata.linktype] as $linktechnologyidx => $linktechnology}
+				<OPTION value="{$linktechnologyidx}"{if $nodedata.linktechnology == $linktechnologyidx} selected{/if}>{$linktechnology}</OPTION>
 				{/foreach}
 			</SELECT>
 			<SELECT NAME="nodedata[linkspeed]" id="linkspeed" {tip trigger="linkspeed" text="Select link speed"}>
 				{foreach from=$_LINKSPEEDS item=item key=key}
-				<OPTION value="{$key}"{if $key==100000} selected{/if}>{$item}</OPTION>
+				<OPTION value="{$key}"{if $nodedata.linkspeed == $key} selected{/if}>{$item}</OPTION>
 				{/foreach}
 			</SELECT>
 		</TD>
@@ -184,6 +184,7 @@
 				inputname  = "nodedata[ownerid]"
 				input_id   = "customerid_input"
 				selecttip  = "Assign node to customer"
+				customOnChange = "customer_change();"
 			}
 		</td>
 	</tr>
@@ -194,6 +195,7 @@
 		</td>
 		<td style="width: 99%; white-space: nowrap;" colspan="2">
 			<select id="customer_addresses" name="nodedata[address_id]" {tip trigger="address_id"}></select>
+			<input type="hidden" name="customer_addresses_warning" value="{if $customer_addresses_warning}1{else}0{/if}">
 		</td>
 	</tr>
 
@@ -301,11 +303,8 @@
     </TBODY>
 </TABLE></FORM>
 
-<script type="text/javascript" src="img/lms-ui-iconselectmenu.js"></script>
 <script type="text/javascript">
 <!--
-	var customer_addresses = new LmsUiIconSelectMenu( "#customer_addresses" );
-
 	$(function() {
 		$('form[name="nodeadd"] [name="nodedata[name]"]').focus();
 	});
@@ -342,7 +341,9 @@
 		var display = wholenetwork.checked ? 'none' : 'table-row';
 
 		document.getElementsByName("nodedataipaddr")[0].parentNode.parentNode.style.display = display;
-		document.getElementsByName("nodedataipaddr_pub")[0].parentNode.parentNode.style.display = display;
+		var ipaddr_pub = document.getElementsByName("nodedataipaddr_pub");
+		if (ipaddr_pub.length)
+			ipaddr_pub[0].parentNode.parentNode.style.display = display;
 	}
 	change_wholenetwork();
 
@@ -411,33 +412,23 @@
 		}
 	});
 
+    var customer_addresses = new LmsUiIconSelectMenu( "#customer_addresses" );
+
     /*!
      * \brief Update addresses list on customer input change.
      */
-    $( '#customerid_input' ).on('input reset_customer', function() {
-        customer_addresses.setAddressList( getCustomerAddresses($(this).val()) );
-    });
+    function customer_change() {
+        getCustomerAddresses($("#customerid_input").val(), function(addresses) {
+            customer_addresses.setAddressList(addresses);
+        });
+    }
 
-    {if !ConfigHelper::checkConfig('phpui.big_networks')}
-    /*!
-     * \brief Update customer addresses list on select change.
-     * Using when big_networks is set as false.
-     */
-    $( '#customerid_select' ).on('change reset_customer', function() {
-        var id = $(this).val();
-
-        if ( id != 'undefined' && id > 0 ) {
-            customer_addresses.setAddressList( getCustomerAddresses(id) );
-        }
-    });
-    {/if}
-
-    customer_addresses.setAddressList( getCustomerAddresses( {intval($nodedata.ownerid)} ) );
-
-    {if $nodedata.address_id && $nodedata.ownerid}
+    getCustomerAddresses( {intval($nodedata.ownerid)}, function(addresses) {
+        customer_addresses.setAddressList( addresses );
+        {if $nodedata.address_id && $nodedata.ownerid}
         $( '#customer_addresses' ).val( {$nodedata.address_id} );
-    {/if}
-
-    customer_addresses.init();
+        {/if}
+        customer_addresses.init();
+    });
 //-->
 </script>

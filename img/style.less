@@ -12,6 +12,8 @@
 @icon-size: 16px;
 @link: #800000;
 @linkhover: #336600;
+@red-light: #ffb1b1;
+@red-lucid: #fccdcd;
 
 .lms-ui-no-user-select {
 	-webkit-user-select: none;
@@ -163,13 +165,15 @@ INPUT[type="radio"] {
 INPUT {
 	font-size: 8pt;
 	font-family: @fonts;
-	&.alert {
+	&.alert,
+	&:invalid {
 		background-color: @alert;
 	}
 	&[type="checkbox"].alert {
 		outline: 2px solid #FF6060;
 	}
-	&[type="radio"].alert {
+	&[type="radio"].alert,
+	&[type="radio"]:invalid {
 		outline: 2px solid #FF6060;
 	}
 	&.hiddenbtn {
@@ -198,7 +202,8 @@ TEXTAREA {
 	border-width: 1pt;
 	background-color: @lucid;
 	vertical-align: middle;
-	&.alert {
+	&.alert,
+	&:invalid {
 		font-size: 8pt;
 		font-family: @fonts;
 		border-style: solid;
@@ -215,7 +220,8 @@ SELECT {
 	border-width: 1pt;
 	background-color: @lucid;
 	vertical-align: middle;
-	&.alert {
+	&.alert,
+	&:invalid {
 		font-size: 8pt;
 		font-family: @fonts;
 		border-style: solid;
@@ -242,6 +248,10 @@ div.lms-ui-multiselect {
 	max-width: 200px;
 	white-space: pre-wrap;
 	min-width: 200px;
+	display: inline-block;
+	&.lms-ui-multiselect-filter {
+		min-width: 100px;
+	}
 }
 div.lms-ui-multiselect-tiny {
 	overflow: hidden;
@@ -285,6 +295,12 @@ div.lms-ui-multiselectlayer {
 		span {
 			padding-left: 3px;
 		}
+	}
+	div {
+		border-left: solid 1px @blend;
+		border-right: solid 1px @blend;
+		border-bottom: solid 1px @blend;
+		background-color: @light;
 	}
 }
 
@@ -379,7 +395,10 @@ div.lms-ui-multiselectlayer {
 .red		{ color: #FF0000; }
 .brown		{ color: #A52A2A; }
 .white		{ color: #FFFFFF; }
-.alert		{ color: #FF0000 !important; }
+.alert,
+input:invalid {
+	color: #FF0000 !important;
+}
 .alertblend	{ color: #FA8072; }
 .suspended	{ color: #30B6C6; }
 .bold		{ font-weight: bold; }
@@ -441,7 +460,6 @@ div.lms-ui-multiselectlayer {
     .phone_number:link {
         pointer-events: none;
         cursor: default;
-        color: black;
     }
 }
 
@@ -463,6 +481,36 @@ div.lms-ui-multiselectlayer {
         text-decoration: underline;
     }
 }
+
+.lms-ui-rt-deleted {
+	&.light {
+		&:not(:hover) {
+			background-color: @red-light;
+		}
+	}
+	&.lucid {
+		&:not(:hover) {
+			background-color: @red-lucid;
+		}
+	}
+}
+.lms-ui-rt-partly-deleted {
+	&.light {
+		background-image: repeating-linear-gradient(145deg, transparent, transparent 10px, @red-light 10px, @red-light 20px);
+	}
+	&.lucid {
+		background-image: repeating-linear-gradient(145deg, transparent, transparent 10px, @red-lucid 10px, @red-lucid 20px);
+	}
+}
+.lms-ui-rtmessage-deleted {
+	&.light {
+		background-color: @red-light;
+	}
+	&.lucid {
+		background-color: @red-lucid;
+	}
+}
+
 .lms-ui-multi-check-all {
 	.lms-ui-no-user-select;
 }
@@ -489,12 +537,14 @@ table.lmsbox {
 	&>thead,
 	&>tfoot,
 	&>tbody,
-	&-inner>tfoot,
 	&-innerbox>thead,
 	&-innerbox>tfoot {
 		border-width: 1px;
 		border-style: solid;
 		border-color: black;
+	}
+	&-inner>tfoot {
+		border-top: 1px solid black;
 	}
 	&-inner {
 		td {
@@ -1001,12 +1051,16 @@ table.dataTable {
 	}
 }
 
+.lms-ui-address-select.alert {
+	background-color: @alert !important;
+}
+
 .lms-ui-address-select {
 	padding-left: 4px;
 	padding-right: 4px;
 
 	border: 1px solid #a9a9a9 !important;
-	background-color: #ebe4d6 !important;
+	background-color: @lucid !important;
 	box-shadow: none !important;
 	border-radius: 0 !important;
 	color: black !important;
@@ -1027,6 +1081,10 @@ table.dataTable {
 		color: white;
 		background-color: #4a90d9 !important;
 	}
+}
+
+.ui-tooltip.lms-ui-tooltip-nodelist {
+	max-width: initial;
 }
 
 .lms-ui-cursor-pointer:hover {

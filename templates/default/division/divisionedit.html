@@ -58,6 +58,7 @@
 				location_flat        = "{$division.location_flat}"
 				location_zip         = "{$division.location_zip}"
 				location_country_id  = "{$division.location_country_id}"
+				location_postoffice  = "{$division.location_postoffice}"
 				teryt                = "{$division.teryt}"
 			}
 		</td>
@@ -127,6 +128,17 @@
 		</TD>
 		<TD>
 			<INPUT type="text" value="{$division.rbe}" name="division[rbe]" size="30" {tip text="Enter National Court Register / Register of Business Entities Number (optional)" trigger="rbe"}>
+		</TD>
+	</TR>
+	<TR>
+		<TD>
+			<IMG src="img/phone.gif" alt="">
+		</TD>
+		<TD class="bold nobr">
+			{trans("Telecom number:")}
+		</TD>
+		<TD>
+			<INPUT type="text" value="{$division.telecomnumber}" name="division[telecomnumber]" size="30" {tip text="Enter Telecom Registry Number (optional)" trigger="telecomnumber"}>
 		</TD>
 	</TR>
 	<TR>
